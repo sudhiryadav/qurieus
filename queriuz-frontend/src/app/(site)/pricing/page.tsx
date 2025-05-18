@@ -8,8 +8,8 @@ import { authOptions } from "@/lib/auth";
 import { createSubscription, createCustomer } from "@/utils/razorpay";
 
 export const metadata: Metadata = {
-  title: "Pricing | Queriuz - AI-Powered Document Conversations",
-  description: "Choose the perfect Queriuz plan for your organization's document conversation needs.",
+  title: "Pricing | Qurieus - AI-Powered Document Conversations",
+  description: "Choose the perfect Qurieus plan for your organization's document conversation needs.",
 };
 
 type SubscriptionPlan = {

@@ -2,8 +2,8 @@ import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "How It Works | Queriuz - AI-Powered Document Conversations",
-  description: "Learn how Queriuz uses AI to transform your documents into interactive conversations.",
+  title: "How It Works | Qurieus - AI-Powered Document Conversations",
+  description: "Learn how Qurieus uses AI to transform your documents into interactive conversations.",
 };
 
 export default function HowItWorksPage() {
@@ -11,17 +11,17 @@ export default function HowItWorksPage() {
     <>
       <Breadcrumb
         pageName="How It Works"
-        pageDescription="Learn how Queriuz transforms your documents into interactive conversations"
+        pageDescription="Learn how Qurieus transforms your documents into interactive conversations"
       />
       <section className="py-16 md:py-20 lg:py-28">
         <div className="container">
           <div className="flex flex-wrap items-center">
             <div className="w-full px-4 lg:w-1/2">
               <h2 className="mb-8 text-3xl font-bold !leading-tight text-black dark:text-white sm:text-4xl md:text-[45px]">
-                How Queriuz Works
+                How Qurieus Works
               </h2>
               <p className="mb-8 text-base !leading-relaxed text-body-color md:text-lg">
-                Queriuz uses advanced AI technology to transform your documents into interactive conversations. Here's how it works:
+                Qurieus uses advanced AI technology to transform your documents into interactive conversations. Here's how it works:
               </p>
               <div className="space-y-4">
                 <div className="flex items-start">
@@ -69,7 +69,7 @@ export default function HowItWorksPage() {
               <div className="relative mx-auto aspect-[25/24] max-w-[500px] lg:mr-0">
                 <img
                   src="/images/how-it-works.svg"
-                  alt="How Queriuz Works"
+                  alt="How Qurieus Works"
                   className="w-full"
                 />
               </div>

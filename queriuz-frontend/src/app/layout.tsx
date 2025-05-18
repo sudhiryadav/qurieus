@@ -25,10 +25,10 @@ export default function RootLayout({
     setTimeout(() => setLoading(false), 1000);
   }, []);
   useEffect(() => {
-    // Create and inject the QueriuzChatConfig script
+    // Create and inject the QurieusChatConfig script
     const configScript = document.createElement('script');
     configScript.innerHTML = `
-      window.QueriuzChatConfig = {
+      window.QurieusChatConfig = {
         documentOwnerId: 'cmarrl8mj0000vjqyb9jmhcoa',
         theme: 'light',
         position: 'bottom-right'

@@ -3,8 +3,8 @@ import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Reset Password | Queriuz - AI-Powered Document Conversations",
-  description: "Reset your Queriuz account password to continue managing your AI-powered document conversations.",
+  title: "Reset Password | Qurieus - AI-Powered Document Conversations",
+  description: "Reset your Qurieus account password to continue managing your AI-powered document conversations.",
 };
 
 export default async function ResetPasswordPage({

@@ -2,8 +2,8 @@ import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Legal Notice | Queriuz - AI-Powered Document Conversations",
-  description: "Important legal information about Queriuz and its services.",
+  title: "Legal Notice | Qurieus - AI-Powered Document Conversations",
+  description: "Important legal information about Qurieus and its services.",
 };
 
 export default function LegalNoticePage() {
@@ -21,9 +21,9 @@ export default function LegalNoticePage() {
 
             <h3>1. Company Information</h3>
             <p>
-              Queriuz is operated by:
+              Qurieus is operated by:
               <br />
-              Queriuz Inc.
+              Qurieus Inc.
               <br />
               123 AI Street
               <br />
@@ -36,7 +36,7 @@ export default function LegalNoticePage() {
             <p>
               For any legal inquiries, please contact:
               <br />
-              Email: legal@queriuz.com
+              Email: legal@qurieus.com
               <br />
               Phone: +1 (555) 123-4567
             </p>
@@ -50,7 +50,7 @@ export default function LegalNoticePage() {
 
             <h3>4. Regulatory Information</h3>
             <p>
-              Queriuz complies with:
+              Qurieus complies with:
             </p>
             <ul>
               <li>General Data Protection Regulation (GDPR)</li>
@@ -60,7 +60,7 @@ export default function LegalNoticePage() {
 
             <h3>5. Intellectual Property</h3>
             <p>
-              All content on this website, including but not limited to text, graphics, logos, and software, is the property of Queriuz and is protected by international copyright laws.
+              All content on this website, including but not limited to text, graphics, logos, and software, is the property of Qurieus and is protected by international copyright laws.
             </p>
 
             <h3>6. Dispute Resolution</h3>

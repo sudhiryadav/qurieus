@@ -2,7 +2,7 @@ import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Refund Policy | Queriuz - AI-Powered Document Conversations",
+  title: "Refund Policy | Qurieus - AI-Powered Document Conversations",
   description: "Learn about our refund policy and how we handle subscription cancellations.",
 };
 
@@ -39,7 +39,7 @@ export default function RefundPolicyPage() {
               To request a refund:
             </p>
             <ol>
-              <li>Contact our support team at support@queriuz.com</li>
+              <li>Contact our support team at support@qurieus.com</li>
               <li>Provide your account details and reason for refund</li>
               <li>Allow up to 5 business days for review</li>
               <li>If approved, refund will be processed to original payment method</li>
@@ -69,7 +69,7 @@ export default function RefundPolicyPage() {
             <p>
               If you have any questions about our refund policy, please contact us at:
               <br />
-              Email: support@queriuz.com
+              Email: support@qurieus.com
             </p>
           </div>
         </div>

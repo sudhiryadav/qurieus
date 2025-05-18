@@ -16,9 +16,9 @@ const About = () => {
                   Making Document Knowledge Accessible Through AI
                 </h2>
                 <p className="mb-10 text-base leading-relaxed text-body-color dark:text-dark-6">
-                  At Queriuz, we believe that valuable information locked in documents should be easily accessible to everyone. Our AI-powered platform transforms static PDFs into interactive conversations, making it easier for users to find and understand the information they need.
+                  At Qurieus, we believe that valuable information locked in documents should be easily accessible to everyone. Our AI-powered platform transforms static PDFs into interactive conversations, making it easier for users to find and understand the information they need.
                   <br /> <br />
-                  Whether you&apos;re a business looking to make your documentation more user-friendly, an educational institution wanting to enhance learning materials, or an organization seeking to improve information accessibility, Queriuz provides the tools you need to make your content more engaging and accessible.
+                  Whether you&apos;re a business looking to make your documentation more user-friendly, an educational institution wanting to enhance learning materials, or an organization seeking to improve information accessibility, Qurieus provides the tools you need to make your content more engaging and accessible.
                 </p>
 
                 <Link

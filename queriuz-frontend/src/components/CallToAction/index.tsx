@@ -16,13 +16,13 @@ const CallToAction = () => {
                   </span>
                 </h2>
                 <p className="mx-auto mb-6 max-w-[515px] text-base leading-[1.5] text-white">
-                  Join the growing number of organizations using Queriuz to make their documents more accessible and engaging through AI-powered conversations.
+                  Join the growing number of organizations using Qurieus to make their documents more accessible and engaging through AI-powered conversations.
                 </p>
                 <Link
                   href="/signup"
                   className="inline-block rounded-md border border-transparent bg-secondary px-7 py-3 text-base font-medium text-white transition hover:bg-[#0BB489]"
                 >
-                  Get Started with Queriuz
+                  Get Started with Qurieus
                 </Link>
               </div>
             </div>

@@ -13,13 +13,13 @@ class Settings(BaseSettings):
     
     # API Settings
     API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "Queriuz API"
+    PROJECT_NAME: str = "Qurieus API"
     VERSION: str = "1.0.0"
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     
     # Database Settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/queriuz")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/qurieus")
     
     # Security Settings
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key")
@@ -46,12 +46,12 @@ class Settings(BaseSettings):
     POSTMAN_COLLECTION_ID: Optional[str] = os.getenv("POSTMAN_COLLECTION_ID")
     
     # Email settings
-    ADMIN_EMAIL: str = "admin@queriuz.com"
+    ADMIN_EMAIL: str = "admin@qurieus.com"
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = "noreply@queriuz.com"
+    SMTP_FROM_EMAIL: str = "noreply@qurieus.com"
     
     # File upload settings
     MAX_FILE_SIZE: int = 20 * 1024 * 1024  # 20MB in bytes

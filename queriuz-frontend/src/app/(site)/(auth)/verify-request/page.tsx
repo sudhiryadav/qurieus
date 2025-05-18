@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Logo from "@/components/Common/Logo";
 
 export const metadata: Metadata = {
-  title: "Check your email | Queriuz - AI-Powered Document Conversations",
+  title: "Check your email | Qurieus - AI-Powered Document Conversations",
   description: "Please check your email for the magic link to sign in.",
 };
 

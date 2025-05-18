@@ -60,7 +60,7 @@ const Logo = ({
         />
         {showBrandName && (
           <span className="ml-2 text-xl font-bold text-black dark:text-white">
-            Queriuz
+            Qurieus
           </span>
         )}
       </Link>
@@ -82,7 +82,7 @@ const Logo = ({
         />
         {showBrandName && (
           <span className="ml-2 text-xl font-bold text-black dark:text-white">
-            Queriuz
+            Qurieus
           </span>
         )}
       </div>

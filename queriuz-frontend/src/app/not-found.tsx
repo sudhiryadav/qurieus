@@ -3,8 +3,8 @@ import NotFound from "@/components/NotFound";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Page Not Found | Queriuz - AI-Powered Document Conversations",
-  description: "The page you are looking for could not be found. Please return to the Queriuz homepage.",
+  title: "Page Not Found | Qurieus - AI-Powered Document Conversations",
+  description: "The page you are looking for could not be found. Please return to the Qurieus homepage.",
 };
 
 const ErrorPage = () => {

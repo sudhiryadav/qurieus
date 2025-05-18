@@ -61,7 +61,7 @@ const NotFound = () => {
               </h3>
               <p className="mb-5 text-slate-700 dark:text-white">
                 Oops! The page you are looking for is not found. It might have
-                been moved or deleted. Please return to the Queriuz homepage.
+                been moved or deleted. Please return to the Qurieus homepage.
               </p>
               <Link
                 href="/"

@@ -297,7 +297,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/sudhir/Documents/Projects/frontslash/queriuz/queriuz-frontend/prisma/generated/client",
+      "value": "/Users/sudhir/Documents/Projects/frontslash/qurieus/qurieus-frontend/prisma/generated/client",
       "fromEnvVar": null
     },
     "config": {
@@ -311,7 +311,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/sudhir/Documents/Projects/frontslash/queriuz/queriuz-frontend/prisma/schema.prisma",
+    "sourceFilePath": "/Users/sudhir/Documents/Projects/frontslash/qurieus/qurieus-frontend/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

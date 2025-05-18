@@ -71,14 +71,14 @@ class ModelHealthMonitor:
             msg = MIMEMultipart()
             msg['From'] = settings.SMTP_FROM_EMAIL
             msg['To'] = admin_email
-            msg['Subject'] = f"[Queriuz] {subject}"
+            msg['Subject'] = f"[Qurieus] {subject}"
 
             body = f"""
             Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             
             {message}
             
-            System: Queriuz Document Processing
+            System: Qurieus Document Processing
             Environment: {settings.ENVIRONMENT}
             """
 

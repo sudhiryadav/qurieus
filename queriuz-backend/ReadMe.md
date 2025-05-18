@@ -1,6 +1,6 @@
-# Queriuz Backend
+# Qurieus Backend
 
-This is the backend service for Queriuz, a document querying and chat application.
+This is the backend service for Qurieus, a document querying and chat application.
 
 ## Prerequisites
 
@@ -25,12 +25,12 @@ This is the backend service for Queriuz, a document querying and chat applicatio
 
 3. Create the database:
    ```bash
-   createdb queriuz
+   createdb qurieus
    ```
 
 4. Install the pgvector extension:
    ```bash
-   psql queriuz -c "CREATE EXTENSION IF NOT EXISTS vector;"
+   psql qurieus -c "CREATE EXTENSION IF NOT EXISTS vector;"
    ```
 
 ### 2. Ollama Setup
@@ -74,7 +74,7 @@ This is the backend service for Queriuz, a document querying and chat applicatio
    ```
    Edit `.env` with your configuration:
    ```
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/queriuz
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/qurieus
    OLLAMA_API_URL=http://localhost:11434
    NEXTAUTH_SECRET=your-secret-key
    ```
@@ -129,8 +129,8 @@ Key environment variables:
 
 This project is proprietary and confidential. All rights reserved.
 
-Copyright (c) 2024 Queriuz
+Copyright (c) 2024 Qurieus
 
-This software and its documentation are proprietary and confidential. No part of this software, including but not limited to the source code, documentation, and design, may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of Queriuz.
+This software and its documentation are proprietary and confidential. No part of this software, including but not limited to the source code, documentation, and design, may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of Qurieus.
 
 Unauthorized copying, distribution, or use of this software, via any medium, is strictly prohibited. The receipt or possession of the source code and/or related information does not convey or imply any right to use, reproduce, disclose or distribute its contents, or to manufacture, use, or sell anything that it may describe.

@@ -19,7 +19,7 @@ const Hero = () => {
                   Transform Your Documents into Interactive Conversations
                 </h1>
                 <p className="mx-auto mb-9 max-w-[600px] text-base font-medium text-white sm:text-lg sm:leading-[1.44]">
-                  Queriuz is an AI-powered platform that lets you upload PDFs, train the AI, and enable your users to have natural conversations with your documents. Make your content more accessible and engaging.
+                  Qurieus is an AI-powered platform that lets you upload PDFs, train the AI, and enable your users to have natural conversations with your documents. Make your content more accessible and engaging.
                 </p>
                 <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
                   <Link

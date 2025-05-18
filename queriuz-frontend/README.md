@@ -1,6 +1,6 @@
-# Queriuz Frontend
+# Qurieus Frontend
 
-This is the frontend application for Queriuz, built with Next.js and Tailwind CSS. It provides a modern, responsive interface for document management and AI-powered chat functionality.
+This is the frontend application for Qurieus, built with Next.js and Tailwind CSS. It provides a modern, responsive interface for document management and AI-powered chat functionality.
 
 ## Prerequisites
 
@@ -81,7 +81,7 @@ yarn start
 ## Project Structure
 
 ```
-queriuz-frontend/
+qurieus-frontend/
 ├── public/              # Static files
 │   ├── chat.js         # Embedded chat widget
 │   └── embed.js        # Chat widget loader
@@ -100,7 +100,7 @@ To add the chat widget to any webpage:
 
 1. Add the container div:
 ```html
-<div id="queriuz-chat-container"></div>
+<div id="qurieus-chat-container"></div>
 ```
 
 2. Include the embed script:
@@ -110,7 +110,7 @@ To add the chat widget to any webpage:
 
 3. Initialize the chat:
 ```javascript
-QueriuzChat.init({
+QurieusChat.init({
   apiUrl: 'https://your-api-url/api/v1/chat/query',
   documentOwnerId: 'your-document-owner-id',
   theme: 'light', // or 'dark'
@@ -178,8 +178,8 @@ export const Component: FC<Props> = ({ prop1, prop2 }) => {
 
 This project is proprietary and confidential. All rights reserved.
 
-Copyright (c) 2024 Queriuz
+Copyright (c) 2024 Qurieus
 
-This software and its documentation are proprietary and confidential. No part of this software, including but not limited to the source code, documentation, and design, may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of Queriuz.
+This software and its documentation are proprietary and confidential. No part of this software, including but not limited to the source code, documentation, and design, may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of Qurieus.
 
 Unauthorized copying, distribution, or use of this software, via any medium, is strictly prohibited. The receipt or possession of the source code and/or related information does not convey or imply any right to use, reproduce, disclose or distribute its contents, or to manufacture, use, or sell anything that it may describe.

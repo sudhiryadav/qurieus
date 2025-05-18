@@ -16,7 +16,7 @@ export default function EmbedCode() {
     if (session?.user?.id) {
       const frontendUrl = window.location.origin;
       const code = `<script>
-  window.QueriuzChatConfig = {
+  window.QurieusChatConfig = {
     documentOwnerId: '${session.user.id}',
     theme: 'light',
     position: 'bottom-right'
@@ -41,13 +41,13 @@ export default function EmbedCode() {
   const handleApplyEmbedCode = () => {
     try {
       // Remove any existing chat container
-      const existingContainer = document.getElementById('queriuz-chat-container');
+      const existingContainer = document.getElementById('qurieus-chat-container');
       if (existingContainer) {
         existingContainer.remove();
       }
 
       const configScript = document.createElement('script');
-      configScript.textContent = `window.QueriuzChatConfig = {
+      configScript.textContent = `window.QurieusChatConfig = {
         documentOwnerId: '${session?.user?.id}',
         theme: 'light',
         position: 'bottom-right'

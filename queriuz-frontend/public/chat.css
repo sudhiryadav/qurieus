@@ -1,13 +1,13 @@
-#queriuz-chat-container {
+#qurieus-chat-container {
   position: fixed;
   z-index: 1000;
 }
 
-.queriuz-chat-wrapper {
+.qurieus-chat-wrapper {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-.queriuz-chat-button {
+.qurieus-chat-button {
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -25,18 +25,18 @@
   transition: all 0.2s ease;
 }
 
-.queriuz-chat-button:hover {
+.qurieus-chat-button:hover {
   background-color: #1d4ed8;
   transform: scale(1.05);
 }
 
-.queriuz-chat-icon {
+.qurieus-chat-icon {
   width: 24px;
   height: 24px;
   fill: currentColor;
 }
 
-.queriuz-chat-window {
+.qurieus-chat-window {
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -50,7 +50,7 @@
   overflow: hidden;
 }
 
-.queriuz-chat-header {
+.qurieus-chat-header {
   padding: 16px;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
@@ -58,14 +58,14 @@
   align-items: center;
 }
 
-.queriuz-chat-header h3 {
+.qurieus-chat-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
 }
 
-.queriuz-chat-close {
+.qurieus-chat-close {
   background: none;
   border: none;
   font-size: 24px;
@@ -75,7 +75,7 @@
   line-height: 1;
 }
 
-.queriuz-chat-messages {
+.qurieus-chat-messages {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
@@ -84,7 +84,7 @@
   gap: 16px;
 }
 
-.queriuz-chat-message {
+.qurieus-chat-message {
   max-width: 80%;
   padding: 12px 16px;
   border-radius: 12px;
@@ -92,37 +92,37 @@
   line-height: 1.5;
 }
 
-.queriuz-chat-message-user {
+.qurieus-chat-message-user {
   align-self: flex-end;
   background-color: #2563eb;
   color: white;
 }
 
-.queriuz-chat-message-assistant {
+.qurieus-chat-message-assistant {
   align-self: flex-start;
   background-color: #f3f4f6;
   color: #1f2937;
 }
 
-.queriuz-chat-message-sources {
+.qurieus-chat-message-sources {
   margin-top: 8px;
   font-size: 12px;
   color: #6b7280;
 }
 
-.queriuz-chat-message-sources ul {
+.qurieus-chat-message-sources ul {
   margin: 4px 0 0;
   padding-left: 20px;
 }
 
-.queriuz-chat-form {
+.qurieus-chat-form {
   padding: 16px;
   border-top: 1px solid #e5e7eb;
   display: flex;
   gap: 8px;
 }
 
-.queriuz-chat-form input {
+.qurieus-chat-form input {
   flex: 1;
   padding: 8px 12px;
   border: 1px solid #e5e7eb;
@@ -131,12 +131,12 @@
   outline: none;
 }
 
-.queriuz-chat-form input:focus {
+.qurieus-chat-form input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
-.queriuz-chat-form button {
+.qurieus-chat-form button {
   padding: 8px 16px;
   background-color: #2563eb;
   color: white;
@@ -148,62 +148,62 @@
   transition: background-color 0.2s ease;
 }
 
-.queriuz-chat-form button:hover {
+.qurieus-chat-form button:hover {
   background-color: #1d4ed8;
 }
 
 /* Dark theme */
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-window {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-window {
   background-color: #1f2937;
 }
 
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-header {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-header {
   border-bottom-color: #374151;
 }
 
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-header h3 {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-header h3 {
   color: #f9fafb;
 }
 
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-close {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-close {
   color: #9ca3af;
 }
 
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-message-assistant {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-message-assistant {
   background-color: #374151;
   color: #f9fafb;
 }
 
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-form {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-form {
   border-top-color: #374151;
 }
 
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-form input {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-form input {
   background-color: #374151;
   border-color: #4b5563;
   color: #f9fafb;
 }
 
-.queriuz-chat-wrapper[data-theme="dark"] .queriuz-chat-form input:focus {
+.qurieus-chat-wrapper[data-theme="dark"] .qurieus-chat-form input:focus {
   border-color: #60a5fa;
   box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
 }
 
 /* Position variants */
-.queriuz-chat-wrapper[data-position="bottom-left"] .queriuz-chat-button,
-.queriuz-chat-wrapper[data-position="bottom-left"] .queriuz-chat-window {
+.qurieus-chat-wrapper[data-position="bottom-left"] .qurieus-chat-button,
+.qurieus-chat-wrapper[data-position="bottom-left"] .qurieus-chat-window {
   right: auto;
   left: 20px;
 }
 
-.queriuz-chat-wrapper[data-position="top-right"] .queriuz-chat-button,
-.queriuz-chat-wrapper[data-position="top-right"] .queriuz-chat-window {
+.qurieus-chat-wrapper[data-position="top-right"] .qurieus-chat-button,
+.qurieus-chat-wrapper[data-position="top-right"] .qurieus-chat-window {
   bottom: auto;
   top: 20px;
 }
 
-.queriuz-chat-wrapper[data-position="top-left"] .queriuz-chat-button,
-.queriuz-chat-wrapper[data-position="top-left"] .queriuz-chat-window {
+.qurieus-chat-wrapper[data-position="top-left"] .qurieus-chat-button,
+.qurieus-chat-wrapper[data-position="top-left"] .qurieus-chat-window {
   bottom: auto;
   right: auto;
   top: 20px;

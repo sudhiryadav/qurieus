@@ -2,8 +2,8 @@ import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Queriuz - AI-Powered Document Conversations",
-  description: "Learn about how Queriuz protects your privacy and handles your data.",
+  title: "Privacy Policy | Qurieus - AI-Powered Document Conversations",
+  description: "Learn about how Qurieus protects your privacy and handles your data.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -21,7 +21,7 @@ export default function PrivacyPolicyPage() {
 
             <h3>1. Introduction</h3>
             <p>
-              At Queriuz, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
+              At Qurieus, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
             </p>
 
             <h3>2. Information We Collect</h3>
@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
             <p>
               If you have any questions about this Privacy Policy, please contact us at:
               <br />
-              Email: privacy@queriuz.com
+              Email: privacy@qurieus.com
             </p>
           </div>
         </div>

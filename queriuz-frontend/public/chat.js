@@ -1,12 +1,12 @@
-window.QueriuzChat = {
+window.QurieusChat = {
   init: function(config) {
     // Create a container for the chat
-    const container = document.getElementById('queriuz-chat-container');
+    const container = document.getElementById('qurieus-chat-container');
     if (!container) return;
 
     // Create the chat component
     const chat = document.createElement('div');
-    chat.id = 'queriuz-chat';
+    chat.id = 'qurieus-chat';
     container.appendChild(chat);
 
     // Initialize the chat with the provided configuration
@@ -17,19 +17,19 @@ window.QueriuzChat = {
   renderChat: function(container, config) {
     // Create the chat UI
     const chatUI = `
-      <div class="queriuz-chat-wrapper" data-theme="${config.theme}" data-position="${config.position}">
-        <button class="queriuz-chat-button">
-          <svg viewBox="0 0 24 24" class="queriuz-chat-icon">
+      <div class="qurieus-chat-wrapper" data-theme="${config.theme}" data-position="${config.position}">
+        <button class="qurieus-chat-button">
+          <svg viewBox="0 0 24 24" class="qurieus-chat-icon">
             <path d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
           </svg>
         </button>
-        <div class="queriuz-chat-window" style="display: none;">
-          <div class="queriuz-chat-header">
+        <div class="qurieus-chat-window" style="display: none;">
+          <div class="qurieus-chat-header">
             <h3>Chat with us</h3>
-            <button class="queriuz-chat-close">×</button>
+            <button class="qurieus-chat-close">×</button>
           </div>
-          <div class="queriuz-chat-messages"></div>
-          <form class="queriuz-chat-form">
+          <div class="qurieus-chat-messages"></div>
+          <form class="qurieus-chat-form">
             <input type="text" placeholder="Ask a question..." />
             <button type="submit">Send</button>
           </form>
@@ -40,12 +40,12 @@ window.QueriuzChat = {
     container.innerHTML = chatUI;
 
     // Add event listeners
-    const button = container.querySelector('.queriuz-chat-button');
-    const closeButton = container.querySelector('.queriuz-chat-close');
-    const chatWindow = container.querySelector('.queriuz-chat-window');
-    const form = container.querySelector('.queriuz-chat-form');
+    const button = container.querySelector('.qurieus-chat-button');
+    const closeButton = container.querySelector('.qurieus-chat-close');
+    const chatWindow = container.querySelector('.qurieus-chat-window');
+    const form = container.querySelector('.qurieus-chat-form');
     const input = form.querySelector('input');
-    const messagesContainer = container.querySelector('.queriuz-chat-messages');
+    const messagesContainer = container.querySelector('.qurieus-chat-messages');
 
     // Add welcome message when chat is opened
     button.addEventListener('click', () => {
@@ -108,7 +108,7 @@ window.QueriuzChat = {
         this.addMessage(messagesContainer, data.answer, 'assistant', data.sources);
 
         // Add follow-up suggestion if this is the first response
-        if (messagesContainer.querySelectorAll('.queriuz-chat-message-assistant').length === 2) {
+        if (messagesContainer.querySelectorAll('.qurieus-chat-message-assistant').length === 2) {
           setTimeout(() => {
             this.addMessage(messagesContainer, 
               "Is there anything specific about this you'd like me to explain further?", 
@@ -130,19 +130,19 @@ window.QueriuzChat = {
 
   addMessage: function(container, content, role, sources = null, id = null) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `queriuz-chat-message queriuz-chat-message-${role}`;
+    messageDiv.className = `qurieus-chat-message qurieus-chat-message-${role}`;
     if (id) {
       messageDiv.id = id;
     }
     
     const contentDiv = document.createElement('div');
-    contentDiv.className = 'queriuz-chat-message-content';
+    contentDiv.className = 'qurieus-chat-message-content';
     contentDiv.textContent = content;
     messageDiv.appendChild(contentDiv);
 
     if (sources && sources.length > 0) {
       const sourcesDiv = document.createElement('div');
-      sourcesDiv.className = 'queriuz-chat-message-sources';
+      sourcesDiv.className = 'qurieus-chat-message-sources';
       sourcesDiv.innerHTML = `
         <p>Sources:</p>
         <ul>

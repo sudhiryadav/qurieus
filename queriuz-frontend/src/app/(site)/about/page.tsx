@@ -4,8 +4,8 @@ import Team from "@/components/Team";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About Us | Queriuz - AI-Powered Document Conversations",
-  description: "Learn about Queriuz's mission to make document knowledge accessible through AI-powered conversations.",
+  title: "About Us | Qurieus - AI-Powered Document Conversations",
+  description: "Learn about Qurieus's mission to make document knowledge accessible through AI-powered conversations.",
 };
 
 const AboutPage = () => {
