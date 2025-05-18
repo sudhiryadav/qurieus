@@ -1,0 +1,87 @@
+# Python Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.env
+*.log
+.coverage
+htmlcov/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+alembic/versions/*
+!alembic/versions/.gitkeep
+uploaded_docs/
+*.postman_collection.json
+
+# Node.js Frontend
+node_modules/
+.pnp/
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.next/
+out/
+build/
+dist/
+coverage/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+uploads/
+package-lock.json
+*.png
+play-nextjs.png
+nextjs-play.png
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build outputs
+*.tsbuildinfo
+next-env.d.ts
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts 
