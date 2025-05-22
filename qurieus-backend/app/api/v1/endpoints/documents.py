@@ -197,23 +197,6 @@ async def upload_files(
             detail=f"Upload processing error: {str(e)}"
         )
 
-@router.get("/documents")
-async def list_documents(
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """List all documents for the current user."""
-    try:
-        documents = db.query(DBDocument).filter(DBDocument.userId == current_user["sub"]).all()
-        return documents
-    except Exception as e:
-        print(f"Error listing documents: {str(e)}")
-        print(traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error retrieving documents: {str(e)}"
-        )
-
 @router.post("/query")
 async def query_documents(
     request: QueryRequest,
@@ -289,19 +272,59 @@ async def query_documents(
         # Query Ollama
         try:
             print("Querying Ollama...")
+            # Available Ollama models:
+            # - mixtral: Best choice for document Q&A - 8x7B MoE model with superior understanding and accuracy
+            # - mistral: Good balance of performance and resource usage (7B parameters)
+            # - neural-chat: Budget-friendly option, optimized for chat
+            # - llama2: Meta's 7B parameter model, good for general purpose tasks
+            # - codellama: Specialized for code generation and understanding
+            # - starling-lm: Good for creative writing and storytelling
+            # - gemma: Google's lightweight 2B/7B models, good for resource-constrained environments
+            # - phi: Microsoft's small but efficient model, good for quick responses
+            # - orca-mini: Lightweight model good for basic tasks
+            # - dolphin-phi: Enhanced version of phi with better instruction following
             ollama_response = requests.post(
                 f"{settings.OLLAMA_API_URL}/api/generate",
                 json={
-                    "model": "mistral",
-                    "prompt": f"""Based on the following context, answer the question. 
-                    If the answer cannot be found in the context, say so.
+                    "model": "neural-chat",
+                    "prompt": f"""You are a friendly and helpful AI assistant. Your primary role is to help users find information from their documents, but you can also engage in general conversation.
+
+If the user asks a general question or greeting (like 'hi', 'hello', 'how are you', etc.), respond naturally and warmly. If they ask about the documents, use the context below to provide accurate information.
                     
-                    Context:
+Context from documents:
                     {context}
                     
-                    Question: {request.query}
+User's question: {request.query}
                     
-                    Answer:""",
+Guidelines:
+1. Be friendly and conversational
+2. If it's a general question, respond naturally without forcing document context
+3. If it's about the documents, use the context to provide accurate information
+4. If you can't find the answer in the context, say so politely
+5. Keep responses concise but helpful
+
+Formatting Guidelines:
+1. When listing items, use proper markdown formatting:
+   - For numbered lists, start each line with a number and period (e.g., "1. First item")
+   - For bullet points, start each line with a dash (e.g., "- First item")
+   - Use double asterisks for bold text (e.g., "**important point**")
+   - Use single asterisks for italic text (e.g., "*emphasis*")
+   - Use backticks for code or technical terms (e.g., "`code`")
+2. Always start numbered lists with "1." and increment properly
+3. Use line breaks between different sections
+4. If presenting steps or procedures, use numbered lists
+5. If listing features or options, use bullet points
+6. Ensure proper spacing:
+   - Add a blank line before and after lists
+   - Remove extra spaces at the start of lines
+   - Use consistent indentation
+7. For numbered lists:
+   - Each item should start with a number and period
+   - Items should be properly aligned
+   - Use proper line breaks between items
+   - Do not use ranges (like "6-14") in numbered lists
+
+Your response:""",
                     "stream": False
                 }
             )

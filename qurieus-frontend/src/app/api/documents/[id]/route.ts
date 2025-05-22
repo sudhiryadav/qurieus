@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest) {
+  // Extract the id param from the URL
+  const id = req.nextUrl.pathname.split("/").pop();
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,7 +16,7 @@ export async function DELETE(
     // Delete the document only if it belongs to the user
     const document = await prisma.document.deleteMany({
       where: {
-        id: params.id,
+        id,
         userId: session.user.id,
       },
     });

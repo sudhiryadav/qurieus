@@ -9,7 +9,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "tunnel": "ngrok http 3000"
+    "tunnel": "ngrok http 3000",
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.5.0",

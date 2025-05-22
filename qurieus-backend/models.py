@@ -31,6 +31,8 @@ class Users(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Profile fields
     company = Column(String, nullable=False)
+    jobTitle = Column(String)
+    bio = Column(String)
     plan = Column(Enum(PlanType), nullable=False)
     subscription_type = Column(Enum(SubscriptionType), nullable=False)
     subscription_start_date = Column(DateTime, nullable=False, default=datetime.utcnow)

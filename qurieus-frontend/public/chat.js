@@ -137,11 +137,14 @@ window.QurieusChat = {
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'qurieus-chat-message-content';
-    contentDiv.textContent = content;
+    
+    // Convert markdown to HTML
+    contentDiv.innerHTML = this.markdownToHtml(content);
     messageDiv.appendChild(contentDiv);
 
     if (sources && sources.length > 0) {
       const sourcesDiv = document.createElement('div');
+      sourcesDiv.style.display = 'none';
       sourcesDiv.className = 'qurieus-chat-message-sources';
       sourcesDiv.innerHTML = `
         <p>Sources:</p>
@@ -156,5 +159,53 @@ window.QurieusChat = {
 
     container.appendChild(messageDiv);
     container.scrollTop = container.scrollHeight;
+  },
+
+  markdownToHtml: function(markdown) {
+    // Normalize line endings and remove leading spaces
+    let html = markdown
+      .replace(/\r\n/g, '\n')
+      .replace(/^\s+/gm, '')
+      .replace(/\n{3,}/g, '\n\n');
+
+    // Convert markdown to HTML
+    html = html
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Code
+      .replace(/`(.*?)`/g, '<code>$1</code>');
+
+    // Numbered lists: treat each line starting with number. as a new item, even with blank lines
+    html = html.replace(/(?:^|\n)(\d+\.\s+[^\n]+)(?=\n|$)/g, function(match, item) {
+      return `<li>${item.replace(/^\d+\.\s+/, '')}</li>`;
+    });
+    // Wrap consecutive <li> in <ol>
+    html = html.replace(/(<li>.*?<\/li>)+/gs, function(match) {
+      return `<ol>${match}</ol>`;
+    });
+
+    // Bullet points
+    html = html.replace(/(?:^|\n)([-*]\s+[^\n]+)(?=\n|$)/g, function(match, item) {
+      return `<li>${item.replace(/^[-*]\s+/, '')}</li>`;
+    });
+    html = html.replace(/(<li>.*?<\/li>)+/gs, function(match) {
+      // If not already wrapped in <ol>, wrap in <ul>
+      if (!/^<ol>/.test(match)) return `<ul>${match}</ul>`;
+      return match;
+    });
+
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+
+    // Remove <br> right after <ol> or <ul> and before </ol> or </ul>
+    html = html
+      .replace(/<ol><br>/g, '<ol>')
+      .replace(/<ul><br>/g, '<ul>')
+      .replace(/<br><\/ol>/g, '</ol>')
+      .replace(/<br><\/ul>/g, '</ul>');
+
+    return html;
   }
 }; 

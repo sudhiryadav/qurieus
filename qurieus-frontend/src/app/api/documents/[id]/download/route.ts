@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest) {
+  // Extract the id param from the URL
+  const id = req.nextUrl.pathname.split("/").pop();
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,7 +14,7 @@ export async function GET(
 
   const document = await prisma.document.findUnique({
     where: {
-      id: params.id,
+      id,
       userId: session.user.id, // Ensure user owns the document
     },
   });
@@ -29,7 +29,7 @@ export async function GET(
   headers.set('Content-Disposition', `attachment; filename="${document.fileName}"`);
 
   // Return the file data
-  return new NextResponse(document.fileData, {
+  return new NextResponse(document.content, {
     headers,
   });
 } 

@@ -163,7 +163,8 @@ exports.Prisma.UsersScalarFieldEnum = {
   created_at: 'created_at',
   updated_at: 'updated_at',
   jobTitle: 'jobTitle',
-  bio: 'bio'
+  bio: 'bio',
+  phone: 'phone'
 };
 
 exports.Prisma.VerificationTokenScalarFieldEnum = {

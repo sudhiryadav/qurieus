@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Common/Logo";
+import Image from "next/image";
 
 const Footer = () => {
   return (
@@ -255,11 +256,11 @@ const Footer = () => {
 
       <div>
         <span className="absolute left-0 top-0 z-[-1] aspect-[95/82] w-full max-w-[570px]">
-          <img src="/images/footer/shape-1.svg" alt="shape" style={{ width: '100%', height: 'auto' }} />
+          <Image src="/images/footer/shape-1.svg" alt="shape" width={500} height={100} style={{ width: '100%', height: 'auto' }} />
         </span>
 
         <span className="absolute bottom-0 right-0 z-[-1] aspect-[31/22] w-full max-w-[372px]">
-          <img src="/images/footer/shape-3.svg" alt="shape" style={{ width: '100%', height: 'auto' }} />
+          <Image src="/images/footer/shape-3.svg" alt="shape" width={500} height={100} style={{ width: '100%', height: 'auto' }} />
         </span>
 
         <span className="absolute right-0 top-0 z-[-1]">

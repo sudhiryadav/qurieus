@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from "next/headers";
 import { UAParser } from "ua-parser-js";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/utils/auth";
 import { prisma } from '@/utils/prismaDB';
 import { PrismaClient, Prisma } from "@prisma/client";
 import { ReadonlyHeaders } from "next/dist/server/web/spec-extension/adapters/headers";

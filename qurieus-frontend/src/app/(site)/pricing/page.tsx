@@ -4,7 +4,7 @@ import Pricing from "@/components/Pricing";
 import { Metadata } from "next";
 import { prisma } from "@/utils/prismaDB";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/utils/auth";
 import { createSubscription, createCustomer } from "@/utils/razorpay";
 
 export const metadata: Metadata = {

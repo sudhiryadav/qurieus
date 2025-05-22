@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     // Create or get customer in Razorpay
     const customer = await createCustomer({
       name: user.name || "",
-      email: user.email,
+      email: user.email || "",
       contact: user.phone || "",
     });
 
@@ -45,8 +45,8 @@ export async function POST(request: Request) {
         razorpayCustomerId: customer.id,
         planId,
         status: subscription.status,
-        currentPeriodStart: new Date(subscription.current_start),
-        currentPeriodEnd: new Date(subscription.current_end),
+        currentPeriodStart: new Date(subscription.current_start || new Date()),
+        currentPeriodEnd: new Date(subscription.current_end || new Date()),
       },
     });
 

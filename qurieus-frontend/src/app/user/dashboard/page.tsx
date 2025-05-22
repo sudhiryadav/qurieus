@@ -63,8 +63,8 @@ export default function Dashboard() {
       foreColor: "#64748b",
     },
     stroke: {
-      curve: "smooth",
-      width: 3,
+      curve: "smooth" as const,
+      width: 2,
     },
     xaxis: {
       categories: ["Week 1", "Week 2", "Week 3", "Week 4"],

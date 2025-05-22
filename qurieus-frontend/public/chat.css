@@ -209,3 +209,42 @@
   top: 20px;
   left: 20px;
 } 
+
+.qurieus-chat-message-content {
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.qurieus-chat-message-content strong {
+  font-weight: 600;
+}
+
+.qurieus-chat-message-content em {
+  font-style: italic;
+}
+
+.qurieus-chat-message-content code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.qurieus-chat-message-content ul,
+.qurieus-chat-message-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.qurieus-chat-message-content li {
+  margin: 4px 0;
+}
+
+.qurieus-chat-message-content br {
+  margin: 8px 0;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .qurieus-chat-message-content code {
+  background-color: rgba(255, 255, 255, 0.1);
+} 

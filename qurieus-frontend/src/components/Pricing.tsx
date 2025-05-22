@@ -15,9 +15,9 @@ type SubscriptionPlan = {
 };
 
 type PricingProps = {
-  plans: SubscriptionPlan[];
-  handleSubscription: (planId: string) => Promise<{ success: boolean; subscription?: any; error?: string }>;
-  isAuthenticated: boolean;
+  plans?: SubscriptionPlan[];
+  handleSubscription?: (planId: string) => Promise<{ success: boolean; subscription?: any; error?: string }>;
+  isAuthenticated?: boolean;
 };
 
 export default function Pricing({ plans, handleSubscription, isAuthenticated }: PricingProps) {
@@ -35,12 +35,12 @@ export default function Pricing({ plans, handleSubscription, isAuthenticated }: 
         return;
       }
 
-      const result = await handleSubscription(planId);
+      const result = await handleSubscription?.(planId);
       
-      if (result.success && result.subscription) {
+      if (result?.success && result?.subscription) {
         window.location.href = result.subscription.short_url;
       } else {
-        setError(result.error || "Failed to create subscription");
+        setError(result?.error || "Failed to create subscription");
       }
     } catch (error) {
       setError("An error occurred while processing your request");

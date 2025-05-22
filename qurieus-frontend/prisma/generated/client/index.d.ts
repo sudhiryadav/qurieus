@@ -4430,6 +4430,7 @@ export namespace Prisma {
     updated_at: Date | null
     jobTitle: string | null
     bio: string | null
+    phone: string | null
   }
 
   export type UsersMaxAggregateOutputType = {
@@ -4454,6 +4455,7 @@ export namespace Prisma {
     updated_at: Date | null
     jobTitle: string | null
     bio: string | null
+    phone: string | null
   }
 
   export type UsersCountAggregateOutputType = {
@@ -4478,6 +4480,7 @@ export namespace Prisma {
     updated_at: number
     jobTitle: number
     bio: number
+    phone: number
     _all: number
   }
 
@@ -4512,6 +4515,7 @@ export namespace Prisma {
     updated_at?: true
     jobTitle?: true
     bio?: true
+    phone?: true
   }
 
   export type UsersMaxAggregateInputType = {
@@ -4536,6 +4540,7 @@ export namespace Prisma {
     updated_at?: true
     jobTitle?: true
     bio?: true
+    phone?: true
   }
 
   export type UsersCountAggregateInputType = {
@@ -4560,6 +4565,7 @@ export namespace Prisma {
     updated_at?: true
     jobTitle?: true
     bio?: true
+    phone?: true
     _all?: true
   }
 
@@ -4671,6 +4677,7 @@ export namespace Prisma {
     updated_at: Date
     jobTitle: string | null
     bio: string | null
+    phone: string | null
     _count: UsersCountAggregateOutputType | null
     _avg: UsersAvgAggregateOutputType | null
     _sum: UsersSumAggregateOutputType | null
@@ -4714,6 +4721,7 @@ export namespace Prisma {
     updated_at?: boolean
     jobTitle?: boolean
     bio?: boolean
+    phone?: boolean
     accounts?: boolean | Users$accountsArgs<ExtArgs>
     sessions?: boolean | Users$sessionsArgs<ExtArgs>
     subscription?: boolean | Users$subscriptionArgs<ExtArgs>
@@ -4746,6 +4754,7 @@ export namespace Prisma {
     updated_at?: boolean
     jobTitle?: boolean
     bio?: boolean
+    phone?: boolean
   }, ExtArgs["result"]["users"]>
 
   export type UsersSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -4770,6 +4779,7 @@ export namespace Prisma {
     updated_at?: boolean
     jobTitle?: boolean
     bio?: boolean
+    phone?: boolean
   }, ExtArgs["result"]["users"]>
 
   export type UsersSelectScalar = {
@@ -4794,9 +4804,10 @@ export namespace Prisma {
     updated_at?: boolean
     jobTitle?: boolean
     bio?: boolean
+    phone?: boolean
   }
 
-  export type UsersOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "password" | "passwordResetToken" | "passwordResetTokenExp" | "company" | "plan" | "subscription_type" | "subscription_start_date" | "subscription_end_date" | "is_active" | "is_verified" | "login_attempts" | "locked_until" | "created_at" | "updated_at" | "jobTitle" | "bio", ExtArgs["result"]["users"]>
+  export type UsersOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "password" | "passwordResetToken" | "passwordResetTokenExp" | "company" | "plan" | "subscription_type" | "subscription_start_date" | "subscription_end_date" | "is_active" | "is_verified" | "login_attempts" | "locked_until" | "created_at" | "updated_at" | "jobTitle" | "bio" | "phone", ExtArgs["result"]["users"]>
   export type UsersInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     accounts?: boolean | Users$accountsArgs<ExtArgs>
     sessions?: boolean | Users$sessionsArgs<ExtArgs>
@@ -4843,6 +4854,7 @@ export namespace Prisma {
       updated_at: Date
       jobTitle: string | null
       bio: string | null
+      phone: string | null
     }, ExtArgs["result"]["users"]>
     composites: {}
   }
@@ -5294,6 +5306,7 @@ export namespace Prisma {
     readonly updated_at: FieldRef<"Users", 'DateTime'>
     readonly jobTitle: FieldRef<"Users", 'String'>
     readonly bio: FieldRef<"Users", 'String'>
+    readonly phone: FieldRef<"Users", 'String'>
   }
     
 
@@ -17029,7 +17042,8 @@ export namespace Prisma {
     created_at: 'created_at',
     updated_at: 'updated_at',
     jobTitle: 'jobTitle',
-    bio: 'bio'
+    bio: 'bio',
+    phone: 'phone'
   };
 
   export type UsersScalarFieldEnum = (typeof UsersScalarFieldEnum)[keyof typeof UsersScalarFieldEnum]
@@ -17462,6 +17476,7 @@ export namespace Prisma {
     updated_at?: DateTimeFilter<"Users"> | Date | string
     jobTitle?: StringNullableFilter<"Users"> | string | null
     bio?: StringNullableFilter<"Users"> | string | null
+    phone?: StringNullableFilter<"Users"> | string | null
     accounts?: AccountListRelationFilter
     sessions?: SessionListRelationFilter
     subscription?: XOR<SubscriptionNullableScalarRelationFilter, SubscriptionWhereInput> | null
@@ -17493,6 +17508,7 @@ export namespace Prisma {
     updated_at?: SortOrder
     jobTitle?: SortOrderInput | SortOrder
     bio?: SortOrderInput | SortOrder
+    phone?: SortOrderInput | SortOrder
     accounts?: AccountOrderByRelationAggregateInput
     sessions?: SessionOrderByRelationAggregateInput
     subscription?: SubscriptionOrderByWithRelationInput
@@ -17527,6 +17543,7 @@ export namespace Prisma {
     updated_at?: DateTimeFilter<"Users"> | Date | string
     jobTitle?: StringNullableFilter<"Users"> | string | null
     bio?: StringNullableFilter<"Users"> | string | null
+    phone?: StringNullableFilter<"Users"> | string | null
     accounts?: AccountListRelationFilter
     sessions?: SessionListRelationFilter
     subscription?: XOR<SubscriptionNullableScalarRelationFilter, SubscriptionWhereInput> | null
@@ -17558,6 +17575,7 @@ export namespace Prisma {
     updated_at?: SortOrder
     jobTitle?: SortOrderInput | SortOrder
     bio?: SortOrderInput | SortOrder
+    phone?: SortOrderInput | SortOrder
     _count?: UsersCountOrderByAggregateInput
     _avg?: UsersAvgOrderByAggregateInput
     _max?: UsersMaxOrderByAggregateInput
@@ -17590,6 +17608,7 @@ export namespace Prisma {
     updated_at?: DateTimeWithAggregatesFilter<"Users"> | Date | string
     jobTitle?: StringNullableWithAggregatesFilter<"Users"> | string | null
     bio?: StringNullableWithAggregatesFilter<"Users"> | string | null
+    phone?: StringNullableWithAggregatesFilter<"Users"> | string | null
   }
 
   export type VerificationTokenWhereInput = {
@@ -18469,6 +18488,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
@@ -18500,6 +18520,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
@@ -18531,6 +18552,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
@@ -18562,6 +18584,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
@@ -18593,6 +18616,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
   }
 
   export type UsersUpdateManyMutationInput = {
@@ -18617,6 +18641,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type UsersUncheckedUpdateManyInput = {
@@ -18641,6 +18666,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type VerificationTokenCreateInput = {
@@ -19727,6 +19753,7 @@ export namespace Prisma {
     updated_at?: SortOrder
     jobTitle?: SortOrder
     bio?: SortOrder
+    phone?: SortOrder
   }
 
   export type UsersAvgOrderByAggregateInput = {
@@ -19755,6 +19782,7 @@ export namespace Prisma {
     updated_at?: SortOrder
     jobTitle?: SortOrder
     bio?: SortOrder
+    phone?: SortOrder
   }
 
   export type UsersMinOrderByAggregateInput = {
@@ -19779,6 +19807,7 @@ export namespace Prisma {
     updated_at?: SortOrder
     jobTitle?: SortOrder
     bio?: SortOrder
+    phone?: SortOrder
   }
 
   export type UsersSumOrderByAggregateInput = {
@@ -21305,6 +21334,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     sessions?: SessionCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
     messages?: MessageCreateNestedManyWithoutUserInput
@@ -21335,6 +21365,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
     messages?: MessageUncheckedCreateNestedManyWithoutUserInput
@@ -21381,6 +21412,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     sessions?: SessionUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
     messages?: MessageUpdateManyWithoutUserNestedInput
@@ -21411,6 +21443,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
     messages?: MessageUncheckedUpdateManyWithoutUserNestedInput
@@ -21441,6 +21474,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
     messages?: MessageCreateNestedManyWithoutUserInput
@@ -21471,6 +21505,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
     messages?: MessageUncheckedCreateNestedManyWithoutUserInput
@@ -21517,6 +21552,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
     messages?: MessageUpdateManyWithoutUserNestedInput
@@ -21547,6 +21583,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
     messages?: MessageUncheckedUpdateManyWithoutUserNestedInput
@@ -22112,6 +22149,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     messages?: MessageCreateNestedManyWithoutUserInput
@@ -22142,6 +22180,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     messages?: MessageUncheckedCreateNestedManyWithoutUserInput
@@ -22217,6 +22256,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     messages?: MessageUpdateManyWithoutUserNestedInput
@@ -22247,6 +22287,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     messages?: MessageUncheckedUpdateManyWithoutUserNestedInput
@@ -22312,6 +22353,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
@@ -22342,6 +22384,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
@@ -22388,6 +22431,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
@@ -22418,6 +22462,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
@@ -22448,6 +22493,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
@@ -22478,6 +22524,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
@@ -22548,6 +22595,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
@@ -22578,6 +22626,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
@@ -22715,6 +22764,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
@@ -22745,6 +22795,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
@@ -22815,6 +22866,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
@@ -22845,6 +22897,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput
@@ -23017,6 +23070,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     subscription?: SubscriptionCreateNestedOneWithoutUserInput
@@ -23047,6 +23101,7 @@ export namespace Prisma {
     updated_at?: Date | string
     jobTitle?: string | null
     bio?: string | null
+    phone?: string | null
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     subscription?: SubscriptionUncheckedCreateNestedOneWithoutUserInput
@@ -23112,6 +23167,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUpdateOneWithoutUserNestedInput
@@ -23142,6 +23198,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     jobTitle?: NullableStringFieldUpdateOperationsInput | string | null
     bio?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     subscription?: SubscriptionUncheckedUpdateOneWithoutUserNestedInput

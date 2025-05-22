@@ -1,17 +1,11 @@
 "use client";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Icons } from "@/components/icons";
-import MagicLink from "../MagicLink";
 import Loader from "@/components/Common/Loader";
 import Logo from "@/components/Common/Logo";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import MagicLink from "../MagicLink";
 import SwitchOption from "../SwitchOption";
 
 const isBusinessEmail = (email: string) => {

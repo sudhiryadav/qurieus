@@ -1,24 +1,19 @@
 "use client";
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Icons } from "@/components/icons";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import toast from "react-hot-toast";
-import SwitchOption from "../SwitchOption";
-import MagicLink from "../MagicLink";
 import Loader from "@/components/Common/Loader";
 import Logo from "@/components/Common/Logo";
+import { signIn, useSession } from "next-auth/react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import MagicLink from "../MagicLink";
+import SwitchOption from "../SwitchOption";
 
 const Signin = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const { status } = useSession();
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -34,7 +29,7 @@ const Signin = () => {
     if (status === "authenticated") {
       router.push(callbackUrl);
     }
-  }, [status, router, callbackUrl]);
+  }, [router, callbackUrl, status]);
 
   const loginUser = async (e: React.FormEvent) => {
     e.preventDefault();

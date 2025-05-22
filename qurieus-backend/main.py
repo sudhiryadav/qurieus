@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 # Now we can import using absolute paths
 from app.core.config import settings
 from app.api.v1.endpoints import documents
 from generate_postman import generate_postman_collection
 from contextlib import asynccontextmanager
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,6 +40,11 @@ app.add_middleware(
 # app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 
+# Serve static frontend (Next.js export) at root
+frontend_path = os.path.join(os.path.dirname(__file__), 'frontend')
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
@@ -45,4 +52,9 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(
+        "main:app",
+        host=settings.API_HOST,
+        port=settings.API_PORT,
+        reload=True
+    )

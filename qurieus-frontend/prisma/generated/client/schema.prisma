@@ -76,6 +76,7 @@ model Users {
   updated_at              DateTime         @updatedAt
   jobTitle                String?
   bio                     String?
+  phone                   String?
 
   accounts          Account[]
   sessions          Session[]

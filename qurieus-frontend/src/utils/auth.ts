@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
     newUser: "/signup",
     verifyRequest: "/verify-request",
   },
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: PrismaAdapter(prisma as any) as Adapter,
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",

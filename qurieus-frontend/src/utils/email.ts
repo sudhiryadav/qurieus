@@ -54,3 +54,20 @@ export async function sendContactEmail(data: {
     return false;
   }
 }
+
+export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  const mailOptions = {
+    from: process.env.SMTP_USERNAME,
+    to,
+    subject,
+    html,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return false;
+  }
+}

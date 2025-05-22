@@ -1,5 +1,6 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "How It Works | Qurieus - AI-Powered Document Conversations",
@@ -21,7 +22,7 @@ export default function HowItWorksPage() {
                 How Qurieus Works
               </h2>
               <p className="mb-8 text-base !leading-relaxed text-body-color md:text-lg">
-                Qurieus uses advanced AI technology to transform your documents into interactive conversations. Here's how it works:
+                Qurieus uses advanced AI technology to transform your documents into interactive conversations. Here&apos;s how it works:
               </p>
               <div className="space-y-4">
                 <div className="flex items-start">
@@ -67,9 +68,11 @@ export default function HowItWorksPage() {
             </div>
             <div className="w-full px-4 lg:w-1/2">
               <div className="relative mx-auto aspect-[25/24] max-w-[500px] lg:mr-0">
-                <img
+                <Image
                   src="/images/how-it-works.svg"
                   alt="How Qurieus Works"
+                  width={500}
+                  height={480}
                   className="w-full"
                 />
               </div>

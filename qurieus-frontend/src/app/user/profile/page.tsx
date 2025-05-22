@@ -16,17 +16,31 @@ export default function Profile() {
     bio: "",
   });
 
-  // Load user data when session is available
+  // Load user data from API when session is available
   useEffect(() => {
+    const fetchUserProfile = async () => {
     if (session?.user) {
+        try {
+          const response = await fetch("/api/user/profile");
+          if (!response.ok) {
+            throw new Error("Failed to fetch profile");
+          }
+          const data = await response.json();
       setFormData({
-        name: session.user.name || "",
-        email: session.user.email || "",
-        company: session.user.company || "",
-        jobTitle: session.user.jobTitle || "",
-        bio: session.user.bio || "",
+            name: data.user.name || "",
+            email: data.user.email || "",
+            company: data.user.company || "",
+            jobTitle: data.user.jobTitle || "",
+            bio: data.user.bio || "",
       });
-    }
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+          toast.error("Failed to load profile data");
+        }
+      }
+    };
+
+    fetchUserProfile();
   }, [session]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
