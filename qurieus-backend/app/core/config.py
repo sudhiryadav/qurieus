@@ -54,7 +54,8 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = "noreply@qurieus.com"
     
     # File upload settings
-    MAX_FILE_SIZE: int = 20 * 1024 * 1024  # 20MB in bytes
+    MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE", "10"))  # Default 10MB
+    MAX_FILE_SIZE_BYTES: int = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
     
     # Ollama settings
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")

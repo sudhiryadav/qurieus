@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
+import { X, FileText } from "lucide-react";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -19,24 +20,96 @@ const CATEGORY_OPTIONS = [
   "Other",
 ];
 
+const MAX_FILES_PER_UPLOAD = 5;
+const MAX_FILE_SIZE_BYTES = (Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE) || 10) * 1024 * 1024; // Default 10MB
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "text/csv",
+  "text/markdown"
+];
+const ALLOWED_EXTENSIONS_DISPLAY = "PDF, DOC, DOCX, TXT, CSV, MD";
+
+interface SelectedFile {
+  file: File;
+  error?: string;
+  id: string;
+}
+
 export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: UploadDialogProps) {
   const { data: session } = useSession();
-  const [files, setFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const validateAndSetFiles = (files: FileList | File[]) => {
+    const newFilesArray = Array.from(files);
+    let currentValidationErrors: string[] = [];
+
+    if (selectedFiles.length + newFilesArray.length > MAX_FILES_PER_UPLOAD) {
+      toast.error(`Cannot add more files. Maximum ${MAX_FILES_PER_UPLOAD} files allowed.`);
+      return;
+    }
+    
+    const filesToAdd: SelectedFile[] = [];
+
+    newFilesArray.forEach((file) => {
+      let errorMsg: string | undefined = undefined;
+      
+      // Check for duplicates
+      if (selectedFiles.some(sf => sf.file.name === file.name) || 
+          filesToAdd.some(nf => nf.file.name === file.name)) {
+        errorMsg = `File "${file.name}" is already selected.`;
+      }
+      // Check file size
+      else if (file.size > MAX_FILE_SIZE_BYTES) {
+        errorMsg = `File "${file.name}" (${formatFileSize(file.size)}) exceeds the ${formatFileSize(MAX_FILE_SIZE_BYTES)} size limit.`;
+      }
+      // Check file type
+      else if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        errorMsg = `File "${file.name}" has an invalid type. Allowed types: ${ALLOWED_EXTENSIONS_DISPLAY}.`;
+      }
+      
+      if(errorMsg) {
+        currentValidationErrors.push(errorMsg);
+        filesToAdd.push({ file, error: errorMsg, id: file.name + Date.now() });
+      } else {
+        filesToAdd.push({ file, id: file.name + Date.now() });
+      }
+    });
+
+    setSelectedFiles(prev => [...prev, ...filesToAdd]);
+
+    if (currentValidationErrors.length > 0) {
+      const firstError = currentValidationErrors[0];
+      toast.error(firstError);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      validateAndSetFiles(e.target.files);
+      // Reset input to allow selecting the same file again if removed
+      if(fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files) {
-      setFiles(Array.from(e.dataTransfer.files));
+      validateAndSetFiles(e.dataTransfer.files);
     }
   };
 
@@ -44,8 +117,12 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     e.preventDefault();
   };
 
+  const removeFile = (fileId: string) => {
+    setSelectedFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
   const handleReset = () => {
-    setFiles([]);
+    setSelectedFiles([]);
     setDescription("");
     setCategory("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -53,31 +130,71 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length === 0) {
-      toast.error("Please select at least one file to upload");
+    
+    const validFiles = selectedFiles.filter(f => !f.error);
+    if (validFiles.length === 0) {
+      toast.error("Please select at least one valid file to upload");
       return;
     }
+
+    // Don't proceed if there are any files with errors
+    if (selectedFiles.some(f => f.error)) {
+      toast.error("Please remove or fix files with errors before uploading");
+      return;
+    }
+
+    if (!category) {
+      toast.error("Please select a category");
+      return;
+    }
+
+    if (!description.trim()) {
+      toast.error("Please provide a description");
+      return;
+    }
+
     setLoading(true);
     try {
       const formData = new FormData();
-      files.forEach(file => {
-        formData.append("files", file);
+      validFiles.forEach(sf => {
+        formData.append("files", sf.file);
       });
       formData.append("description", description);
       formData.append("category", category);
       formData.append("userId", session?.user?.id || "");
-      const response = await fetch("/api/upload", {
+
+      const response = await fetch("/api/documents/upload", {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to upload files");
+
+      const data = await response.json();
+
+      if (!response.ok && response.status !== 207) {
+        throw new Error(data.error || "Failed to upload files");
       }
-      toast.success("Files uploaded successfully");
-      onUploadSuccess();
-      onClose();
-      handleReset();
+
+      if (data.results) {
+        const allSucceeded = data.results.every((r: any) => r.success);
+        if (allSucceeded) {
+          toast.success("All files uploaded successfully");
+          onUploadSuccess();
+          onClose();
+          handleReset();
+        } else {
+          toast.error("Some files failed to upload. Check the list below.");
+          // Update errors for failed files
+          setSelectedFiles(prev => prev.map(sf => {
+            const result = data.results.find((r: any) => r.fileName === sf.file.name);
+            if (result && !result.success) {
+              return { ...sf, error: result.error || "Upload failed" };
+            }
+            return sf;
+          }));
+        }
+      } else {
+        throw new Error(data.error || "Upload completed with unclear results");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to upload files");
       console.error("Upload error:", error);
@@ -95,8 +212,9 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         <div className="mb-6 rounded-lg bg-[#2d3543] p-5 text-white">
           <h3 className="mb-2 text-lg font-semibold">Guidelines</h3>
           <ul className="list-disc pl-5 text-sm space-y-1">
-            <li>Supported formats: PDF, DOCX, TXT, CSV, MD</li>
-            <li>Maximum file size: {process.env.NEXT_PUBLIC_MAX_FILE_SIZE}MB per file</li>
+            <li>Supported formats: {ALLOWED_EXTENSIONS_DISPLAY}</li>
+            <li>Maximum {MAX_FILES_PER_UPLOAD} files per upload</li>
+            <li>Maximum file size: {formatFileSize(MAX_FILE_SIZE_BYTES)} per file</li>
             <li>Files will be processed and made available for searching</li>
             <li>Provide clear descriptions to improve searchability</li>
           </ul>
@@ -106,32 +224,90 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
           <div>
             <label className="mb-2 block text-base font-semibold text-white">Upload Files</label>
             <div
-              className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-500 bg-[#2d3543] py-8 cursor-pointer transition hover:border-primary"
-              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-500 bg-[#2d3543] py-8 transition hover:border-primary ${
+                selectedFiles.length >= MAX_FILES_PER_UPLOAD ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+              }`}
+              onDrop={selectedFiles.length < MAX_FILES_PER_UPLOAD ? handleDrop : undefined}
               onDragOver={handleDragOver}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => selectedFiles.length < MAX_FILES_PER_UPLOAD && fileInputRef.current?.click()}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-8m0 0l-4 4m4-4l4 4m-8 4h8" />
               </svg>
               <span className="text-blue-400 font-medium underline">Upload files</span> or drag and drop
-              <div className="text-xs text-gray-400 mt-1">PDF, DOCX, TXT, CSV, MD up to 10MB each</div>
+              <div className="text-xs text-gray-400 mt-1">
+                {ALLOWED_EXTENSIONS_DISPLAY} up to {formatFileSize(MAX_FILE_SIZE_BYTES)} each
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
                 onChange={handleFileChange}
                 className="hidden"
+                accept=".pdf,.doc,.docx,.txt,.csv,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,text/markdown"
+                disabled={selectedFiles.length >= MAX_FILES_PER_UPLOAD}
               />
-              {files.length > 0 && (
-                <div className="mt-3 text-xs text-gray-200">
-                  {files.map(file => (
-                    <div key={file.name}>{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</div>
-                  ))}
+
+              {/* Show valid files in the drag-drop area */}
+              {selectedFiles.filter(f => !f.error).length > 0 && (
+                <div className="mt-4 w-full px-4">
+                  <div className="rounded-md bg-[#232a36] p-2">
+                    {selectedFiles.filter(f => !f.error).map((sf) => (
+                      <div key={sf.id} className="flex items-center justify-between py-1">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-white truncate" title={sf.file.name}>
+                            {sf.file.name} ({formatFileSize(sf.file.size)})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(sf.id)}
+                          className="text-gray-400 hover:text-red-400 disabled:opacity-50"
+                          title="Remove file"
+                          disabled={loading}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
+
+            {/* Show only rejected files */}
+            {selectedFiles.filter(f => f.error).length > 0 && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-medium text-red-400">Rejected Files:</h4>
+                <ul className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-red-500/50 bg-[#2d3543] p-2">
+                  {selectedFiles.filter(f => f.error).map((sf) => (
+                    <li key={sf.id} className="flex items-center justify-between rounded-md p-2 even:bg-[#232a36]">
+                      <div className="flex items-center space-x-2 overflow-hidden">
+                        <FileText className="h-5 w-5 flex-shrink-0 text-red-400" />
+                        <span className="truncate text-sm text-white" title={sf.file.name}>
+                          {sf.file.name} ({formatFileSize(sf.file.size)})
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-red-400 truncate" title={sf.error}>{sf.error}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(sf.id)}
+                          className="text-gray-400 hover:text-red-400 disabled:opacity-50"
+                          title="Remove file"
+                          disabled={loading}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
+
           {/* Category Dropdown */}
           <div>
             <label className="mb-2 block text-base font-semibold text-white">Category</label>
@@ -147,6 +323,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
               ))}
             </select>
           </div>
+
           {/* Description */}
           <div>
             <label className="mb-2 block text-base font-semibold text-white">Description</label>
@@ -159,6 +336,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
               required
             />
           </div>
+
           {/* Buttons */}
           <div className="flex justify-end space-x-3 pt-2">
             <button
@@ -171,7 +349,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || selectedFiles.length === 0 || selectedFiles.some(f => f.error)}
               className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
             >
               {loading ? (
@@ -180,7 +358,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
                   Uploading...
                 </>
               ) : (
-                "Upload Files"
+                `Upload ${selectedFiles.filter(f => !f.error).length} File${selectedFiles.filter(f => !f.error).length !== 1 ? 's' : ''}`
               )}
             </button>
           </div>

@@ -149,6 +149,17 @@ async def upload_files(
         userId = current_user.get("id")
         print(f"Processing upload for user: {userId}")
         
+        # Validate file sizes
+        for file in files:
+            content = await file.read()
+            if len(content) > settings.MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {file.filename} exceeds the maximum size limit of {settings.MAX_FILE_SIZE_MB}MB"
+                )
+            # Reset file pointer for later reading
+            await file.seek(0)
+        
         total_chunks = 0
         for file in files:
             print(f"Processing file: {file.filename}")
