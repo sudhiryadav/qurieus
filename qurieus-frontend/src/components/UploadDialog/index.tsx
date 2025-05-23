@@ -143,16 +143,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       return;
     }
 
-    if (!category) {
-      toast.error("Please select a category");
-      return;
-    }
-
-    if (!description.trim()) {
-      toast.error("Please provide a description");
-      return;
-    }
-
     setLoading(true);
     try {
       const formData = new FormData();
@@ -163,35 +153,23 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       formData.append("category", category);
       formData.append("userId", session?.user?.id || "");
 
-      const response = await fetch("/api/documents/upload", {
+      const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
 
       const data = await response.json();
 
-      if (!response.ok && response.status !== 207) {
+      if (!response.ok) {
         throw new Error(data.error || "Failed to upload files");
       }
 
-      if (data.results) {
-        const allSucceeded = data.results.every((r: any) => r.success);
-        if (allSucceeded) {
-          toast.success("All files uploaded successfully");
-          onUploadSuccess();
-          onClose();
-          handleReset();
-        } else {
-          toast.error("Some files failed to upload. Check the list below.");
-          // Update errors for failed files
-          setSelectedFiles(prev => prev.map(sf => {
-            const result = data.results.find((r: any) => r.fileName === sf.file.name);
-            if (result && !result.success) {
-              return { ...sf, error: result.error || "Upload failed" };
-            }
-            return sf;
-          }));
-        }
+      // Check if we have a successful response
+      if (data.message === "Files uploaded successfully" && data.files) {
+        toast.success("All files uploaded successfully");
+        onUploadSuccess();
+        onClose();
+        handleReset();
       } else {
         throw new Error(data.error || "Upload completed with unclear results");
       }
@@ -315,9 +293,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
               value={category}
               onChange={e => setCategory(e.target.value)}
               className="w-full rounded-md border border-gray-600 bg-[#232a36] p-2 text-white focus:border-primary focus:outline-none"
-              required
             >
-              <option value="" disabled>Select a category</option>
+              <option value="">Select a category</option>
               {CATEGORY_OPTIONS.map(opt => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}
@@ -333,7 +310,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
               className="w-full rounded-md border border-gray-600 bg-[#393f4a] p-2 text-white placeholder-gray-400 focus:border-primary focus:outline-none"
               rows={3}
               placeholder="Provide a brief description of the uploaded files"
-              required
             />
           </div>
 
