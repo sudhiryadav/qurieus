@@ -88,3 +88,5 @@ next-env.d.ts
 .env
 
 qurieus-frontend/prisma/generated/
+qurieus-backend/.env
+qurieus-frontend/.env

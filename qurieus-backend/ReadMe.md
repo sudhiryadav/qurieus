@@ -92,12 +92,12 @@ This is the backend service for Qurieus, a document querying and chat applicatio
 ## API Documentation
 
 Once the server is running, you can access:
-- API documentation: http://localhost:8000/docs
-- Alternative documentation: http://localhost:8000/redoc
+- API documentation: http://localhost:8001/docs
+- Alternative documentation: http://localhost:8001/redoc
 
 ## Development
 
-- The server runs on http://localhost:8000 by default
+- The server runs on http://localhost:8001 by default
 - API endpoints are prefixed with `/api/v1`
 - Debug mode is enabled by default in development
 
@@ -168,7 +168,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
         - **Crucially for `.env` on EC2:**
             - `DATABASE_URL` must point to your production database.
             - `API_HOST` should be set to `"0.0.0.0"` to allow Uvicorn to be accessed by Nginx.
-            - `API_PORT` should be set (e.g., `"8000"`). This is the internal port Nginx will proxy to.
+            - `API_PORT` should be set (e.g., `"8001"`). This is the internal port Nginx will proxy to.
             - `SECRET_KEY` must be a strong, unique secret.
             - Configure `OLLAMA_API_URL`, `FRONTEND_URL` and any other production-specific settings.
     - Running database migrations (`alembic upgrade head`) against your production database.
@@ -178,7 +178,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
     ```bash
     uvicorn main:app --host $(grep API_HOST .env | cut -d '=' -f2) --port $(grep API_PORT .env | cut -d '=' -f2)
     ```
-    Or explicitly: `uvicorn main:app --host 0.0.0.0 --port 8000` (if API_PORT=8000).
+    Or explicitly: `uvicorn main:app --host 0.0.0.0 --port 8001` (if API_PORT=8001).
     Access `http://your-ec2-ip:<API_PORT>/docs` in your browser. Press `Ctrl+C` to stop.
 
 5.  **Start the application with PM2:**
@@ -195,7 +195,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
     ```
     Then start with PM2 (replace with your actual API_PORT and Python path):
     ```bash
-    pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name "qurieus-backend" --interpreter /home/ubuntu/qurieus-backend/.venv/bin/python
+    pm2 start "uvicorn main:app --host 0.0.0.0 --port 8001" --name "qurieus-backend" --interpreter /home/ubuntu/qurieus-backend/.venv/bin/python
     ```
     - Check status: `pm2 list`
     - View logs: `pm2 logs qurieus-backend`
@@ -218,7 +218,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
         server_name api.your_domain.com; # Or your EC2 IP if not using a domain
 
         location / {
-            proxy_pass http://127.0.0.1:8000; # Must match API_PORT from .env
+            proxy_pass http://127.0.0.1:8001; # Must match API_PORT from .env
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -277,4 +277,4 @@ Your Qurieus FastAPI backend should now be accessible, proxied by Nginx.
     -   Verify `proxy_pass` in Nginx config matches Uvicorn's host and port.
 -   **Application errors:** Check PM2 logs for Python tracebacks.
 -   **Database connection issues:** Ensure `DATABASE_URL` is correct and the database is accessible from the EC2 instance.
--   **Firewall:** Confirm the EC2 instance's security group and any local firewall (like UFW) allow traffic on port 80/443 (for Nginx) and the Uvicorn port (e.g., 8000) if testing directly.
+-   **Firewall:** Confirm the EC2 instance's security group and any local firewall (like UFW) allow traffic on port 80/443 (for Nginx) and the Uvicorn port (e.g., 8001) if testing directly.
