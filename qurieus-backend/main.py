@@ -23,7 +23,11 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Document AI Chatbot API with multi-tenant support",
     version=settings.VERSION,
-    lifespan=lifespan
+    lifespan=lifespan,
+    # Enable OpenAPI documentation
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
 )
 
 # CORS middleware with proper settings for handling credentials
