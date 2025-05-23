@@ -5,7 +5,7 @@ import { getToken } from 'next-auth/jwt';
 
 // Maximum file size (10MB)
 // Convert MB to bytes (1MB = 1024 * 1024 bytes)
-const MAX_FILE_SIZE_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE) || 20;
+const MAX_FILE_SIZE_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB) || 20;
 const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       // Check file size
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
-          { error: `File ${file.name} exceeds the ${process.env.NEXT_PUBLIC_MAX_FILE_SIZE}MB size limit` },
+          { error: `File ${file.name} exceeds the ${process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB}MB size limit` },
           { status: 400 }
         );
       }

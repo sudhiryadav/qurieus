@@ -28,11 +28,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     
     # CORS settings
-    CORS_ORIGINS: List[str] = [
-        os.getenv("FRONTEND_URL", "http://localhost:3000"),
-        "http://localhost:3000",
-        "https://localhost:3000",
-    ]
+    CORS_ORIGINS: List[str] = [os.getenv("FRONTEND_URL")]
     
     # NextAuth Secret for token verification
     # IMPORTANT: This must match the NEXTAUTH_SECRET in the Next.js frontend
@@ -54,8 +50,11 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = "noreply@qurieus.com"
     
     # File upload settings
-    MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE", "10"))  # Default 10MB
-    MAX_FILE_SIZE_BYTES: int = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+    MAX_FILE_SIZE_MB: int = 10  # default is 10MB
+
+    @property
+    def MAX_FILE_SIZE_BYTES(self) -> int:
+        return self.MAX_FILE_SIZE_MB * 1024 * 1024
     
     # Ollama settings
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")

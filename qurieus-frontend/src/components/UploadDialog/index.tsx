@@ -21,7 +21,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 const MAX_FILES_PER_UPLOAD = 5;
-const MAX_FILE_SIZE_BYTES = (Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE) || 10) * 1024 * 1024; // Default 10MB
+const MAX_FILE_SIZE_BYTES = (Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB) || 10) * 1024 * 1024; // Default 10MB
 const ALLOWED_MIME_TYPES = [
   "application/pdf",
   "application/msword",

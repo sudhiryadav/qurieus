@@ -6,7 +6,7 @@ import { prisma } from "@/utils/prismaDB";
 // Get max files from env or default to 5
 const MAX_FILES_PER_UPLOAD = Number(process.env.NEXT_PUBLIC_MAX_FILES) || 5;
 // Convert MB to bytes (1 MB = 1024 * 1024 bytes)
-const MAX_FILE_SIZE_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE) || 10; // Default 10MB
+const MAX_FILE_SIZE_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB) || 10; // Default 10MB
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export async function POST(request: Request) {
