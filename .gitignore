@@ -85,5 +85,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts 
 .env.prod
+.env
 
 qurieus-frontend/prisma/generated/
