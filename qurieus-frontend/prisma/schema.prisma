@@ -222,3 +222,12 @@ model Embedding {
   @@index([userId])
   @@index([chunkId])
 }
+
+model Log {
+  id        String   @id @default(uuid())
+  userId    String?
+  level     String
+  message   String
+  meta      Json?
+  createdAt DateTime @default(now())
+}

@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 from sentence_transformers import SentenceTransformer
+from app.utils.logger import log_to_frontend
 
 # Add the root directory to Python path
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -147,7 +148,7 @@ async def upload_files(
     try:
         # Use the authenticated user id from token
         userId = current_user.get("id")
-        print(f"Processing upload for user: {userId}")
+        log_to_frontend("info", f"Processing upload for user: {userId}", user=current_user)
         
         # Validate file sizes
         for file in files:
@@ -162,7 +163,7 @@ async def upload_files(
         
         total_chunks = 0
         for file in files:
-            print(f"Processing file: {file.filename}")
+            log_to_frontend("info", f"Processing file: {file.filename}")
             
             # Read file content
             content = await file.read()
@@ -180,10 +181,10 @@ async def upload_files(
                     db=db
                 )
                 total_chunks += chunks.get("chunks")
-                print(f"Processed {chunks.get('chunks')} chunks from {file.filename}")
+                log_to_frontend("info", f"Processed {chunks.get('chunks')} chunks from {file.filename}")
             except Exception as e:
-                print(f"Error processing file {file.filename}: {str(e)}")
-                print(traceback.format_exc())
+                log_to_frontend("error", f"Error processing file {file.filename}: {str(e)}")
+                log_to_frontend("error", traceback.format_exc())
                 raise HTTPException(
                     status_code=500, 
                     detail=f"Error processing file {file.filename}: {str(e)}"
@@ -201,8 +202,8 @@ async def upload_files(
     except HTTPException:
         raise  # Re-raise HTTP exceptions as they are already formatted
     except Exception as e:
-        print(f"Unexpected error in upload_files: {str(e)}")
-        print(traceback.format_exc())
+        log_to_frontend("error", f"Unexpected error in upload_files: {str(e)}")
+        log_to_frontend("error", traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=f"Upload processing error: {str(e)}"
@@ -221,16 +222,16 @@ async def query_documents(
                 detail="Search service is currently unavailable. Please try again later."
             )
 
-        print(f"Processing query for user: {request.document_owner_id}")
-        print(f"Query: {request.query}")
+        log_to_frontend("info", f"Processing query for user: {request.document_owner_id}")
+        log_to_frontend("info", f"Query: {request.query}")
 
         # Generate embedding for the query
         query_embedding = embedding_model.encode(request.query)
-        print(f"Generated embedding of length: {len(query_embedding)}")
+        log_to_frontend("info", f"Generated embedding of length: {len(query_embedding)}")
 
         # Find similar chunks using cosine similarity
         try:
-            print("Executing SQL query for similar chunks...")
+            log_to_frontend("info", "Executing SQL query for similar chunks...")
             # Convert embedding to a string of values
             embedding_values = ','.join(map(str, query_embedding.tolist()))
             
@@ -258,18 +259,18 @@ async def query_documents(
                     "userId": request.document_owner_id
                 }
             ).fetchall()
-            print(f"Found {len(similar_chunks)} similar chunks")
+            log_to_frontend("info", f"Found {len(similar_chunks)} similar chunks")
         except Exception as sql_error:
-            print(f"SQL Error: {str(sql_error)}")
-            print(f"SQL Error type: {type(sql_error)}")
-            print(f"SQL Error details: {traceback.format_exc()}")
+            log_to_frontend("error", f"SQL Error: {str(sql_error)}")
+            log_to_frontend("error", f"SQL Error type: {type(sql_error)}")
+            log_to_frontend("error", traceback.format_exc())
             raise HTTPException(
                 status_code=500,
                 detail=f"Error executing similarity search: {str(sql_error)}"
             )
 
         if not similar_chunks:
-            print("No similar chunks found")
+            log_to_frontend("info", "No similar chunks found")
             return {
                 "answer": "No relevant documents found.",
                 "sources": []
@@ -278,11 +279,11 @@ async def query_documents(
         # Prepare context from similar chunks
         context = "\n".join([chunk[0] for chunk in similar_chunks])
         sources = [{"document": chunk[2], "similarity": chunk[3]} for chunk in similar_chunks]
-        print(f"Prepared context with {len(sources)} sources")
+        log_to_frontend("info", f"Prepared context with {len(sources)} sources")
 
         # Query Ollama
         try:
-            print("Querying Ollama...")
+            log_to_frontend("info", "Querying Ollama...")
             # Available Ollama models:
             # - mixtral: Best choice for document Q&A - 8x7B MoE model with superior understanding and accuracy
             # - mistral: Good balance of performance and resource usage (7B parameters)
@@ -341,18 +342,18 @@ Your response:""",
             )
 
             if not ollama_response.ok:
-                print(f"Ollama error: {ollama_response.status_code} - {ollama_response.text}")
+                log_to_frontend("error", f"Ollama error: {ollama_response.status_code} - {ollama_response.text}")
                 raise HTTPException(
                     status_code=500,
                     detail="Failed to get response from Ollama"
                 )
 
             response_data = ollama_response.json()
-            print("Successfully got response from Ollama")
+            log_to_frontend("info", "Successfully got response from Ollama")
             
         except Exception as ollama_error:
-            print(f"Ollama Error: {str(ollama_error)}")
-            print(f"Ollama Error details: {traceback.format_exc()}")
+            log_to_frontend("error", f"Ollama Error: {str(ollama_error)}")
+            log_to_frontend("error", traceback.format_exc())
             raise HTTPException(
                 status_code=500,
                 detail=f"Error querying Ollama: {str(ollama_error)}"
@@ -364,9 +365,9 @@ Your response:""",
         }
 
     except Exception as e:
-        print(f"Error in query_documents: {str(e)}")
-        print(f"Error type: {type(e)}")
-        print(f"Error details: {traceback.format_exc()}")
+        log_to_frontend("error", f"Error in query_documents: {str(e)}")
+        log_to_frontend("error", f"Error type: {type(e)}")
+        log_to_frontend("error", traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=f"Error processing query: {str(e)}"

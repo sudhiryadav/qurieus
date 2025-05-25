@@ -273,9 +273,23 @@ exports.Prisma.EmbeddingScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.LogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  level: 'level',
+  message: 'message',
+  meta: 'meta',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -286,6 +300,12 @@ exports.Prisma.QueryMode = {
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 exports.PlanType = exports.$Enums.PlanType = {
   basic: 'basic',
@@ -312,7 +332,8 @@ exports.Prisma.ModelName = {
   ChatMessage: 'ChatMessage',
   Document: 'Document',
   DocumentChunk: 'DocumentChunk',
-  Embedding: 'Embedding'
+  Embedding: 'Embedding',
+  Log: 'Log'
 };
 
 /**
