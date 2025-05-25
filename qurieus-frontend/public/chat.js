@@ -107,48 +107,69 @@ window.QurieusChat = {
           loadingMessage.remove();
         }
 
-        // For debugging, let's first try to get the raw response
-        const rawResponse = await response.text();
-        console.log('Raw response:', rawResponse);
-
         // Create a new message container for the response
         const messageId = 'message-' + Date.now();
         this.addMessage(messagesContainer, '', 'assistant', null, messageId);
         const messageElement = document.getElementById(messageId);
         const contentElement = messageElement.querySelector('.qurieus-chat-message-content');
 
-        // Parse the response
-        const lines = rawResponse.split('\n').filter(Boolean);
+        // Initialize variables for response handling
         let fullResponse = '';
         let sources = null;
 
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
-            console.log('Parsed data:', data);
-            if (data.chunk) {
-              fullResponse += data.chunk;
-              contentElement.innerHTML = this.markdownToHtml(fullResponse);
-              messageElement.scrollIntoView({ behavior: 'smooth' });
-            } else if (data.final) {
-              sources = data.sources;
-              // Add sources to the message
-              const sourcesDiv = document.createElement('div');
-              sourcesDiv.className = 'qurieus-chat-message-sources';
-              sourcesDiv.innerHTML = `
-                <p>Sources:</p>
-                <ul>
-                  ${sources.map(source => `
-                    <li>${source.document} (Similarity: ${(source.similarity * 100).toFixed(1)}%)</li>
-                  `).join('')}
-                </ul>
-              `;
-              sourcesDiv.style.display = 'none';
-              messageElement.appendChild(sourcesDiv);
+        // Get the response as a stream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            // Decode the chunk and add it to our buffer
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete lines from the buffer
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+
+              try {
+                const data = JSON.parse(line);
+                console.log('Parsed data:', data);
+                if (data.chunk) {
+                  fullResponse += data.chunk;
+                  contentElement.innerHTML = this.markdownToHtml(fullResponse);
+                  messageElement.scrollIntoView({ behavior: 'smooth' });
+                } else if (data.final) {
+                  sources = data.sources;
+                  // Add sources to the message
+                  const sourcesDiv = document.createElement('div');
+                  sourcesDiv.className = 'qurieus-chat-message-sources';
+                  sourcesDiv.innerHTML = `
+                    <p>Sources:</p>
+                    <ul>
+                      ${sources.map(source => `
+                        <li>${source.document} (Similarity: ${(source.similarity * 100).toFixed(1)}%)</li>
+                      `).join('')}
+                    </ul>
+                  `;
+                  sourcesDiv.style.display = 'none';
+                  messageElement.appendChild(sourcesDiv);
+                }
+              } catch (e) {
+                console.error('Error parsing line:', e, 'Raw line:', line);
+              }
             }
-          } catch (e) {
-            console.error('Error parsing line:', e, 'Raw line:', line);
           }
+        } catch (error) {
+          console.error('Error reading stream:', error);
+          throw error;
+        } finally {
+          reader.releaseLock();
         }
 
         // Add follow-up suggestion if this is the first response

@@ -107,63 +107,8 @@ export async function POST(request: Request) {
 
     console.log('FastAPI response received, setting up stream...');
 
-    // Create a TransformStream to handle the streaming response
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-    let answer = '';
-    let sources: any[] = [];
-
-    const stream = new TransformStream({
-      async transform(chunk, controller) {
-        console.log('Received chunk from FastAPI');
-        const text = decoder.decode(chunk);
-        const lines = text.split('\n').filter(Boolean);
-
-        for (const line of lines) {
-          try {
-            console.log('Processing chunk data:', { type: line.includes('{') ? 'chunk' : 'final', length: line.length });
-            const data = JSON.parse(line);
-            if (data.chunk) {
-              answer += data.chunk;
-              controller.enqueue(encoder.encode(JSON.stringify({ chunk: data.chunk }) + '\n'));
-            } else if (data.final) {
-              sources = data.sources;
-              controller.enqueue(encoder.encode(JSON.stringify({ final: true, sources }) + '\n'));
-            }
-          } catch (e) {
-            console.error('Error parsing chunk:', e, 'Raw line:', line);
-          }
-        }
-      },
-      async flush(controller) {
-        console.log('Stream complete, recording response in database');
-        // Record assistant response after stream is complete
-        const assistantMessage = await (prisma as any).chatMessage.create({
-          data: {
-            conversationId: conversation.id,
-            content: answer,
-            role: "assistant",
-          },
-        });
-
-        // Calculate and update average response time
-        const responseTime = assistantMessage.createdAt.getTime() - userMessage.createdAt.getTime();
-        await (prisma as any).chatConversation.update({
-          where: { id: conversation.id },
-          data: {
-            avgResponseTime: responseTime,
-          },
-        });
-      }
-    });
-
-    console.log('Piping FastAPI response to transform stream...');
-    // Pipe the FastAPI response through our transform stream
-    fastApiResponse.body?.pipeTo(stream.writable);
-
-    console.log('Returning streaming response to client');
-    // Return the streaming response
-    return new Response(stream.readable, {
+    // Forward the streaming response directly
+    return new Response(fastApiResponse.body, {
       headers: {
         'Content-Type': 'application/x-ndjson',
         'Transfer-Encoding': 'chunked',

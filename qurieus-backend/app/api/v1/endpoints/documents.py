@@ -315,9 +315,11 @@ async def query_documents(
                     "model": "llama2",
                     "prompt": f"""You are a friendly and helpful AI assistant. Your primary role is to help users find information from their documents, but you can also engage in general conversation.
 
+IMPORTANT: Start your response directly with the answer.
+
 Conversation so far:
 {history_text}
-User: {request.query}
+{request.query}
 
 Context from documents:
 {context}
@@ -328,30 +330,18 @@ Guidelines:
 3. If it's about the documents, use the context to provide accurate information
 4. If you can't find the answer in the context, say so politely
 5. Keep responses concise but helpful
+6. DO NOT repeat the user's question in your response
+7. Start your response directly with the answer
 
-Formatting Guidelines:
-1. When listing items, use proper markdown formatting:
-   - For numbered lists, start each line with a number and period (e.g., "1. First item")
-   - For bullet points, start each line with a dash (e.g., "- First item")
-   - Use double asterisks for bold text (e.g., "**important point**")
-   - Use single asterisks for italic text (e.g., "*emphasis*")
-   - Use backticks for code or technical terms (e.g., "`code`")
-2. Always start numbered lists with "1." and increment properly
-3. Use line breaks between different sections
-4. If presenting steps or procedures, use numbered lists
-5. If listing features or options, use bullet points
-6. Ensure proper spacing:
-   - Add a blank line before and after lists
-   - Remove extra spaces at the start of lines
-   - Use consistent indentation
-7. For numbered lists:
-   - Each item should start with a number and period
-   - Items should be properly aligned
-   - Use proper line breaks between items
-   - Do not use ranges (like "6-14") in numbered lists
+Formatting:
+- Use markdown for formatting (**, *, `)
+- Use numbered lists for steps
+- Use bullet points for features/options
+- Keep proper spacing between sections
 
 Your response:""",
-                    "stream": True
+                    "stop": ["User:", "Assistant:", "[INST]", "None", "\nUser:", "\nAssistant:"],
+                    "max_tokens": 1000
                 },
                 stream=True
             )
@@ -364,22 +354,13 @@ Your response:""",
                         chunk = json.loads(line)
                         if chunk.get("response"):
                             response_text += chunk["response"]
-                            # Clean up the response by removing User: and Assistant: prefixes
                             cleaned_chunk = chunk["response"]
-                            if cleaned_chunk.startswith("User:"):
-                                continue
-                            if cleaned_chunk.startswith("Assistant:"):
-                                cleaned_chunk = cleaned_chunk.replace("Assistant:", "", 1).strip()
                             if cleaned_chunk:
                                 chunk_json = json.dumps({"chunk": cleaned_chunk}) + "\n"
                                 print(f"Sending chunk: {chunk_json[:100]}...")
                                 yield chunk_json
                 
-                # Clean up the final response
-                if response_text.startswith("User:"):
-                    response_text = response_text.split("Assistant:", 1)[-1].strip()
-                elif response_text.startswith("Assistant:"):
-                    response_text = response_text.replace("Assistant:", "", 1).strip()
+                response_text = response_text.strip()
 
                 final_json = json.dumps({
                     "final": True,
