@@ -80,9 +80,13 @@ window.QurieusChat = {
 
       try {
         const visitorId = getVisitorId();
+        const requestStart = performance.now();
         const history = await fetchChatHistory(visitorId, config.documentOwnerId, 10);
+        const historyEnd = performance.now();
+        console.log(`History fetch took: ${(historyEnd - requestStart).toFixed(2)}ms`);
         
         // Send message to API
+        const apiStart = performance.now();
         const response = await fetch(config.apiUrl, {
           method: 'POST',
           headers: {
@@ -100,6 +104,8 @@ window.QurieusChat = {
         if (!response.ok) {
           throw new Error('Failed to get response');
         }
+        const apiEnd = performance.now();
+        console.log(`API request took: ${(apiEnd - apiStart).toFixed(2)}ms`);
 
         // Remove loading message
         const loadingMessage = document.getElementById(loadingId);
@@ -116,6 +122,8 @@ window.QurieusChat = {
         // Initialize variables for response handling
         let fullResponse = '';
         let sources = null;
+        let firstChunkTime = null;
+        let lastChunkTime = null;
 
         // Get the response as a stream
         const reader = response.body.getReader();
@@ -126,6 +134,12 @@ window.QurieusChat = {
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
+
+            if (firstChunkTime === null) {
+              firstChunkTime = performance.now();
+              console.log(`Time to first chunk: ${(firstChunkTime - apiEnd).toFixed(2)}ms`);
+            }
+            lastChunkTime = performance.now();
 
             // Decode the chunk and add it to our buffer
             buffer += decoder.decode(value, { stream: true });
@@ -165,6 +179,9 @@ window.QurieusChat = {
               }
             }
           }
+          const totalEnd = performance.now();
+          console.log(`Total streaming time: ${(lastChunkTime - firstChunkTime).toFixed(2)}ms`);
+          console.log(`Total request time: ${(totalEnd - requestStart).toFixed(2)}ms`);
         } catch (error) {
           console.error('Error reading stream:', error);
           throw error;

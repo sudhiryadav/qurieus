@@ -9,6 +9,7 @@ import { ReadonlyHeaders } from "next/dist/server/web/spec-extension/adapters/he
 
 export async function POST(request: Request) {
   try {
+    const routeStart = performance.now();
     const session = await getServerSession(authOptions);
     const body = await request.json();
     const { query, documentOwnerId, history } = body;
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
     const userAgent = headersList.get("user-agent") || "unknown";
     const ipAddress = headersList.get("x-forwarded-for") || "unknown";
     const referrer = headersList.get("referer") || "unknown";
+
+    const setupEnd = performance.now();
+    console.log(`Next.js route setup took: ${(setupEnd - routeStart).toFixed(2)}ms`);
 
     // Parse user agent
     const parser = new UAParser(userAgent);
@@ -38,6 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const dbStart = performance.now();
     // Create or update chat conversation
     const conversation = await (prisma as any).chatConversation.upsert({
       where: {
@@ -75,8 +80,11 @@ export async function POST(request: Request) {
         role: "user",
       },
     });
+    const dbEnd = performance.now();
+    console.log(`Next.js DB operations took: ${(dbEnd - dbStart).toFixed(2)}ms`);
 
     // Query the FastAPI backend
+    const fastApiStart = performance.now();
     console.log('Sending request to FastAPI:', {
       url: `${process.env.BACKEND_URL}/api/v1/documents/query`,
       query,
@@ -105,9 +113,15 @@ export async function POST(request: Request) {
       throw new Error(`Failed to get response from FastAPI: ${fastApiResponse.status} ${fastApiResponse.statusText}`);
     }
 
+    const fastApiEnd = performance.now();
+    console.log(`FastAPI request took: ${(fastApiEnd - fastApiStart).toFixed(2)}ms`);
+
     console.log('FastAPI response received, setting up stream...');
 
     // Forward the streaming response directly
+    const routeEnd = performance.now();
+    console.log(`Total Next.js route processing took: ${(routeEnd - routeStart).toFixed(2)}ms`);
+
     return new Response(fastApiResponse.body, {
       headers: {
         'Content-Type': 'application/x-ndjson',

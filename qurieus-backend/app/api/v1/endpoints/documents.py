@@ -225,6 +225,8 @@ async def query_documents(
             "history_length": len(request.history) if request.history else 0
         })
         total_start = time.time()
+        log_to_frontend("info", "Starting query processing...")
+
         if not embedding_model:
             raise HTTPException(
                 status_code=503,
@@ -235,6 +237,7 @@ async def query_documents(
         log_to_frontend("info", f"Query: {request.query}")
 
         # Prepare chat history for prompt
+        history_start = time.time()
         history = request.history or []
         history_text = ""
         for turn in history:
@@ -242,19 +245,24 @@ async def query_documents(
                 history_text += f"User: {turn.get('content')}\n"
             elif turn.get("role") == "assistant":
                 history_text += f"Assistant: {turn.get('content')}\n"
+        history_end = time.time()
+        log_to_frontend("info", f"History preparation took: {history_end-history_start:.2f}s")
 
         embedding_start = time.time()
         # Generate embedding for the query
         query_embedding = embedding_model.encode(request.query)
         embedding_end = time.time()
-        log_to_frontend("info", f"Generated embedding of length: {len(query_embedding)}")
+        log_to_frontend("info", f"Embedding generation took: {embedding_end-embedding_start:.2f}s (length: {len(query_embedding)})")
 
         # Find similar chunks using cosine similarity
         try:
             db_start = time.time()
             log_to_frontend("info", "Executing SQL query for similar chunks...")
             # Convert embedding to a string of values
+            vector_prep_start = time.time()
             embedding_values = ','.join(map(str, query_embedding.tolist()))
+            vector_prep_end = time.time()
+            log_to_frontend("info", f"Vector preparation took: {vector_prep_end-vector_prep_start:.2f}s")
             
             query = text(f"""
                 WITH query_embedding AS (
@@ -274,14 +282,17 @@ async def query_documents(
                 LIMIT 5
             """)
             
+            sql_exec_start = time.time()
             similar_chunks = db.execute(
                 query,
                 {
                     "userId": request.document_owner_id
                 }
             ).fetchall()
+            sql_exec_end = time.time()
             db_end = time.time()
-            log_to_frontend("info", f"Found {len(similar_chunks)} similar chunks")
+            log_to_frontend("info", f"SQL execution took: {sql_exec_end-sql_exec_start:.2f}s")
+            log_to_frontend("info", f"Total DB operation took: {db_end-db_start:.2f}s (found {len(similar_chunks)} chunks)")
         except Exception as sql_error:
             log_to_frontend("error", f"SQL Error: {str(sql_error)}")
             log_to_frontend("error", f"SQL Error type: {type(sql_error)}")
@@ -294,21 +305,24 @@ async def query_documents(
         if not similar_chunks:
             log_to_frontend("info", "No similar chunks found")
             total_end = time.time()
-            log_to_frontend("info", f"TIMING: embedding={embedding_end-embedding_start:.2f}s, db={db_end-embedding_end:.2f}s, ollama=0.00s, total={total_end-total_start:.2f}s")
+            log_to_frontend("info", f"TIMING: history={history_end-history_start:.2f}s, embedding={embedding_end-embedding_start:.2f}s, db={db_end-db_start:.2f}s, total={total_end-total_start:.2f}s")
             return {
                 "answer": "No relevant documents found.",
                 "sources": []
             }
 
         # Prepare context from similar chunks
+        context_prep_start = time.time()
         context = "\n".join([chunk[0] for chunk in similar_chunks])
         sources = [{"document": chunk[2], "similarity": chunk[3]} for chunk in similar_chunks]
-        log_to_frontend("info", f"Prepared context with {len(sources)} sources")
+        context_prep_end = time.time()
+        log_to_frontend("info", f"Context preparation took: {context_prep_end-context_prep_start:.2f}s")
 
         # Query Ollama
         try:
             ollama_start = time.time()
             log_to_frontend("info", "Querying Ollama...")
+            prompt_prep_start = time.time()
             ollama_response = requests.post(
                 f"{settings.OLLAMA_API_URL}/api/generate",
                 json={
@@ -345,12 +359,19 @@ Your response:""",
                 },
                 stream=True
             )
+            prompt_prep_end = time.time()
+            log_to_frontend("info", f"Prompt preparation took: {prompt_prep_end-prompt_prep_start:.2f}s")
 
             async def generate():
                 response_text = ""
+                first_chunk_time = None
+                last_chunk_time = None
                 print("Starting to generate response from Ollama...")
                 for line in ollama_response.iter_lines():
                     if line:
+                        if first_chunk_time is None:
+                            first_chunk_time = time.time()
+                        last_chunk_time = time.time()
                         chunk = json.loads(line)
                         if chunk.get("response"):
                             response_text += chunk["response"]
@@ -361,6 +382,11 @@ Your response:""",
                                 yield chunk_json
                 
                 response_text = response_text.strip()
+                ollama_end = time.time()
+                log_to_frontend("info", f"Ollama streaming took: {ollama_end-ollama_start:.2f}s")
+                if first_chunk_time:
+                    log_to_frontend("info", f"Time to first chunk: {first_chunk_time-ollama_start:.2f}s")
+                    log_to_frontend("info", f"Total streaming time: {last_chunk_time-first_chunk_time:.2f}s")
 
                 final_json = json.dumps({
                     "final": True,
@@ -369,6 +395,9 @@ Your response:""",
                 }) + "\n"
                 print(f"Sending final response: {final_json[:100]}...")
                 yield final_json
+
+                total_end = time.time()
+                log_to_frontend("info", f"TIMING: history={history_end-history_start:.2f}s, embedding={embedding_end-embedding_start:.2f}s, db={db_end-db_start:.2f}s, context={context_prep_end-context_prep_start:.2f}s, prompt={prompt_prep_end-prompt_prep_start:.2f}s, ollama={ollama_end-ollama_start:.2f}s, total={total_end-total_start:.2f}s")
 
             return StreamingResponse(
                 generate(),
