@@ -9,7 +9,7 @@ export default function KnowledgeBase() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="mx-auto">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-dark dark:text-white">Knowledge Base</h1>
         <button

@@ -45,14 +45,14 @@ const Logo = ({
         className="flex items-center"
       >
         <Image
-          src="/images/logo/logo.png"
+          src="/images/logo/logo.svg"
           alt="logo"
           width={width}
           height={height}
           className="hidden dark:block"
         />
         <Image
-          src="/images/logo/logo-white.png"
+          src="/images/logo/logo-white.svg"
           alt="logo"
           width={width}
           height={height}
@@ -67,14 +67,14 @@ const Logo = ({
     ) : (
       <div className="flex items-center">
         <Image
-          src="/images/logo/logo.png"
+          src="/images/logo/logo.svg"
           alt="logo"
           width={width}
           height={height}
           className="hidden dark:block"
         />
         <Image
-          src="/images/logo/logo-white.png"
+          src="/images/logo/logo-white.svg"
           alt="logo"
           width={width}
           height={height}

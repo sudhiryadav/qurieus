@@ -30,7 +30,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen">
       <UserNav />
       <div className="flex-1 lg:ml-64">
-        <div className="container mx-auto px-4 py-8 pt-16">
+        <div className="container mx-auto px-4 py-8 pt-24">
           {children}
         </div>
       </div>

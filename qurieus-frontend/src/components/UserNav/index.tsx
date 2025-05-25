@@ -12,6 +12,7 @@ import {
   Code
 } from "lucide-react";
 import { useState } from "react";
+import Logo from "../Common/Logo";
 
 const UserNav = () => {
   const pathname = usePathname();
@@ -74,8 +75,8 @@ const UserNav = () => {
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-full flex-col">
-          <div className="flex-grow overflow-y-auto py-6">
+        <div className="flex h-full flex-col pt-20">
+          <div className="flex-grow overflow-y-auto py-2">
             <nav className="space-y-1 px-2">
               {navItems.map((item) => (
                 <Link 
