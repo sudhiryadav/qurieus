@@ -80,15 +80,20 @@ window.QurieusChat = {
       this.addMessage(messagesContainer, 'Thinking...', 'assistant', null, loadingId);
 
       try {
+        const visitorId = getVisitorId();
+        const history = await fetchChatHistory(visitorId, config.documentOwnerId, 10);
         // Send message to API
         const response = await fetch(config.apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-visitor-id': visitorId,
           },
           body: JSON.stringify({
             query: message,
-            documentOwnerId: config.documentOwnerId
+            documentOwnerId: config.documentOwnerId,
+            visitorId,
+            history,
           }),
         });
 
@@ -208,4 +213,23 @@ window.QurieusChat = {
 
     return html;
   }
-}; 
+};
+
+function getVisitorId() {
+  let id = localStorage.getItem('qurieus_visitor_id');
+  if (!id) {
+    id = 'v_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('qurieus_visitor_id', id);
+  }
+  return id;
+}
+
+async function fetchChatHistory(visitorId, userId, limit = 10) {
+  try {
+    const res = await fetch(`/api/chat/history?visitorId=${visitorId}&userId=${userId}&limit=${limit}`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+} 

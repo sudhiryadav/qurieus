@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const body = await request.json();
-    const { query, documentOwnerId } = body;
+    const { query, documentOwnerId, history } = body;
 
     // Get headers
     const headersList = await headers();
@@ -84,7 +84,8 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         query,
-        document_owner_id: userId
+        document_owner_id: userId,
+        history,
       }),
     });
 

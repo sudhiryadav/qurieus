@@ -44,6 +44,7 @@ except Exception as e:
 class QueryRequest(BaseModel):
     query: str
     document_owner_id: str
+    history: Optional[List[dict]] = None  # [{role: "user"/"assistant", content: "..."}]
 
 def derive_encryption_key(secret: str) -> bytes:
     """Derive the encryption key using HKDF, matching NextAuth.js implementation."""
@@ -225,6 +226,15 @@ async def query_documents(
         log_to_frontend("info", f"Processing query for user: {request.document_owner_id}")
         log_to_frontend("info", f"Query: {request.query}")
 
+        # Prepare chat history for prompt
+        history = request.history or []
+        history_text = ""
+        for turn in history:
+            if turn.get("role") == "user":
+                history_text += f"User: {turn.get('content')}\n"
+            elif turn.get("role") == "assistant":
+                history_text += f"Assistant: {turn.get('content')}\n"
+
         # Generate embedding for the query
         query_embedding = embedding_model.encode(request.query)
         log_to_frontend("info", f"Generated embedding of length: {len(query_embedding)}")
@@ -301,13 +311,13 @@ async def query_documents(
                     "model": "neural-chat",
                     "prompt": f"""You are a friendly and helpful AI assistant. Your primary role is to help users find information from their documents, but you can also engage in general conversation.
 
-If the user asks a general question or greeting (like 'hi', 'hello', 'how are you', etc.), respond naturally and warmly. If they ask about the documents, use the context below to provide accurate information.
-                    
+Conversation so far:
+{history_text}
+User: {request.query}
+
 Context from documents:
-                    {context}
-                    
-User's question: {request.query}
-                    
+{context}
+
 Guidelines:
 1. Be friendly and conversational
 2. If it's a general question, respond naturally without forcing document context
