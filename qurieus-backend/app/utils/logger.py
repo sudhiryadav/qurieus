@@ -1,7 +1,7 @@
 import requests
 import os
 
-FRONTEND_LOG_URL = os.getenv("FRONTEND_LOG_URL", "http://localhost:3000/api/logs")  # Adjust as needed
+FRONTEND_LOG_URL = os.getenv("FRONTEND_URL")  + '/api/logs'  # Adjust as needed
 
 def log_to_frontend(level, message, user=None, meta=None):
     payload = {

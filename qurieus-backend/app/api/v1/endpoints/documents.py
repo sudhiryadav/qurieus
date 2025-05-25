@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
@@ -18,6 +19,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 from sentence_transformers import SentenceTransformer
 from app.utils.logger import log_to_frontend
+import time
 
 # Add the root directory to Python path
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -217,6 +219,12 @@ async def query_documents(
 ):
     """Query documents using semantic search and Ollama."""
     try:
+        print("Received query request:", {
+            "query": request.query,
+            "document_owner_id": request.document_owner_id,
+            "history_length": len(request.history) if request.history else 0
+        })
+        total_start = time.time()
         if not embedding_model:
             raise HTTPException(
                 status_code=503,
@@ -235,12 +243,15 @@ async def query_documents(
             elif turn.get("role") == "assistant":
                 history_text += f"Assistant: {turn.get('content')}\n"
 
+        embedding_start = time.time()
         # Generate embedding for the query
         query_embedding = embedding_model.encode(request.query)
+        embedding_end = time.time()
         log_to_frontend("info", f"Generated embedding of length: {len(query_embedding)}")
 
         # Find similar chunks using cosine similarity
         try:
+            db_start = time.time()
             log_to_frontend("info", "Executing SQL query for similar chunks...")
             # Convert embedding to a string of values
             embedding_values = ','.join(map(str, query_embedding.tolist()))
@@ -269,6 +280,7 @@ async def query_documents(
                     "userId": request.document_owner_id
                 }
             ).fetchall()
+            db_end = time.time()
             log_to_frontend("info", f"Found {len(similar_chunks)} similar chunks")
         except Exception as sql_error:
             log_to_frontend("error", f"SQL Error: {str(sql_error)}")
@@ -281,6 +293,8 @@ async def query_documents(
 
         if not similar_chunks:
             log_to_frontend("info", "No similar chunks found")
+            total_end = time.time()
+            log_to_frontend("info", f"TIMING: embedding={embedding_end-embedding_start:.2f}s, db={db_end-embedding_end:.2f}s, ollama=0.00s, total={total_end-total_start:.2f}s")
             return {
                 "answer": "No relevant documents found.",
                 "sources": []
@@ -293,22 +307,12 @@ async def query_documents(
 
         # Query Ollama
         try:
+            ollama_start = time.time()
             log_to_frontend("info", "Querying Ollama...")
-            # Available Ollama models:
-            # - mixtral: Best choice for document Q&A - 8x7B MoE model with superior understanding and accuracy
-            # - mistral: Good balance of performance and resource usage (7B parameters)
-            # - neural-chat: Budget-friendly option, optimized for chat
-            # - llama2: Meta's 7B parameter model, good for general purpose tasks
-            # - codellama: Specialized for code generation and understanding
-            # - starling-lm: Good for creative writing and storytelling
-            # - gemma: Google's lightweight 2B/7B models, good for resource-constrained environments
-            # - phi: Microsoft's small but efficient model, good for quick responses
-            # - orca-mini: Lightweight model good for basic tasks
-            # - dolphin-phi: Enhanced version of phi with better instruction following
             ollama_response = requests.post(
                 f"{settings.OLLAMA_API_URL}/api/generate",
                 json={
-                    "model": "neural-chat",
+                    "model": "llama2",
                     "prompt": f"""You are a friendly and helpful AI assistant. Your primary role is to help users find information from their documents, but you can also engage in general conversation.
 
 Conversation so far:
@@ -347,20 +351,49 @@ Formatting Guidelines:
    - Do not use ranges (like "6-14") in numbered lists
 
 Your response:""",
-                    "stream": False
-                }
+                    "stream": True
+                },
+                stream=True
             )
 
-            if not ollama_response.ok:
-                log_to_frontend("error", f"Ollama error: {ollama_response.status_code} - {ollama_response.text}")
-                raise HTTPException(
-                    status_code=500,
-                    detail="Failed to get response from Ollama"
-                )
+            async def generate():
+                response_text = ""
+                print("Starting to generate response from Ollama...")
+                for line in ollama_response.iter_lines():
+                    if line:
+                        chunk = json.loads(line)
+                        if chunk.get("response"):
+                            response_text += chunk["response"]
+                            # Clean up the response by removing User: and Assistant: prefixes
+                            cleaned_chunk = chunk["response"]
+                            if cleaned_chunk.startswith("User:"):
+                                continue
+                            if cleaned_chunk.startswith("Assistant:"):
+                                cleaned_chunk = cleaned_chunk.replace("Assistant:", "", 1).strip()
+                            if cleaned_chunk:
+                                chunk_json = json.dumps({"chunk": cleaned_chunk}) + "\n"
+                                print(f"Sending chunk: {chunk_json[:100]}...")
+                                yield chunk_json
+                
+                # Clean up the final response
+                if response_text.startswith("User:"):
+                    response_text = response_text.split("Assistant:", 1)[-1].strip()
+                elif response_text.startswith("Assistant:"):
+                    response_text = response_text.replace("Assistant:", "", 1).strip()
 
-            response_data = ollama_response.json()
-            log_to_frontend("info", "Successfully got response from Ollama")
-            
+                final_json = json.dumps({
+                    "final": True,
+                    "answer": response_text,
+                    "sources": sources
+                }) + "\n"
+                print(f"Sending final response: {final_json[:100]}...")
+                yield final_json
+
+            return StreamingResponse(
+                generate(),
+                media_type="application/x-ndjson"
+            )
+
         except Exception as ollama_error:
             log_to_frontend("error", f"Ollama Error: {str(ollama_error)}")
             log_to_frontend("error", traceback.format_exc())
@@ -369,11 +402,6 @@ Your response:""",
                 detail=f"Error querying Ollama: {str(ollama_error)}"
             )
         
-        return {
-            "answer": response_data.get("response", "No answer generated."),
-            "sources": sources
-        }
-
     except Exception as e:
         log_to_frontend("error", f"Error in query_documents: {str(e)}")
         log_to_frontend("error", f"Error type: {type(e)}")

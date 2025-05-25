@@ -10,7 +10,6 @@ window.QurieusChat = {
     container.appendChild(chat);
 
     // Initialize the chat with the provided configuration
-    console.log('xxxx config', config);
     this.renderChat(chat, config);
   },
 
@@ -82,6 +81,7 @@ window.QurieusChat = {
       try {
         const visitorId = getVisitorId();
         const history = await fetchChatHistory(visitorId, config.documentOwnerId, 10);
+        
         // Send message to API
         const response = await fetch(config.apiUrl, {
           method: 'POST',
@@ -101,16 +101,54 @@ window.QurieusChat = {
           throw new Error('Failed to get response');
         }
 
-        const data = await response.json();
-        
         // Remove loading message
         const loadingMessage = document.getElementById(loadingId);
         if (loadingMessage) {
           loadingMessage.remove();
         }
 
-        // Add assistant message
-        this.addMessage(messagesContainer, data.answer, 'assistant', data.sources);
+        // For debugging, let's first try to get the raw response
+        const rawResponse = await response.text();
+        console.log('Raw response:', rawResponse);
+
+        // Create a new message container for the response
+        const messageId = 'message-' + Date.now();
+        this.addMessage(messagesContainer, '', 'assistant', null, messageId);
+        const messageElement = document.getElementById(messageId);
+        const contentElement = messageElement.querySelector('.qurieus-chat-message-content');
+
+        // Parse the response
+        const lines = rawResponse.split('\n').filter(Boolean);
+        let fullResponse = '';
+        let sources = null;
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            console.log('Parsed data:', data);
+            if (data.chunk) {
+              fullResponse += data.chunk;
+              contentElement.innerHTML = this.markdownToHtml(fullResponse);
+              messageElement.scrollIntoView({ behavior: 'smooth' });
+            } else if (data.final) {
+              sources = data.sources;
+              // Add sources to the message
+              const sourcesDiv = document.createElement('div');
+              sourcesDiv.className = 'qurieus-chat-message-sources';
+              sourcesDiv.innerHTML = `
+                <p>Sources:</p>
+                <ul>
+                  ${sources.map(source => `
+                    <li>${source.document} (Similarity: ${(source.similarity * 100).toFixed(1)}%)</li>
+                  `).join('')}
+                </ul>
+              `;
+              messageElement.appendChild(sourcesDiv);
+            }
+          } catch (e) {
+            console.error('Error parsing line:', e, 'Raw line:', line);
+          }
+        }
 
         // Add follow-up suggestion if this is the first response
         if (messagesContainer.querySelectorAll('.qurieus-chat-message-assistant').length === 2) {
@@ -232,4 +270,4 @@ async function fetchChatHistory(visitorId, userId, limit = 10) {
   } catch {
     return [];
   }
-} 
+}

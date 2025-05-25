@@ -77,6 +77,12 @@ export async function POST(request: Request) {
     });
 
     // Query the FastAPI backend
+    console.log('Sending request to FastAPI:', {
+      url: `${process.env.BACKEND_URL}/api/v1/documents/query`,
+      query,
+      document_owner_id: userId
+    });
+
     const fastApiResponse = await fetch(`${process.env.BACKEND_URL}/api/v1/documents/query`, {
       method: 'POST',
       headers: {
@@ -90,41 +96,78 @@ export async function POST(request: Request) {
     });
 
     if (!fastApiResponse.ok) {
-      throw new Error('Failed to get response from FastAPI');
+      const errorText = await fastApiResponse.text();
+      console.error('FastAPI Error Response:', {
+        status: fastApiResponse.status,
+        statusText: fastApiResponse.statusText,
+        error: errorText
+      });
+      throw new Error(`Failed to get response from FastAPI: ${fastApiResponse.status} ${fastApiResponse.statusText}`);
     }
 
-    const { answer, sources } = await fastApiResponse.json();
+    console.log('FastAPI response received, setting up stream...');
 
-    // Record assistant response
-    const assistantMessage = await (prisma as any).chatMessage.create({
-      data: {
-        conversationId: conversation.id,
-        content: answer,
-        role: "assistant",
+    // Create a TransformStream to handle the streaming response
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    let answer = '';
+    let sources: any[] = [];
+
+    const stream = new TransformStream({
+      async transform(chunk, controller) {
+        console.log('Received chunk from FastAPI');
+        const text = decoder.decode(chunk);
+        const lines = text.split('\n').filter(Boolean);
+
+        for (const line of lines) {
+          try {
+            console.log('Processing chunk data:', { type: line.includes('{') ? 'chunk' : 'final', length: line.length });
+            const data = JSON.parse(line);
+            if (data.chunk) {
+              answer += data.chunk;
+              controller.enqueue(encoder.encode(JSON.stringify({ chunk: data.chunk }) + '\n'));
+            } else if (data.final) {
+              sources = data.sources;
+              controller.enqueue(encoder.encode(JSON.stringify({ final: true, sources }) + '\n'));
+            }
+          } catch (e) {
+            console.error('Error parsing chunk:', e, 'Raw line:', line);
+          }
+        }
       },
-    });
+      async flush(controller) {
+        console.log('Stream complete, recording response in database');
+        // Record assistant response after stream is complete
+        const assistantMessage = await (prisma as any).chatMessage.create({
+          data: {
+            conversationId: conversation.id,
+            content: answer,
+            role: "assistant",
+          },
+        });
 
-    // Calculate and update average response time
-    const responseTime = assistantMessage.createdAt.getTime() - userMessage.createdAt.getTime();
-    await (prisma as any).chatConversation.update({
-      where: { id: conversation.id },
-      data: {
-        avgResponseTime: responseTime,
-      },
-    });
-
-    return NextResponse.json({
-      answer,
-      sources,
-      visitorInfo: {
-        visitorId,
-        userAgent,
-        ipAddress,
-        referrer,
-        browser,
-        os,
-        device
+        // Calculate and update average response time
+        const responseTime = assistantMessage.createdAt.getTime() - userMessage.createdAt.getTime();
+        await (prisma as any).chatConversation.update({
+          where: { id: conversation.id },
+          data: {
+            avgResponseTime: responseTime,
+          },
+        });
       }
+    });
+
+    console.log('Piping FastAPI response to transform stream...');
+    // Pipe the FastAPI response through our transform stream
+    fastApiResponse.body?.pipeTo(stream.writable);
+
+    console.log('Returning streaming response to client');
+    // Return the streaming response
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'application/x-ndjson',
+        'Transfer-Encoding': 'chunked',
+      },
     });
   } catch (error) {
     console.error("Error processing query:", error);

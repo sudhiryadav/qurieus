@@ -4,6 +4,7 @@ import { prisma } from '@/utils/prismaDB';
 export async function POST(req: NextRequest) {
   try {
     const { userId, level, message, meta } = await req.json();
+    
     await prisma.log.create({
       data: { userId, level, message, meta },
     });
