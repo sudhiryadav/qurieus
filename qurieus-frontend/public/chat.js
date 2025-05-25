@@ -143,6 +143,7 @@ window.QurieusChat = {
                   `).join('')}
                 </ul>
               `;
+              sourcesDiv.style.display = 'none';
               messageElement.appendChild(sourcesDiv);
             }
           } catch (e) {
