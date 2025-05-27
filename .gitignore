@@ -87,6 +87,5 @@ next-env.d.ts
 .env.prod
 .env
 
-qurieus-frontend/prisma/generated/
-qurieus-backend/.env
-qurieus-frontend/.env
+# Prisma
+qurieus-frontend/prisma/generated/client
