@@ -17,10 +17,10 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "Free and Open-Source",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
+    title: "Chat with Your Documents",
+    paragraph: "Upload PDFs, DOCX, and more. Ask questions and get instant, context-aware answers from your own files.",
     btn: "Learn More",
-    btnLink: "/#",
+    btnLink: "/features/chat-with-your-documents",
   },
   {
     id: 2,
@@ -38,10 +38,10 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "Modern Design",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
+    title: "AI-Powered Q&A",
+    paragraph: "Get accurate, AI-generated answers to your queries, using the latest language models and your document context.",
     btn: "Learn More",
-    btnLink: "/#",
+    btnLink: "/features/ai-powered-qa",
   },
   {
     id: 3,
@@ -91,10 +91,10 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "SaaS Starter Kit",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
+    title: "Knowledge Search & Summarization",
+    paragraph: "Search across all your documents and receive concise summaries, saving you time and effort.",
     btn: "Learn More",
-    btnLink: "/#",
+    btnLink: "/features/knowledge-search-summarization",
   },
   {
     id: 4,
@@ -124,10 +124,10 @@ const featuresData: Feature[] = [
         />
       </svg>
     ),
-    title: "All Essential Integrations",
-    paragraph: "Lorem Ipsum is simply dummy text of the printing and industry.",
+    title: "Easy Website Embedding",
+    paragraph: "Embed a chat widget on your site to let visitors interact with your knowledge base using natural language.",
     btn: "Learn More",
-    btnLink: "/#",
+    btnLink: "/features/easy-website-embedding",
   },
 ];
 export default featuresData;

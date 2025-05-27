@@ -1,3 +1,5 @@
+// @ts-ignore
+// @ts-nocheck
 window.QurieusChat = {
   init: function(config) {
     // Create a container for the chat

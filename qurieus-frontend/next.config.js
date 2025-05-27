@@ -8,6 +8,11 @@ const nextConfig = {
     }
     return config;
   },
+  images: {
+    domains: [
+      'images.unsplash.com',
+    ],
+  },
 }
 
 module.exports = nextConfig

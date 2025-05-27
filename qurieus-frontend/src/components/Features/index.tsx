@@ -8,8 +8,8 @@ const Features = () => {
       <div className="container">
         <SectionTitle
           subtitle="Features"
-          title="Main Features Of Play"
-          paragraph="There are many variations of passages of Lorem Ipsum available but the majority have suffered alteration in some form."
+          title="What Makes Qurieus Powerful"
+          paragraph="Qurieus helps you chat with your documents, search and summarize knowledge, and embed AI-powered Q&A on your site. Upload files, ask questions, and get instant, context-aware answers."
         />
 
         <div className="-mx-4 mt-12 flex flex-wrap lg:mt-20">
