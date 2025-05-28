@@ -24,30 +24,7 @@ export default function RootLayout({
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
   }, []);
-  useEffect(() => {
-    // Create and inject the QurieusChatConfig script
-    const configScript = document.createElement('script');
-    configScript.innerHTML = `
-      window.QurieusChatConfig = {
-        documentOwnerId: 'cmarrl8mj0000vjqyb9jmhcoa',
-        theme: 'light',
-        position: 'bottom-right'
-      };
-    `;
-    document.head.appendChild(configScript);
-
-    // Create and inject the embed.js script
-    const embedScript = document.createElement('script');
-    embedScript.src = 'http://localhost:3000/embed.js';
-    embedScript.async = true;
-    document.head.appendChild(embedScript);
-
-    // Cleanup function to remove scripts when component unmounts
-    return () => {
-      document.head.removeChild(configScript);
-      document.head.removeChild(embedScript);
-    };
-  }, []);
+  
 
   return (
     <html suppressHydrationWarning={true} className="!scroll-smooth" lang="en">

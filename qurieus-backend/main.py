@@ -25,9 +25,9 @@ app = FastAPI(
     version=settings.VERSION,
     lifespan=lifespan,
     # Enable OpenAPI documentation
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
+    openapi_url="/api/v1/openapi.json"
 )
 
 # CORS middleware with proper settings for handling credentials
@@ -41,7 +41,6 @@ app.add_middleware(
 )
 
 # Include routers
-# app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 
 # Serve static frontend (Next.js export) at root

@@ -378,7 +378,6 @@ Your response:""",
                             cleaned_chunk = chunk["response"]
                             if cleaned_chunk:
                                 chunk_json = json.dumps({"chunk": cleaned_chunk}) + "\n"
-                                print(f"Sending chunk: {chunk_json[:100]}...")
                                 yield chunk_json
                 
                 response_text = response_text.strip()

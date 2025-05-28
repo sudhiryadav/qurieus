@@ -9,6 +9,7 @@ def log_to_frontend(level, message, user=None, meta=None):
         "message": message,
         "meta": meta or {},
     }
+    print(payload)
     if user:
         payload["userId"] = user.get("id")
         payload["meta"]["userName"] = user.get("name")

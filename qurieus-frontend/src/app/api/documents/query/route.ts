@@ -42,9 +42,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // Verify user exists before creating chat conversation
+    const user = await prisma.users.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      console.error(`User not found with ID: ${userId}`);
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     const dbStart = performance.now();
     // Create or update chat conversation
-    const conversation = await (prisma as any).chatConversation.upsert({
+    const conversation = await prisma.chatConversation.upsert({
       where: {
         visitorId_userId: {
           visitorId,
@@ -73,7 +86,7 @@ export async function POST(request: Request) {
     });
 
     // Record user message
-    const userMessage = await (prisma as any).chatMessage.create({
+    const userMessage = await prisma.chatMessage.create({
       data: {
         conversationId: conversation.id,
         content: query,
