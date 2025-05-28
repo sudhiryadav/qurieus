@@ -63,12 +63,12 @@ This is the backend service for Qurieus, a document querying and chat applicatio
    source .venv/bin/activate
    ```
 
-2. Install dependencies:
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Set up environment variables:
+4. Set up environment variables:
    ```bash
    cp .env.example .env
    ```
@@ -79,12 +79,12 @@ This is the backend service for Qurieus, a document querying and chat applicatio
    NEXTAUTH_SECRET=your-secret-key
    ```
 
-4. Run database migrations:
+5. Run database migrations:
    ```bash
    alembic upgrade head
    ```
 
-5. Start the backend server:
+6. Start the backend server:
    ```bash
    uvicorn app.main:app --reload
    ```
