@@ -5,8 +5,6 @@ import Header from "@/components/Header";
 import ScrollToTop from "@/components/ScrollToTop";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
-import "@/styles/index.css";
-import "@/styles/prism-vsc-dark-plus.css";
 import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
 import { Inter } from "next/font/google";
@@ -26,7 +24,7 @@ export default function ClientLayout({
   }, []);
 
   return (
-    <div className={`${inter.className} bg-white dark:bg-dark-1 dark:text-white`}>
+    <div className={inter.className}>
       {loading ? (
         <PreLoader />
       ) : (

@@ -3,6 +3,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@reference utilities from tailwindcss/utilities;
 
 @layer base {
   :root {

@@ -47,6 +47,7 @@
     "ua-parser-js": "^2.0.3"
   },
   "devDependencies": {
+    "@babel/core": "^7.27.4",
     "@tailwindcss/postcss": "^4.1.8",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^22.15.28",
@@ -55,9 +56,10 @@
     "@types/react": "19.1.6",
     "@types/react-dom": "19.1.5",
     "autoprefixer": "^10.4.21",
+    "babel-loader": "^10.0.0",
     "cross-env": "^7.0.3",
     "eslint": "^9",
-    "eslint-config-next": "15.3.3",
+    "eslint-config-next": "^15.3.3",
     "ngrok": "^5.0.0-beta.2",
     "postcss": "^8",
     "tailwindcss": "^4.1.8",
