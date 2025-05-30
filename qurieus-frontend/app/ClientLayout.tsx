@@ -7,10 +7,10 @@ import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import "@/styles/index.css";
 import "@/styles/prism-vsc-dark-plus.css";
-import ToasterContext from "@/app/api/contex/ToasetContex";
 import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
 import { Inter } from "next/font/google";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -39,7 +39,7 @@ export default function ClientLayout({
             enableSystem={false}
             defaultTheme="light"
           >
-            <ToasterContext />
+            <Toaster />
             <Header />
             {children}
             <Footer />
