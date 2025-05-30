@@ -7,12 +7,17 @@ import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import "../styles/index.css";
 import "../styles/prism-vsc-dark-plus.css";
-import ToasterContext from "./api/contex/ToasetContex";
+import ToasterContext from "@/app/api/contex/ToasetContex";
 import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const metadata = {
+  title: 'Qurieus',
+  description: 'Qurieus',
+}
 
 export default function RootLayout({
   children,

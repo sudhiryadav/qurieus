@@ -19,7 +19,7 @@ const CallToAction = () => {
                   Join the growing number of organizations using Qurieus to make their documents more accessible and engaging through AI-powered conversations.
                 </p>
                 <Link
-                  href="/signup"
+                  href="/(site)/(auth)/signup"
                   className="inline-block rounded-md border border-transparent bg-secondary px-7 py-3 text-base font-medium text-white transition hover:bg-[#0BB489]"
                 >
                   Get Started with Qurieus

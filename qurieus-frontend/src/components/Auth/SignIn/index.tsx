@@ -142,7 +142,7 @@ const Signin = () => {
               </Link>
               <p className="text-body-secondary text-base">
                 Not a member yet?{" "}
-                <Link href="/signup" className="text-primary hover:underline">
+                <Link href="/(site)/(auth)/signup" className="text-primary hover:underline">
                   Sign Up
                 </Link>
               </p>

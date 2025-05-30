@@ -1,17 +1,39 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  productionBrowserSourceMaps: true,
-  webpack: (config, { isServer, dev }) => {
-    if (dev && !isServer) {
-      config.devtool = 'source-map';
-    }
-    return config;
-  },
+  productionBrowserSourceMaps: false,
   images: {
-    domains: [
-      'images.unsplash.com',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
+  },
+  experimental: {
+    turbo: {
+      rules: {
+        // Configure Turbopack rules here
+        '*.{js,jsx,ts,tsx}': ['eslint'],
+      },
+    },
+  },
+  // Ensure proper handling of route groups
+  trailingSlash: false,
+  basePath: '',
+  async rewrites() {
+    return [
+      {
+        source: '/signup',
+        destination: '/signup',
+      },
+      {
+        source: '/login',
+        destination: '/login',
+      },
+    ];
   },
 }
 
