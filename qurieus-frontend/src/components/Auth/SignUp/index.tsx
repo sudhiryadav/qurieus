@@ -148,7 +148,7 @@ const SignUp = () => {
               <p className="text-body-secondary text-base">
                 Already have an account?
                 <Link
-                  href="/(site)/(auth)/signin"
+                  href="/signin"
                   className="pl-2 text-primary hover:underline"
                 >
                   Sign In
