@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Error uploading files:', error);
     return NextResponse.json(
-      { error: `Failed to upload files: ${error.message}` },
+      { error: `Failed to upload files`},
       { status: 500 }
     );
   }

@@ -76,6 +76,7 @@ This is the backend service for Qurieus, a document querying and chat applicatio
    ```
    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/qurieus
    OLLAMA_API_URL=http://localhost:11434
+   OLLAMA_MODEL=mistral
    NEXTAUTH_SECRET=your-secret-key
    ```
 
@@ -106,6 +107,7 @@ Once the server is running, you can access:
 Key environment variables:
 - `DATABASE_URL`: PostgreSQL connection string
 - `OLLAMA_API_URL`: Ollama API endpoint (default: http://localhost:11434)
+- `OLLAMA_MODEL`: Ollama model to use (default: mistral, options: mistral, llama2, neural-chat, etc.)
 - `NEXTAUTH_SECRET`: Secret key for NextAuth.js token verification
 - `FRONTEND_URL`: Frontend application URL for CORS
 

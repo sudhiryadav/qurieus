@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     
     # Ollama settings
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral")  # Default to mistral if not specified
+    REDIS_HOST: str = os.getenv("REDIS_HOST")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT"))
+    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")
     
     class Config:
         case_sensitive = True
