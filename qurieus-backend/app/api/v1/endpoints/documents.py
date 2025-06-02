@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel
 import os
 import sys
@@ -23,6 +23,8 @@ import time
 from functools import lru_cache
 import hashlib
 import datetime
+import pandas as pd
+import io
 
 # Add the root directory to Python path
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -106,6 +108,42 @@ def optimize_chunk_size(text: str, target_size: int = 500) -> List[str]:
     
     return chunks
 
+def analyze_financial_data(df: pd.DataFrame) -> Dict[str, Any]:
+    """Analyze financial data from DataFrame and return key metrics."""
+    analysis = {}
+    
+    # Basic statistics for numeric columns
+    numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
+    if not numeric_cols.empty:
+        analysis['numeric_summary'] = df[numeric_cols].describe().to_dict()
+    
+    # Try to identify financial metrics
+    for col in df.columns:
+        col_lower = col.lower()
+        # Revenue/Income analysis
+        if any(term in col_lower for term in ['revenue', 'income', 'sales']):
+            analysis['revenue_metrics'] = {
+                'total': df[col].sum(),
+                'average': df[col].mean(),
+                'trend': df[col].pct_change().mean()
+            }
+        # Expense analysis
+        elif any(term in col_lower for term in ['expense', 'cost', 'spend']):
+            analysis['expense_metrics'] = {
+                'total': df[col].sum(),
+                'average': df[col].mean(),
+                'trend': df[col].pct_change().mean()
+            }
+        # Profit analysis
+        elif any(term in col_lower for term in ['profit', 'margin', 'earnings']):
+            analysis['profit_metrics'] = {
+                'total': df[col].sum(),
+                'average': df[col].mean(),
+                'trend': df[col].pct_change().mean()
+            }
+    
+    return analysis
+
 def process_file(
     file_content: bytes,
     file_extension: str,
@@ -116,6 +154,7 @@ def process_file(
     """Process uploaded file with optimized chunking."""
     try:
         text_content = ""
+        financial_analysis = {}
         
         if file_extension.lower() == '.pdf':
             doc = fitz.open(stream=file_content, filetype="pdf")
@@ -125,24 +164,39 @@ def process_file(
             doc = docx.Document(file_content)
             for para in doc.paragraphs:
                 text_content += para.text + "\n"
+        elif file_extension.lower() in ['.xlsx', '.xls', '.csv']:
+            # Handle Excel and CSV files
+            try:
+                if file_extension.lower() == '.csv':
+                    df = pd.read_csv(io.BytesIO(file_content))
+                else:
+                    df = pd.read_excel(io.BytesIO(file_content))
+                # Convert DataFrame to text for embedding
+                text_content = df.to_string()
+                # Perform financial analysis
+                financial_analysis = analyze_financial_data(df)
+            except Exception as e:
+                print(f"Error processing file: {str(e)}")
+                raise ValueError(f"Error processing file: {str(e)}")
         else:
             raise ValueError(f"Unsupported file type: {file_extension}")
         
         # Create document record with all required fields
         document = DBDocument(
             originalName=original_filename,
-            fileName=original_filename,  # Set fileName same as originalName
-            fileType=file_extension.lower().lstrip('.'),  # Remove the dot from extension
-            fileSize=len(file_content),  # Set file size in bytes
+            fileName=original_filename,
+            fileType=file_extension.lower().lstrip('.'),
+            fileSize=len(file_content),
             userId=userId,
-            uploadedAt=datetime.datetime.utcnow(),  # Set upload timestamp
-            content=text_content,  # Store the extracted text content
-            description="",  # Set empty string for optional fields
-            category="",  # Set empty string for optional fields
-            keywords=""  # Set empty string for optional fields
+            uploadedAt=datetime.datetime.utcnow(),
+            content=text_content,
+            description="",
+            category="",
+            keywords="",
+            metadata=json.dumps(financial_analysis) if financial_analysis else None
         )
         db.add(document)
-        db.flush()  # Get the document ID
+        db.flush()
         
         # Optimize chunks
         chunks = optimize_chunk_size(text_content)
@@ -381,9 +435,81 @@ async def query_documents(
                     )
             except Exception as e:
                 log_to_frontend("error", f"Redis cache error: {str(e)}")
-        
-        log_to_frontend("info", "Starting query processing...")
 
+        # Check if this is a financial data query
+        financial_terms = ['revenue', 'income', 'expense', 'profit', 'margin', 'earnings', 'cost', 'sales']
+        is_financial_query = any(term in request.query.lower() for term in financial_terms)
+
+        if is_financial_query:
+            # Query for documents with financial metadata
+            query = text("""
+                SELECT d.content, d.metadata, d."originalName"
+                FROM "Document" d
+                WHERE d.metadata IS NOT NULL
+                AND d."userId" = :userId
+                ORDER BY d."uploadedAt" DESC
+                LIMIT 1
+            """)
+            
+            result = db.execute(query, {"userId": request.document_owner_id}).fetchone()
+            
+            if result:
+                content, metadata, filename = result
+                if metadata:
+                    try:
+                        financial_data = json.loads(metadata)
+                        # Enhance the prompt with financial context
+                        prompt = f"""You are a financial analyst assistant. Answer the following question based on the financial data provided.
+
+Financial Data Summary:
+{json.dumps(financial_data, indent=2)}
+
+Question: {request.query}
+
+Please provide a detailed analysis focusing on the financial metrics and trends. If specific numbers are requested, include them in your response.
+
+Answer:"""
+                    except json.JSONDecodeError:
+                        prompt = f"""Answer the following question based on the provided context.
+
+Context:
+{content}
+
+Question: {request.query}
+
+Answer:"""
+                else:
+                    prompt = f"""Answer the following question based on the provided context.
+
+Context:
+{content}
+
+Question: {request.query}
+
+Answer:"""
+            else:
+                # Fall back to semantic search if no financial document found
+                return await semantic_search_query(request, db)
+        else:
+            # Use regular semantic search for non-financial queries
+            return await semantic_search_query(request, db)
+
+        # Rest of the existing code for Ollama API call...
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_to_frontend("error", f"Unexpected error in query_documents: {str(e)}")
+        log_to_frontend("error", traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred"
+        )
+
+async def semantic_search_query(request: QueryRequest, db: Session):
+    """Handle semantic search queries."""
+    try:
+        cache_key = f"query:{hashlib.md5(request.query.encode()).hexdigest()}"
         if not embedding_model:
             log_to_frontend("error", "Embedding model not available")
             raise HTTPException(
@@ -391,7 +517,6 @@ async def query_documents(
                 detail="Search service is currently unavailable"
             )
 
-        # Get cached embedding for query
         try:
             query_embedding = get_cached_embedding(request.query)
         except Exception as e:
@@ -401,47 +526,43 @@ async def query_documents(
                 detail="Error processing your query"
             )
         
-        # Find similar chunks using cosine similarity
-        try:
-            log_to_frontend("info", "Executing similarity search...")
-            
-            embedding_values = ','.join(map(str, query_embedding))
-            
-            query = text(f"""
-                WITH query_embedding AS (
-                    SELECT ARRAY[{embedding_values}]::vector AS embedding
-                )
-                SELECT 
-                    dc.content,
-                    dc."documentId",
-                    d."originalName",
-                    1 - (e.vector::vector <=> query_embedding.embedding) as similarity
-                FROM "DocumentChunk" dc
-                JOIN "Embedding" e ON e."chunkId" = dc.id
-                JOIN "Document" d ON d.id = dc."documentId"
-                CROSS JOIN query_embedding
-                WHERE e."userId" = :userId
-                ORDER BY similarity DESC
-                LIMIT 3
-            """)
-            
-            similar_chunks = db.execute(
-                query,
-                {"userId": request.document_owner_id}
-            ).fetchall()
+        log_to_frontend("info", "Executing similarity search...")
+        
+        embedding_values = ','.join(map(str, query_embedding))
+        
+        query = text(f"""
+            WITH query_embedding AS (
+                SELECT ARRAY[{embedding_values}]::vector AS embedding
+            )
+            SELECT 
+                dc.content,
+                dc."documentId",
+                d."originalName",
+                1 - (e.vector::vector <=> query_embedding.embedding) as similarity
+            FROM "DocumentChunk" dc
+            JOIN "Embedding" e ON e."chunkId" = dc.id
+            JOIN "Document" d ON d.id = dc."documentId"
+            CROSS JOIN query_embedding
+            WHERE e."userId" = :userId
+            ORDER BY similarity DESC
+            LIMIT 3
+        """)
+        
+        similar_chunks = db.execute(
+            query,
+            {"userId": request.document_owner_id}
+        ).fetchall()
 
-            if not similar_chunks:
-                return {
-                    "answer": "No relevant documents found.",
-                    "sources": []
-                }
+        if not similar_chunks:
+            return {
+                "answer": "No relevant documents found.",
+                "sources": []
+            }
 
-            # Prepare context from similar chunks
-            context = "\n".join([chunk[0][:1000] for chunk in similar_chunks])
-            sources = [{"document": chunk[2], "similarity": chunk[3]} for chunk in similar_chunks]
+        context = "\n".join([chunk[0][:1000] for chunk in similar_chunks])
+        sources = [{"document": chunk[2], "similarity": chunk[3]} for chunk in similar_chunks]
 
-            # Query Ollama with optimized prompt
-            prompt = f"""Answer the following question based on the provided context. If the answer isn't in the context, say so.
+        prompt = f"""Answer the following question based on the provided context. If the answer isn't in the context, say so.
 
 Question: {request.query}
 
@@ -449,223 +570,68 @@ Context:
 {context}
 
 Answer:"""
-            
-            # Verify Ollama API URL is configured
-            if not hasattr(settings, 'OLLAMA_API_URL') or not settings.OLLAMA_API_URL:
-                log_to_frontend("error", "Ollama API URL not configured")
-                raise HTTPException(
-                    status_code=503,
-                    detail="AI service configuration is missing"
-                )
 
-            try:
-                # Log the API URL being used (without sensitive info)
-                log_to_frontend("info", f"Attempting to connect to Ollama API at {settings.OLLAMA_API_URL}")
-                
-                # First check if Ollama is running and get available models
-                try:
-                    log_to_frontend("info", "Checking Ollama model availability...")
-                    models_response = requests.get(
-                        f"{settings.OLLAMA_API_URL}/api/tags",
-                        timeout=5
-                    )
-                    models_response.raise_for_status()
-                    
-                    # Log the raw response for debugging
-                    log_to_frontend("debug", f"Raw models response: {models_response.text}")
-                    
-                    available_models = models_response.json().get("models", [])
-                    log_to_frontend("info", f"Found {len(available_models)} available models")
-                    
-                    # Log each available model
-                    for model in available_models:
-                        model_name = model.get("name", "unknown")
-                        model_size = model.get("size", "unknown")
-                        model_modified = model.get("modified_at", "unknown")
-                        log_to_frontend("info", f"Model: {model_name}, Size: {model_size}, Modified: {model_modified}")
-                    
-                    # Check for configured model
-                    configured_model = settings.OLLAMA_MODEL
-                    model_available = any(
-                        model.get("name", "").startswith(configured_model) 
-                        for model in available_models
-                    )
-                    if not model_available:
-                        log_to_frontend("error", f"Configured model '{configured_model}' not found in Ollama. Available models: " + 
-                                     ", ".join(model.get("name", "unknown") for model in available_models))
-                        raise HTTPException(
-                            status_code=503,
-                            detail=f"Configured AI model '{configured_model}' is not available. Please contact support."
-                        )
-                    else:
-                        # Get the full model name for use in the API call
-                        selected_model = next(
-                            model.get("name") 
-                            for model in available_models 
-                            if model.get("name", "").startswith(configured_model)
-                        )
-                        log_to_frontend("info", f"Model '{selected_model}' is available and ready to use")
-
-                except requests.exceptions.RequestException as e:
-                    log_to_frontend("error", f"Failed to get available models from Ollama: {str(e)}")
-                    log_to_frontend("error", f"Request URL: {settings.OLLAMA_API_URL}/api/tags")
-                    log_to_frontend("error", f"Request headers: {models_response.request.headers if 'models_response' in locals() else 'No request made'}")
-                    raise HTTPException(
-                        status_code=503,
-                        detail="AI service is not properly configured. Please contact support."
-                    )
-
-                # Now try to generate the response
-                log_to_frontend("info", "Initiating chat with Ollama model...")
-                try:
-                    # First, check if the model is ready with a quick health check
-                    health_check = requests.get(
-                        f"{settings.OLLAMA_API_URL}/api/tags",  # Use tags endpoint as health check
-                        timeout=5
-                    )
-                    health_check.raise_for_status()
-                    log_to_frontend("info", "Ollama service health check passed")
-
-                    # Set up the chat request with longer timeouts
-                    ollama_response = requests.post(
-                        f"{settings.OLLAMA_API_URL}/api/generate",
-                        json={
-                            "model": selected_model,
-                            "prompt": f"""Context:
-{context}
-
-Question: {request.query}
-
-Answer:""",
-                            "stream": True,
-                            "options": {
-                                "temperature": 0.7,
-                                "top_p": 0.9,
-                                "max_tokens": 250,  # Reduced from 500
-                                "num_predict": 250,  # Reduced from 500
-                                "stop": ["User:", "Assistant:", "[INST]", "None", "\nUser:", "\nAssistant:"],
-                                "num_ctx": 2048,  # Limit context window
-                                "repeat_penalty": 1.1,  # Reduce repetition
-                                "top_k": 40  # Limit token selection
-                            }
-                        },
-                        stream=True,
-                        timeout=(10, 60)  # Reduced read timeout from 120 to 60 seconds
-                    )
-                    ollama_response.raise_for_status()
-                    log_to_frontend("info", "Successfully connected to Ollama generate API")
-
-                    async def generate():
-                        try:
-                            response_text = ""
-                            start_time = time.time()
-                            for line in ollama_response.iter_lines():
-                                if time.time() - start_time > 55:  # Stop if approaching timeout
-                                    log_to_frontend("warning", "Approaching timeout limit, sending partial response")
-                                    break
-                                    
-                                if line:
-                                    chunk = json.loads(line)
-                                    if chunk.get("response"):  # Changed from message.content to response
-                                        response_text += chunk["response"]
-                                        yield json.dumps({"chunk": chunk["response"]}) + "\n"
-                            
-                            final_response = {
-                                "final": True,
-                                "answer": response_text.strip(),
-                                "sources": sources
-                            }
-                            
-                            # Cache the result if Redis is available
-                            if REDIS_AVAILABLE:
-                                try:
-                                    redis_client.setex(
-                                        cache_key,
-                                        3600,  # Cache for 1 hour
-                                        json.dumps(final_response)
-                                    )
-                                except Exception as e:
-                                    log_to_frontend("error", f"Failed to cache result: {str(e)}")
-                            
-                            yield json.dumps(final_response) + "\n"
-                        except Exception as e:
-                            log_to_frontend("error", f"Error in response generation: {str(e)}")
-                            log_to_frontend("error", f"Response chunk: {chunk if 'chunk' in locals() else 'No chunk'}")
-                            yield json.dumps({
-                                "final": True,
-                                "answer": "I apologize, but I encountered an error while processing your request.",
-                                "sources": []
-                            }) + "\n"
-
-                    return StreamingResponse(
-                        generate(),
-                        media_type="application/x-ndjson"
-                    )
-
-                except requests.exceptions.Timeout as e:
-                    if isinstance(e, requests.exceptions.ConnectTimeout):
-                        log_to_frontend("error", "Connection to Ollama API timed out")
-                        raise HTTPException(
-                            status_code=503,
-                            detail="Could not connect to AI service. Please try again later."
-                        )
-                    else:
-                        log_to_frontend("error", "Ollama API request timed out during response generation")
-                        raise HTTPException(
-                            status_code=503,
-                            detail="AI service is taking too long to respond. Please try again with a shorter query."
-                        )
-                except requests.exceptions.ConnectionError:
-                    log_to_frontend("error", "Could not connect to Ollama API. Please ensure the Ollama server is running.")
-                    log_to_frontend("error", f"Connection attempt to: {settings.OLLAMA_API_URL}")
-                    raise HTTPException(
-                        status_code=503,
-                        detail="AI service is currently unavailable. Please try again later."
-                    )
-                except requests.exceptions.HTTPError as e:
-                    log_to_frontend("error", f"Ollama API error: {str(e)}")
-                    log_to_frontend("error", f"Response status code: {e.response.status_code}")
-                    log_to_frontend("error", f"Response content: {e.response.text}")
-                    if e.response.status_code == 404:
-                        raise HTTPException(
-                            status_code=503,
-                            detail="AI service endpoint not found. Please check the configuration."
-                        )
-                    raise HTTPException(
-                        status_code=503,
-                        detail="AI service is currently unavailable. Please try again later."
-                    )
-                except Exception as e:
-                    log_to_frontend("error", f"Unexpected error with Ollama API: {str(e)}")
-                    log_to_frontend("error", f"Error type: {type(e).__name__}")
-                    log_to_frontend("error", f"Error details: {traceback.format_exc()}")
-                    raise HTTPException(
-                        status_code=503,
-                        detail="AI service encountered an unexpected error. Please try again later."
-                    )
-
-            except Exception as e:
-                log_to_frontend("error", f"Error in query processing: {str(e)}")
-                log_to_frontend("error", traceback.format_exc())
-                raise HTTPException(
-                    status_code=500,
-                    detail="Error processing your query"
-                )
-            
-        except Exception as e:
-            log_to_frontend("error", f"Error in query processing: {str(e)}")
-            log_to_frontend("error", traceback.format_exc())
-            raise HTTPException(
-                status_code=500,
-                detail="Error processing your query"
-            )
-            
-    except HTTPException:
-        raise
+        # Continue with Ollama API call...
+        return await generate_ollama_response(prompt, sources, cache_key)
     except Exception as e:
-        log_to_frontend("error", f"Unexpected error in query_documents: {str(e)}")
+        log_to_frontend("error", f"Error in semantic search: {str(e)}")
         log_to_frontend("error", traceback.format_exc())
         raise HTTPException(
             status_code=500,
-            detail="An unexpected error occurred"
+            detail="Error processing your query"
+        )
+
+async def generate_ollama_response(prompt: str, sources: list, cache_key: str) -> StreamingResponse:
+    """Generate response from Ollama API with streaming."""
+    try:
+        print(f"[DEBUG] Ollama prompt: {repr(prompt)[:500]}")
+        if not prompt.strip():
+            print("[DEBUG] Prompt is empty!")
+
+        response = requests.post(
+            f"{settings.OLLAMA_API_URL}/api/generate",
+            json={
+                "model": settings.OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": True
+            },
+            stream=True
+        )
+
+        print(f"[DEBUG] Ollama API status: {response.status_code}")
+        if not response.ok:
+            print("[DEBUG] Ollama API error:", response.text)
+            raise HTTPException(
+                status_code=500,
+                detail="Error from Ollama API"
+            )
+
+        # Read all lines into a list (so we can cache and stream)
+        lines = [line for line in response.iter_lines() if line]
+        print(f"[DEBUG] Ollama response lines: {len(lines)}")
+        if lines:
+            print(f"[DEBUG] First response line: {lines[0][:200]}")
+        else:
+            print("[DEBUG] Ollama response is empty!")
+
+        # Cache the response if Redis is available
+        if REDIS_AVAILABLE:
+            try:
+                full_response = "\n".join(line.decode() for line in lines)
+                redis_client.setex(cache_key, 3600, full_response)  # Cache for 1 hour
+            except Exception as e:
+                print(f"Redis caching error: {str(e)}")
+
+        # Stream from memory
+        async def line_stream():
+            for line in lines:
+                yield line + b"\n"
+
+        return StreamingResponse(line_stream(), media_type="application/x-ndjson")
+
+    except Exception as e:
+        print(f"[DEBUG] Exception in generate_ollama_response: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating response: {str(e)}"
         ) 
