@@ -285,27 +285,38 @@ const Header = () => {
                         <div className="py-1">
                           <Link
                             href="/user/dashboard"
+                            onClick={() => setUserMenuOpen(false)}
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                           >
                             Dashboard
                           </Link>
                           <Link
                             href="/user/profile"
+                            onClick={() => setUserMenuOpen(false)}
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                           >
                             Profile
                           </Link>
                           <Link
                             href="/user/knowledge-base"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hove  r:bg-dark-3"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                           >
                             Knowledge Base
                           </Link>
                           <Link
                             href="/user/analytics"
+                            onClick={() => setUserMenuOpen(false)}
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                           >
                             Analytics
+                          </Link>
+                          <Link
+                            href="/user/embed-code"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                          >
+                            Embed code
                           </Link>
                           <hr className="my-1 border-gray-200 dark:border-dark-3" />
                       <button

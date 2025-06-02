@@ -9,7 +9,7 @@ export default function SignIn() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = searchParams.get("callbackUrl") || "/user/dashboard";
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [email, setEmail] = useState("er.sudhir.yadav@gmail.com");

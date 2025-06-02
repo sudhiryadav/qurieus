@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { X, FileText } from "lucide-react";
+import ModalDialog from "../ui/ModalDialog";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -181,11 +182,44 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     }
   };
 
+  // Footer buttons
+  const footer = (
+    <>
+      <button
+        type="button"
+        onClick={onClose}
+        className="rounded-md border border-gray-500 px-4 py-2 text-sm font-medium text-white bg-[#2d3543] hover:bg-[#393f4a]"
+        disabled={loading}
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        disabled={loading || selectedFiles.length === 0 || selectedFiles.some(f => f.error)}
+        className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 ml-3"
+      >
+        {loading ? (
+          <>
+            <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+            Uploading...
+          </>
+        ) : (
+          `Upload ${selectedFiles.filter(f => !f.error).length} File${selectedFiles.filter(f => !f.error).length !== 1 ? 's' : ''}`
+        )}
+      </button>
+    </>
+  );
+
+  // Header
+  const header = (
+    <span>Upload Files</span>
+  );
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-2xl rounded-lg bg-[#232a36] p-6" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+    <ModalDialog isOpen={isOpen} onClose={onClose} header={header} footer={footer}>
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Guidelines */}
         <div className="mb-6 rounded-lg bg-[#2d3543] p-5 text-white">
           <h3 className="mb-2 text-lg font-semibold">Guidelines</h3>
@@ -197,149 +231,121 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
             <li>Provide clear descriptions to improve searchability</li>
           </ul>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Upload Files */}
-          <div>
-            <label className="mb-2 block text-base font-semibold text-white">Upload Files</label>
-            <div
-              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-500 bg-[#2d3543] py-8 transition hover:border-primary ${
-                selectedFiles.length >= MAX_FILES_PER_UPLOAD ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-              }`}
-              onDrop={selectedFiles.length < MAX_FILES_PER_UPLOAD ? handleDrop : undefined}
-              onDragOver={handleDragOver}
-              onClick={() => selectedFiles.length < MAX_FILES_PER_UPLOAD && fileInputRef.current?.click()}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-8m0 0l-4 4m4-4l4 4m-8 4h8" />
-              </svg>
-              <span className="text-blue-400 font-medium underline">Upload files</span> or drag and drop
-              <div className="text-xs text-gray-400 mt-1">
-                {ALLOWED_EXTENSIONS_DISPLAY} up to {formatFileSize(MAX_FILE_SIZE_BYTES)} each
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".pdf,.doc,.docx,.txt,.csv,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,text/markdown"
-                disabled={selectedFiles.length >= MAX_FILES_PER_UPLOAD}
-              />
-
-              {/* Show valid files in the drag-drop area */}
-              {selectedFiles.filter(f => !f.error).length > 0 && (
-                <div className="mt-4 w-full px-4">
-                  <div className="rounded-md bg-[#232a36] p-2">
-                    {selectedFiles.filter(f => !f.error).map((sf) => (
-                      <div key={sf.id} className="flex items-center justify-between py-1">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-white truncate" title={sf.file.name}>
-                            {sf.file.name} ({formatFileSize(sf.file.size)})
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(sf.id)}
-                          className="text-gray-400 hover:text-red-400 disabled:opacity-50"
-                          title="Remove file"
-                          disabled={loading}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+        {/* Upload Files */}
+        <div>
+          <label className="mb-2 block text-base font-semibold text-white">Upload Files</label>
+          <div
+            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-500 bg-[#2d3543] py-8 transition hover:border-primary ${
+              selectedFiles.length >= MAX_FILES_PER_UPLOAD ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+            }`}
+            onDrop={selectedFiles.length < MAX_FILES_PER_UPLOAD ? handleDrop : undefined}
+            onDragOver={handleDragOver}
+            onClick={() => selectedFiles.length < MAX_FILES_PER_UPLOAD && fileInputRef.current?.click()}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-8m0 0l-4 4m4-4l4 4m-8 4h8" />
+            </svg>
+            <span className="text-blue-400 font-medium underline">Upload files</span> or drag and drop
+            <div className="text-xs text-gray-400 mt-1">
+              {ALLOWED_EXTENSIONS_DISPLAY} up to {formatFileSize(MAX_FILE_SIZE_BYTES)} each
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt,.csv,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,text/markdown"
+              disabled={selectedFiles.length >= MAX_FILES_PER_UPLOAD}
+            />
 
-            {/* Show only rejected files */}
-            {selectedFiles.filter(f => f.error).length > 0 && (
-              <div className="mt-4 space-y-2">
-                <h4 className="text-sm font-medium text-red-400">Rejected Files:</h4>
-                <ul className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-red-500/50 bg-[#2d3543] p-2">
-                  {selectedFiles.filter(f => f.error).map((sf) => (
-                    <li key={sf.id} className="flex items-center justify-between rounded-md p-2 even:bg-[#232a36]">
-                      <div className="flex items-center space-x-2 overflow-hidden">
-                        <FileText className="h-5 w-5 flex-shrink-0 text-red-400" />
-                        <span className="truncate text-sm text-white" title={sf.file.name}>
+            {/* Show valid files in the drag-drop area */}
+            {selectedFiles.filter(f => !f.error).length > 0 && (
+              <div className="mt-4 w-full px-4">
+                <div className="rounded-md bg-[#232a36] p-2">
+                  {selectedFiles.filter(f => !f.error).map((sf) => (
+                    <div key={sf.id} className="flex items-center justify-between py-1">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-white truncate" title={sf.file.name}>
                           {sf.file.name} ({formatFileSize(sf.file.size)})
                         </span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-red-400 truncate" title={sf.error}>{sf.error}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(sf.id)}
-                          className="text-gray-400 hover:text-red-400 disabled:opacity-50"
-                          title="Remove file"
-                          disabled={loading}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </li>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(sf.id)}
+                        className="text-gray-400 hover:text-red-400 disabled:opacity-50"
+                        title="Remove file"
+                        disabled={loading}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Category Dropdown */}
-          <div>
-            <label className="mb-2 block text-base font-semibold text-white">Category</label>
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="w-full rounded-md border border-gray-600 bg-[#232a36] p-2 text-white focus:border-primary focus:outline-none"
-            >
-              <option value="">Select a category</option>
-              {CATEGORY_OPTIONS.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
+          {/* Show only rejected files */}
+          {selectedFiles.filter(f => f.error).length > 0 && (
+            <div className="mt-4 space-y-2">
+              <h4 className="text-sm font-medium text-red-400">Rejected Files:</h4>
+              <ul className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-red-500/50 bg-[#2d3543] p-2">
+                {selectedFiles.filter(f => f.error).map((sf) => (
+                  <li key={sf.id} className="flex items-center justify-between rounded-md p-2 even:bg-[#232a36]">
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                      <FileText className="h-5 w-5 flex-shrink-0 text-red-400" />
+                      <span className="truncate text-sm text-white" title={sf.file.name}>
+                        {sf.file.name} ({formatFileSize(sf.file.size)})
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-red-400 truncate" title={sf.error}>{sf.error}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(sf.id)}
+                        className="text-gray-400 hover:text-red-400 disabled:opacity-50"
+                        title="Remove file"
+                        disabled={loading}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
 
-          {/* Description */}
-          <div>
-            <label className="mb-2 block text-base font-semibold text-white">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="w-full rounded-md border border-gray-600 bg-[#393f4a] p-2 text-white placeholder-gray-400 focus:border-primary focus:outline-none"
-              rows={3}
-              placeholder="Provide a brief description of the uploaded files"
-            />
-          </div>
+        {/* Category Dropdown */}
+        <div>
+          <label className="mb-2 block text-base font-semibold text-white">Category</label>
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            className="w-full rounded-md border border-gray-600 bg-[#232a36] p-2 text-white focus:border-primary focus:outline-none"
+          >
+            <option value="">Select a category</option>
+            {CATEGORY_OPTIONS.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
 
-          {/* Buttons */}
-          <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-gray-500 px-4 py-2 text-sm font-medium text-white bg-[#2d3543] hover:bg-[#393f4a]"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || selectedFiles.length === 0 || selectedFiles.some(f => f.error)}
-              className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                  Uploading...
-                </>
-              ) : (
-                `Upload ${selectedFiles.filter(f => !f.error).length} File${selectedFiles.filter(f => !f.error).length !== 1 ? 's' : ''}`
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        {/* Description */}
+        <div>
+          <label className="mb-2 block text-base font-semibold text-white">Description</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            className="w-full rounded-md border border-gray-600 bg-[#393f4a] p-2 text-white placeholder-gray-400 focus:border-primary focus:outline-none"
+            rows={3}
+            placeholder="Provide a brief description of the uploaded files"
+          />
+        </div>
+      </form>
+    </ModalDialog>
   );
 } 
