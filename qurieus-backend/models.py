@@ -182,6 +182,7 @@ class Document(Base):
     keywords = Column(String)  # Comma-separated list of keywords
     uploadedAt = Column(DateTime, default=datetime.utcnow)
     userId = Column(String, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
+    doc_metadata = Column("metadata", Text, nullable=True)
     
     user = relationship("Users", back_populates="documents")
     chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")

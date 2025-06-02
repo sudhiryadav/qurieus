@@ -193,7 +193,7 @@ def process_file(
             description="",
             category="",
             keywords="",
-            metadata=json.dumps(financial_analysis) if financial_analysis else None
+            doc_metadata=json.dumps(financial_analysis) if financial_analysis else None
         )
         db.add(document)
         db.flush()
@@ -436,50 +436,35 @@ async def query_documents(
             except Exception as e:
                 log_to_frontend("error", f"Redis cache error: {str(e)}")
 
-        # Check if this is a financial data query
-        financial_terms = ['revenue', 'income', 'expense', 'profit', 'margin', 'earnings', 'cost', 'sales']
-        is_financial_query = any(term in request.query.lower() for term in financial_terms)
+        # Always fetch the most recent document for the user
+        query = text("""
+            SELECT d.content, d.metadata, d."originalName"
+            FROM "Document" d
+            WHERE d."userId" = :userId
+            ORDER BY d."uploadedAt" DESC
+            LIMIT 1
+        """)
+        result = db.execute(query, {"userId": request.document_owner_id}).fetchone()
 
-        if is_financial_query:
-            # Query for documents with financial metadata
-            query = text("""
-                SELECT d.content, d.metadata, d."originalName"
-                FROM "Document" d
-                WHERE d.metadata IS NOT NULL
-                AND d."userId" = :userId
-                ORDER BY d."uploadedAt" DESC
-                LIMIT 1
-            """)
-            
-            result = db.execute(query, {"userId": request.document_owner_id}).fetchone()
-            
-            if result:
-                content, metadata, filename = result
-                if metadata:
-                    try:
-                        financial_data = json.loads(metadata)
-                        # Enhance the prompt with financial context
-                        prompt = f"""You are a financial analyst assistant. Answer the following question based on the financial data provided.
+        if result:
+            content, metadata, filename = result
+            prompt = None
+            if metadata:
+                try:
+                    structured_data = json.loads(metadata)
+                    prompt = f"""You are an intelligent assistant. Answer the following question using all available data, including any structured tables or text.
 
-Financial Data Summary:
-{json.dumps(financial_data, indent=2)}
+Structured Data (if any):
+{json.dumps(structured_data, indent=2)}
 
-Question: {request.query}
-
-Please provide a detailed analysis focusing on the financial metrics and trends. If specific numbers are requested, include them in your response.
-
-Answer:"""
-                    except json.JSONDecodeError:
-                        prompt = f"""Answer the following question based on the provided context.
-
-Context:
+Text Content:
 {content}
 
 Question: {request.query}
 
 Answer:"""
-                else:
-                    prompt = f"""Answer the following question based on the provided context.
+                except json.JSONDecodeError:
+                    prompt = f"""You are an intelligent assistant. Answer the following question using the provided context.
 
 Context:
 {content}
@@ -488,14 +473,20 @@ Question: {request.query}
 
 Answer:"""
             else:
-                # Fall back to semantic search if no financial document found
-                return await semantic_search_query(request, db)
+                prompt = f"""You are an intelligent assistant. Answer the following question using the provided context.
+
+Context:
+{content}
+
+Question: {request.query}
+
+Answer:"""
         else:
-            # Use regular semantic search for non-financial queries
+            # Fall back to semantic search if no document found
             return await semantic_search_query(request, db)
 
-        # Rest of the existing code for Ollama API call...
-
+        # Continue with Ollama API call...
+        return await generate_ollama_response(prompt, [], cache_key)
     except HTTPException:
         raise
     except Exception as e:

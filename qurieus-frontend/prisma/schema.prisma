@@ -188,7 +188,7 @@ model Document {
   keywords     String?  // Comma-separated list of keywords extracted from the document
   uploadedAt   DateTime @default(now())
   userId       String
-  
+  metadata     String?
   user         Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
   chunks       DocumentChunk[]
   
