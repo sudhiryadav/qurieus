@@ -185,7 +185,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-2xl rounded-lg bg-[#232a36] p-6">
+      <div className="w-full max-w-2xl rounded-lg bg-[#232a36] p-6" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
         {/* Guidelines */}
         <div className="mb-6 rounded-lg bg-[#2d3543] p-5 text-white">
           <h3 className="mb-2 text-lg font-semibold">Guidelines</h3>
