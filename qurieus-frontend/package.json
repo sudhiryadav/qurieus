@@ -9,7 +9,8 @@
     "build": "prisma generate && next build",
     "start": "PORT=8000 next start",
     "lint": "next lint",
-    "tunnel": "ngrok http 3000"
+    "tunnel": "ngrok http 3000",
+    "build:widget": "node scripts/build-widget.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.5.0",
@@ -65,7 +66,8 @@
     "postcss": "^8.5.4",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "esbuild": "^0.19.0"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

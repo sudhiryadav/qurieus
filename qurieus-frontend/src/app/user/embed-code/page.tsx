@@ -1,147 +1,178 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { toast } from "react-hot-toast";
-import { Copy, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Copy, Check, MessageSquare } from "lucide-react";
+import ChatWidget from "@/components/ChatWidget";
 
 export default function EmbedCode() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [embedCode, setEmbedCode] = useState("");
-
-  useEffect(() => {
-    if (session?.user?.id) {
-      const frontendUrl = window.location.origin;
-      const code = `<script>
-  window.QurieusChatConfig = {
-    documentOwnerId: '${session.user.id}',
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewConfig, setPreviewConfig] = useState({
     theme: 'light',
-    position: 'bottom-right'
-  };
-</script>
-<script src="${frontendUrl}/embed.js" async></script>`;
-      setEmbedCode(code);
-    }
-  }, [session]);
+    position: 'bottom-right',
+    initialMessage: 'Hello! How can I help you today?'
+  });
 
-  const handleCopy = async () => {
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/signin");
+    }
+  }, [status, router]);
+
+  // Show loading state while checking auth
+  if (status === "loading") {
+    return (
+      <div className="flex h-screen w-full items-center justify-center pt-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  // Debug: log session
+  if (typeof window !== 'undefined') {
+    console.log('Session:', session);
+  }
+
+  const apiKey = session?.user?.id || '';
+
+  const embedCode = `<script 
+  src=\"https://qurieus.com/embed.js\"
+  data-api-key=\"${apiKey}\"
+  data-initial-message=\"${previewConfig.initialMessage}\"
+  data-position=\"${previewConfig.position}\"
+  data-theme=\"${previewConfig.theme}\"
+></script>`;
+
+  const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(embedCode);
       setCopied(true);
-      toast.success("Embed code copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      toast.error("Failed to copy embed code");
+      console.error('Failed to copy text: ', err);
     }
   };
 
-  const handleApplyEmbedCode = () => {
-    try {
-      // Remove any existing chat container
-      const existingContainer = document.getElementById('qurieus-chat-container');
-      if (existingContainer) {
-        existingContainer.remove();
-      }
-
-      const configScript = document.createElement('script');
-      configScript.textContent = `window.QurieusChatConfig = {
-        documentOwnerId: '${session?.user?.id}',
-        theme: 'light',
-        position: 'bottom-right'
-      };`;
-      document.head.appendChild(configScript);
-
-      const embedScript = document.createElement('script');
-      embedScript.src = window.location.origin + '/embed.js';
-      embedScript.async = true;
-      document.head.appendChild(embedScript);
-
-      toast.success("Embed code applied successfully!");
-    } catch (err) {
-      toast.error("Failed to apply embed code");
-    }
-  };
-
+  // Always show live preview
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-dark dark:text-white">
-        Embed Chat Widget
-      </h1>
-
+    <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <Card className="p-6">
-          <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">
-            Your Embed Code
-          </h2>
-          <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            Copy and paste this code into your website to add the chat widget.
-          </p>
-          <div className="relative">
-            <pre className="mb-4 overflow-x-auto rounded-lg bg-gray-100 p-4 dark:bg-dark-3">
-              <code>{embedCode}</code>
-            </pre>
-            <Button
-              onClick={handleCopy}
-              className="absolute right-2 top-2"
-              variant="outline"
-              size="sm"
+        <h1 className="mb-4 text-3xl font-bold">Embed Chat Widget</h1>
+        <p className="text-gray-600 dark:text-gray-300">
+          Add our chat widget to your website by copying and pasting the code below.
+        </p>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        {/* Configuration Panel */}
+        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <h2 className="mb-4 text-xl font-semibold">Widget Configuration</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium">Theme</label>
+              <select
+                value={previewConfig.theme}
+                onChange={(e) => setPreviewConfig(prev => ({ ...prev, theme: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 dark:border-dark-3 dark:bg-dark-3"
+              >
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">Position</label>
+              <select
+                value={previewConfig.position}
+                onChange={(e) => setPreviewConfig(prev => ({ ...prev, position: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 dark:border-dark-3 dark:bg-dark-3"
+              >
+                <option value="bottom-right">Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">Initial Message</label>
+              <input
+                type="text"
+                value={previewConfig.initialMessage}
+                onChange={(e) => setPreviewConfig(prev => ({ ...prev, initialMessage: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 dark:border-dark-3 dark:bg-dark-3"
+                placeholder="Enter initial message"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Embed Code Panel */}
+        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Embed Code</h2>
+            <button
+              onClick={copyToClipboard}
+              className="flex items-center space-x-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
             >
               {copied ? (
                 <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Copied!
+                  <Check className="h-4 w-4" />
+                  <span>Copied!</span>
                 </>
               ) : (
                 <>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
+                  <Copy className="h-4 w-4" />
+                  <span>Copy Code</span>
                 </>
               )}
-            </Button>
+            </button>
           </div>
-        </Card>
-      </div>
-
-      <Card className="p-6">
-        <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">
-          Live Demo
-        </h2>
-        <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          Test the embed code on this page by clicking the button below.
-        </p>
-        <Button onClick={handleApplyEmbedCode} className="mt-2">
-          Apply Embed Code
-        </Button>
-      </Card>
-
-      <Card className="p-6 mt-8">
-        <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">
-          Customization Options
-        </h2>
-        <div className="space-y-4">
-          <div>
-            <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Theme
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Change <code>theme: &quot;light&quot;</code> to <code>theme: &quot;dark&quot;</code>{" "}
-              for dark mode.
-            </p>
+          
+          <div className="relative">
+            <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 dark:bg-dark-3">
+              <code className="text-sm">{embedCode}</code>
+            </pre>
           </div>
-          <div>
-            <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Position
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Available positions: <code>bottom-right</code>, <code>bottom-left</code>,{" "}
-              <code>top-right</code>, <code>top-left</code>
-            </p>
+
+          <div className="mt-4 rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
+            <h3 className="mb-2 font-semibold text-yellow-800 dark:text-yellow-200">Important Notes:</h3>
+            <ul className="list-inside list-disc space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+              <li>The widget requires an active subscription to work</li>
+              <li>Customize the appearance using the configuration options</li>
+              <li>Test the widget using the live preview below</li>
+            </ul>
           </div>
         </div>
-      </Card>
+      </div>
+
+      {/* Live Preview */}
+      <div className="mt-8 rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+        <h2 className="mb-4 text-xl font-semibold">Live Preview</h2>
+        <div className="relative h-[400px] rounded-lg border border-dashed border-gray-300 dark:border-dark-3 overflow-hidden">
+          {apiKey ? (
+            <ChatWidget
+              apiKey={apiKey}
+              initialMessage={previewConfig.initialMessage}
+              position={previewConfig.position as 'bottom-right' | 'bottom-left'}
+              theme={previewConfig.theme as 'light' | 'dark'}
+              inline={true}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-center text-gray-500 dark:text-gray-400">
+              <div>
+                <p className="mb-2 font-semibold">No API key found for your user session.</p>
+                <p>Please make sure you are logged in and your account is set up correctly.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

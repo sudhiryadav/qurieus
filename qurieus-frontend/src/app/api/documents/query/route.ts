@@ -12,13 +12,14 @@ export async function POST(request: Request) {
     const routeStart = performance.now();
     const session = await getServerSession(authOptions);
     const body = await request.json();
-    const { query, documentOwnerId, history } = body;
+    const { query, documentOwnerId, visitorId } = body;
 
     // Get headers
     const headersList = await headers();
     
     // Get visitor information
-    const visitorId = headersList.get("x-visitor-id") || "unknown";
+    const visitorIdHeader = headersList.get("x-visitor-id") || "unknown";
+    const effectiveVisitorId = visitorId || visitorIdHeader;
     const userAgent = headersList.get("user-agent") || "unknown";
     const ipAddress = headersList.get("x-forwarded-for") || "unknown";
     const referrer = headersList.get("referer") || "unknown";
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
     const conversation = await prisma.chatConversation.upsert({
       where: {
         visitorId_userId: {
-          visitorId,
+          visitorId: effectiveVisitorId,
           userId,
         },
       },
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
         },
       },
       create: {
-        visitorId,
+        visitorId: effectiveVisitorId,
         userId,
         userAgent,
         deviceType: device,
@@ -95,6 +96,13 @@ export async function POST(request: Request) {
     });
     const dbEnd = performance.now();
     console.log(`Next.js DB operations took: ${(dbEnd - dbStart).toFixed(2)}ms`);
+
+    // Fetch chat history server-side
+    const historyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/chat/history?visitorId=${effectiveVisitorId}&userId=${userId}&limit=10`);
+    let history = [];
+    if (historyRes.ok) {
+      history = await historyRes.json();
+    }
 
     // Query the FastAPI backend
     const fastApiStart = performance.now();

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import React from "react";
 import Logo from "../Common/Logo";
+import { useSession } from "next-auth/react";
 
 interface UserNavProps {
   isOpen: boolean;
@@ -20,7 +21,9 @@ interface UserNavProps {
 }
 
 const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
+  const { status } = useSession();
   const pathname = usePathname();
+  if (status !== "authenticated") return null;
 
   const navItems = [
     {
