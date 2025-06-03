@@ -105,13 +105,6 @@ export async function POST(request: Request) {
     }
 
     // Query the FastAPI backend
-    const fastApiStart = performance.now();
-    console.log('Sending request to FastAPI:', {
-      url: `${process.env.BACKEND_URL}/api/v1/documents/query`,
-      query,
-      document_owner_id: userId
-    });
-
     const fastApiResponse = await fetch(`${process.env.BACKEND_URL}/api/v1/documents/query`, {
       method: 'POST',
       headers: {
@@ -119,38 +112,65 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         query,
-        document_owner_id: userId,
+        document_owner_id: documentOwnerId,
         history,
       }),
     });
 
     if (!fastApiResponse.ok) {
       const errorText = await fastApiResponse.text();
-      console.error('FastAPI Error Response:', {
-        status: fastApiResponse.status,
-        statusText: fastApiResponse.statusText,
-        error: errorText
-      });
       throw new Error(`Failed to get response from FastAPI: ${fastApiResponse.status} ${fastApiResponse.statusText}`);
     }
 
-    const fastApiEnd = performance.now();
-    console.log(`FastAPI request took: ${(fastApiEnd - fastApiStart).toFixed(2)}ms`);
+    // Stream NDJSON, removing only the 'model' field from each chunk
+    const ndjsonStream = fastApiResponse.body;
+    if (!ndjsonStream) {
+      return NextResponse.json(
+        { error: "No response body from FastAPI" },
+        { status: 500 }
+      );
+    }
+    const filteredStream = new ReadableStream({
+      async start(controller) {
+        const reader = ndjsonStream.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const data = JSON.parse(line);
+              delete data.model;
+              controller.enqueue(JSON.stringify(data) + '\n');
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+        }
+        if (buffer.trim()) {
+          try {
+            const data = JSON.parse(buffer);
+            delete data.model;
+            controller.enqueue(JSON.stringify(data) + '\n');
+          } catch {}
+        }
+        controller.close();
+      }
+    });
 
-    console.log('FastAPI response received, setting up stream...');
-
-    // Forward the streaming response directly
-    const routeEnd = performance.now();
-    console.log(`Total Next.js route processing took: ${(routeEnd - routeStart).toFixed(2)}ms`);
-
-    return new Response(fastApiResponse.body, {
+    return new Response(filteredStream, {
       headers: {
         'Content-Type': 'application/x-ndjson',
         'Transfer-Encoding': 'chunked',
       },
     });
   } catch (error) {
-    console.error("Error processing query:", error);
+    console.error("Error in /api/documents/query route:", error);
     return NextResponse.json(
       { error: "Failed to process query" },
       { status: 500 }

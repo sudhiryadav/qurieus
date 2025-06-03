@@ -29,9 +29,11 @@ const ALLOWED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
   "text/csv",
-  "text/markdown"
+  "text/markdown",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 ];
-const ALLOWED_EXTENSIONS_DISPLAY = "PDF, DOC, DOCX, TXT, CSV, MD";
+const ALLOWED_EXTENSIONS_DISPLAY = "PDF, DOC, DOCX, TXT, CSV, MD, XLS, XLSX";
 
 interface SelectedFile {
   file: File;
@@ -255,10 +257,9 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
               multiple
               onChange={handleFileChange}
               className="hidden"
-              accept=".pdf,.doc,.docx,.txt,.csv,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,text/markdown"
+              accept=".pdf,.doc,.docx,.txt,.csv,.md,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,text/markdown,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               disabled={selectedFiles.length >= MAX_FILES_PER_UPLOAD}
             />
-
             {/* Show valid files in the drag-drop area */}
             {selectedFiles.filter(f => !f.error).length > 0 && (
               <div className="mt-4 w-full px-4">
@@ -286,7 +287,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
               </div>
             )}
           </div>
-
           {/* Show only rejected files */}
           {selectedFiles.filter(f => f.error).length > 0 && (
             <div className="mt-4 space-y-2">
@@ -318,7 +318,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
             </div>
           )}
         </div>
-
         {/* Category Dropdown */}
         <div>
           <label className="mb-2 block text-base font-semibold text-white">Category</label>
@@ -333,7 +332,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
             ))}
           </select>
         </div>
-
         {/* Description */}
         <div>
           <label className="mb-2 block text-base font-semibold text-white">Description</label>

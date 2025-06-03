@@ -126,6 +126,7 @@ window.QurieusChat = {
         let sources = null;
         let firstChunkTime = null;
         let lastChunkTime = null;
+        let gotAssistantResponse = false;
 
         // Get the response as a stream
         const reader = response.body.getReader();
@@ -152,30 +153,17 @@ window.QurieusChat = {
 
             for (const line of lines) {
               if (!line.trim()) continue;
-
               try {
                 const data = JSON.parse(line);
-                console.log('Parsed data:', data);
-                if (data.chunk) {
-                  fullResponse += data.chunk;
+                // Only ignore the 'model' field, use all other metadata
+                // Use the 'response' field for display
+                if (typeof data.response === 'string' && data.response !== '') {
+                  fullResponse += data.response;
+                  gotAssistantResponse = true;
                   contentElement.innerHTML = this.markdownToHtml(fullResponse);
                   messageElement.scrollIntoView({ behavior: 'smooth' });
-                } else if (data.final) {
-                  sources = data.sources;
-                  // Add sources to the message
-                  const sourcesDiv = document.createElement('div');
-                  sourcesDiv.className = 'qurieus-chat-message-sources';
-                  sourcesDiv.innerHTML = `
-                    <p>Sources:</p>
-                    <ul>
-                      ${sources.map(source => `
-                        <li>${source.document} (Similarity: ${(source.similarity * 100).toFixed(1)}%)</li>
-                      `).join('')}
-                    </ul>
-                  `;
-                  sourcesDiv.style.display = 'none';
-                  messageElement.appendChild(sourcesDiv);
                 }
+                // Optionally handle 'done', 'created_at', etc. if needed
               } catch (e) {
                 console.error('Error parsing line:', e, 'Raw line:', line);
               }
@@ -189,6 +177,11 @@ window.QurieusChat = {
           throw error;
         } finally {
           reader.releaseLock();
+        }
+
+        // Show fallback if no assistant response or only whitespace was received
+        if (!gotAssistantResponse || !fullResponse.trim()) {
+          contentElement.innerHTML = 'No answer could be found in your document for this question.';
         }
 
         // Add follow-up suggestion if this is the first response
