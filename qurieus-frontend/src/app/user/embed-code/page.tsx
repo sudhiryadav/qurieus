@@ -17,6 +17,7 @@ export default function EmbedCode() {
     position: 'bottom-right',
     initialMessage: 'Hello! How can I help you today?'
   });
+  const [showEmbedWidget, setShowEmbedWidget] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -67,6 +68,15 @@ export default function EmbedCode() {
         <p className="text-gray-600 dark:text-gray-300">
           Add our chat widget to your website by copying and pasting the code below.
         </p>
+      </div>
+
+      <div className="mb-6 flex justify-end">
+        <button
+          className="rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
+          onClick={() => setShowEmbedWidget((v) => !v)}
+        >
+          {showEmbedWidget ? 'Hide Embed Widget' : 'Show Embed Widget'}
+        </button>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
@@ -173,6 +183,17 @@ export default function EmbedCode() {
           )}
         </div>
       </div>
+
+      {/* Floating Embed Widget (for demo) */}
+      {showEmbedWidget && apiKey && (
+        <ChatWidget
+          apiKey={apiKey}
+          initialMessage={previewConfig.initialMessage}
+          position={previewConfig.position as 'bottom-right' | 'bottom-left'}
+          theme={previewConfig.theme as 'light' | 'dark'}
+          // Do not pass inline, so it floats
+        />
+      )}
     </div>
   );
 }

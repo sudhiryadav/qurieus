@@ -30,6 +30,23 @@ const fetchChatHistory = async (visitorId: string, userId: string, limit = 10) =
   }
 };
 
+// Add shimmer CSS
+const shimmerStyle = `
+  .shimmer {
+    display: inline-block;
+    background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+`;
+
 const ChatWidget: React.FC<ChatWidgetProps> = ({
   apiKey,
   initialMessage = 'Hello! How can I help you today?',
@@ -48,14 +65,13 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sources, setSources] = useState<any[] | null>(null);
   const [showSourcesUI, setShowSourcesUI] = useState(false);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const [showThinking, setShowThinking] = useState(false);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!inline) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, inline]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,14 +83,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     setIsLoading(true);
     setSources(null);
     setShowSourcesUI(false);
+    setShowThinking(true);
 
     try {
       const visitorId = getVisitorId();
-      let assistantIndex = -1;
-      setMessages(prev => {
-        assistantIndex = prev.length;
-        return [...prev, { role: 'assistant', content: '' }];
-      });
+      let gotFirstChunk = false;
+      let fullResponse = '';
 
       const response = await fetch('/api/documents/query', {
         method: 'POST',
@@ -96,7 +110,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let fullResponse = '';
       if (reader) {
         while (true) {
           const { value, done } = await reader.read();
@@ -111,12 +124,43 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
               const data = JSON.parse(line);
               console.log('NDJSON data:', data);
               if (data.chunk) {
-                fullResponse += data.chunk;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  updated[assistantIndex] = { role: 'assistant', content: fullResponse };
-                  return updated;
-                });
+                if (!gotFirstChunk) {
+                  setShowThinking(false);
+                  gotFirstChunk = true;
+                  fullResponse = data.chunk;
+                  setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+                } else {
+                  setMessages(prev => {
+                    const lastAssistantIdx = [...prev].reverse().findIndex(m => m.role === 'assistant');
+                    if (lastAssistantIdx === -1) return prev;
+                    const idx = prev.length - 1 - lastAssistantIdx;
+                    const updated = [...prev];
+                    updated[idx] = {
+                      role: 'assistant',
+                      content: (updated[idx].content || '') + data.chunk
+                    };
+                    return updated;
+                  });
+                }
+              } else if (data.response !== undefined) {
+                setShowThinking(false);
+                if (!gotFirstChunk) {
+                  fullResponse = data.response;
+                  setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+                  gotFirstChunk = true;
+                } else {
+                  setMessages(prev => {
+                    const lastAssistantIdx = [...prev].reverse().findIndex(m => m.role === 'assistant');
+                    if (lastAssistantIdx === -1) return prev;
+                    const idx = prev.length - 1 - lastAssistantIdx;
+                    const updated = [...prev];
+                    updated[idx] = {
+                      role: 'assistant',
+                      content: (updated[idx].content || '') + data.response
+                    };
+                    return updated;
+                  });
+                }
               }
               if (data.final && data.sources) {
                 setSources(data.sources);
@@ -129,6 +173,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
         }
       }
     } catch (error) {
+      setShowThinking(false);
       console.error('Error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -166,175 +211,179 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   };
 
   return (
-    <div
-      className={
-        inline
-          ? 'w-full h-full flex flex-col'
-          : `fixed ${positionClasses[position]} z-50`
-      }
-    >
-      {inline ? (
-        <>
-          <div className="flex-1 overflow-y-auto p-4 bg-transparent">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`mb-4 max-w-[80%] rounded-lg p-3 ${
-                  message.role === 'user'
-                    ? `${themeClasses[theme].message.user} ml-auto`
-                    : `${themeClasses[theme].message.assistant}`
-                }`}
-              >
-                {message.content}
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-            {showSources && sources && (
-              <div className="mt-4">
-                <button
-                  className="text-xs text-primary underline mb-2"
-                  onClick={() => setShowSourcesUI((v) => !v)}
+    <>
+      {/* Inject shimmer CSS */}
+      <style>{shimmerStyle}</style>
+      <div
+        className={
+          inline
+            ? 'w-full h-full flex flex-col'
+            : `fixed ${positionClasses[position]} z-50`
+        }
+      >
+        {inline ? (
+          <>
+            <div className="flex-1 overflow-y-auto p-4 bg-transparent">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`mb-4 max-w-[80%] rounded-lg p-3 ${
+                    message.role === 'user'
+                      ? `${themeClasses[theme].message.user} ml-auto`
+                      : `${themeClasses[theme].message.assistant}`
+                  }`}
                 >
-                  {showSourcesUI ? 'Hide Sources' : 'Show Sources'}
+                  {message.content}
+                </div>
+              ))}
+              {showThinking && (
+                <div className={`mb-4 max-w-[80%] rounded-lg p-3 ${themeClasses[theme].message.assistant}`}>
+                  <span className="shimmer">Thinking...</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+              {showSources && sources && (
+                <div className="mt-4">
+                  <button
+                    className="text-xs text-primary underline mb-2"
+                    onClick={() => setShowSourcesUI((v) => !v)}
+                  >
+                    {showSourcesUI ? 'Hide Sources' : 'Show Sources'}
+                  </button>
+                  {showSourcesUI && (
+                    <div className="rounded bg-gray-100 dark:bg-gray-800 p-2 text-xs">
+                      <p className="font-semibold mb-1">Sources:</p>
+                      <ul className="list-disc ml-4">
+                        {sources.map((source, i) => (
+                          <li key={i}>
+                            {source.document} (Similarity: {(source.similarity * 100).toFixed(1)}%)
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <form onSubmit={handleSubmit} className="border-t p-4 bg-transparent">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`${themeClasses[theme].button} rounded-lg p-2`}
+                >
+                  <Send className="h-5 w-5" />
                 </button>
-                {showSourcesUI && (
-                  <div className="rounded bg-gray-100 dark:bg-gray-800 p-2 text-xs">
-                    <p className="font-semibold mb-1">Sources:</p>
-                    <ul className="list-disc ml-4">
-                      {sources.map((source, i) => (
-                        <li key={i}>
-                          {source.document} (Similarity: {(source.similarity * 100).toFixed(1)}%)
-                        </li>
-                      ))}
-                    </ul>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
+            {!isOpen ? (
+              <button
+                onClick={() => setIsOpen(true)}
+                className={`${themeClasses[theme].button} rounded-full p-4 shadow-lg transition-all duration-300`}
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </button>
+            ) : (
+              <div className={`${themeClasses[theme].container} w-96 rounded-lg shadow-xl transition-all duration-300 ${isMinimized ? 'h-16' : 'h-[600px]'}`}>
+                <div className="flex items-center justify-between border-b p-4">
+                  <h3 className="text-lg font-semibold">Chat with us</h3>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setIsMinimized(!isMinimized)}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => setIsOpen(false)}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
+                </div>
+                {!isMinimized && (
+                  <>
+                    <div className="h-[calc(600px-8rem)] overflow-y-auto p-4">
+                      {messages.map((message, index) => (
+                        <div
+                          key={index}
+                          className={`mb-4 max-w-[80%] rounded-lg p-3 ${
+                            message.role === 'user'
+                              ? `${themeClasses[theme].message.user} ml-auto`
+                              : `${themeClasses[theme].message.assistant}`
+                          }`}
+                        >
+                          {message.content}
+                        </div>
+                      ))}
+                      {showThinking && (
+                        <div className={`mb-4 max-w-[80%] rounded-lg p-3 ${themeClasses[theme].message.assistant}`}>
+                          <span className="shimmer">Thinking...</span>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                      {showSources && sources && (
+                        <div className="mt-4">
+                          <button
+                            className="text-xs text-primary underline mb-2"
+                            onClick={() => setShowSourcesUI((v) => !v)}
+                          >
+                            {showSourcesUI ? 'Hide Sources' : 'Show Sources'}
+                          </button>
+                          {showSourcesUI && (
+                            <div className="rounded bg-gray-100 dark:bg-gray-800 p-2 text-xs">
+                              <p className="font-semibold mb-1">Sources:</p>
+                              <ul className="list-disc ml-4">
+                                {sources.map((source, i) => (
+                                  <li key={i}>
+                                    {source.document} (Similarity: {(source.similarity * 100).toFixed(1)}%)
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <form onSubmit={handleSubmit} className="border-t p-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={inputMessage}
+                          onChange={(e) => setInputMessage(e.target.value)}
+                          placeholder="Type your message..."
+                          className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
+                        />
+                        <button
+                          type="submit"
+                          disabled={isLoading}
+                          className={`${themeClasses[theme].button} rounded-lg p-2`}
+                        >
+                          <Send className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </form>
+                  </>
                 )}
               </div>
             )}
-          </div>
-          <form onSubmit={handleSubmit} className="border-t p-4 bg-transparent">
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type your message..."
-                className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
-              />
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`${themeClasses[theme].button} rounded-lg p-2`}
-              >
-                <Send className="h-5 w-5" />
-              </button>
-            </div>
-          </form>
-        </>
-      ) : (
-        <>
-          {!isOpen ? (
-            <button
-              onClick={() => setIsOpen(true)}
-              className={`${themeClasses[theme].button} rounded-full p-4 shadow-lg transition-all duration-300`}
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-            </button>
-          ) : (
-            <div className={`${themeClasses[theme].container} w-96 rounded-lg shadow-xl transition-all duration-300 ${isMinimized ? 'h-16' : 'h-[600px]'}`}>
-              <div className="flex items-center justify-between border-b p-4">
-                <h3 className="text-lg font-semibold">Chat with us</h3>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setIsMinimized(!isMinimized)}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                  >
-                    {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-                  </button>
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              {!isMinimized && (
-                <>
-                  <div className="h-[calc(600px-8rem)] overflow-y-auto p-4">
-                    {messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`mb-4 max-w-[80%] rounded-lg p-3 ${
-                          message.role === 'user'
-                            ? `${themeClasses[theme].message.user} ml-auto`
-                            : `${themeClasses[theme].message.assistant}`
-                        }`}
-                      >
-                        {message.content}
-                      </div>
-                    ))}
-                    {isLoading && (
-                      <div className="flex justify-center">
-                        <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                    {showSources && sources && (
-                      <div className="mt-4">
-                        <button
-                          className="text-xs text-primary underline mb-2"
-                          onClick={() => setShowSourcesUI((v) => !v)}
-                        >
-                          {showSourcesUI ? 'Hide Sources' : 'Show Sources'}
-                        </button>
-                        {showSourcesUI && (
-                          <div className="rounded bg-gray-100 dark:bg-gray-800 p-2 text-xs">
-                            <p className="font-semibold mb-1">Sources:</p>
-                            <ul className="list-disc ml-4">
-                              {sources.map((source, i) => (
-                                <li key={i}>
-                                  {source.document} (Similarity: {(source.similarity * 100).toFixed(1)}%)
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <form onSubmit={handleSubmit} className="border-t p-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        placeholder="Type your message..."
-                        className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
-                      />
-                      <button
-                        type="submit"
-                        disabled={isLoading}
-                        className={`${themeClasses[theme].button} rounded-lg p-2`}
-                      >
-                        <Send className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </div>
-          )}
-        </>
-      )}
-    </div>
+          </>
+        )}
+      </div>
+    </>
   );
 };
 
