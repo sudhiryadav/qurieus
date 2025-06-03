@@ -10,6 +10,7 @@ import "../styles/prism-vsc-dark-plus.css";
 import ToasterContext from "./api/contex/ToasetContex";
 import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
+import UserNav from "@/components/UserNav";
 
 export default function RootLayout({
   children,
@@ -17,6 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [loading, setLoading] = useState<boolean>(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
@@ -41,7 +43,8 @@ export default function RootLayout({
               defaultTheme="light"
             >
               <ToasterContext />
-              <Header />
+              <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+              <UserNav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
               {children}
               <Footer />
               <ScrollToTop />

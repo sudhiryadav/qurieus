@@ -62,11 +62,11 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[100] w-64 transform border-r border-gray-200 bg-white shadow-lg transition-transform duration-300 ease-in-out dark:border-dark-3 dark:bg-dark-2 lg:z-10 lg:translate-x-0 ${
+        className={`fixed top-16 left-0 z-[100] h-[calc(100vh-4rem)] w-64 transform border-r border-gray-200 bg-white shadow-lg transition-transform duration-300 ease-in-out dark:border-dark-3 dark:bg-dark-2 lg:z-10 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-full flex-col pt-20">
+        <div className="flex h-full flex-col">
           <div className="flex-grow overflow-y-auto py-2">
             <nav className="space-y-1 px-2">
               {navItems.map((item) => (
