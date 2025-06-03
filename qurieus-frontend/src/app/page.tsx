@@ -29,7 +29,6 @@ export default function Home() {
       <Faq />
       <Team />
       <Contact />
-      <Clients />
     </main>
   );
 }

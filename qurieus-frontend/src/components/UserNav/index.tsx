@@ -11,16 +11,16 @@ import {
   X,
   Code
 } from "lucide-react";
-import { useState } from "react";
+import React from "react";
 import Logo from "../Common/Logo";
 
-const UserNav = () => {
-  const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
+interface UserNavProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
+const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
+  const pathname = usePathname();
 
   const navItems = [
     {
@@ -52,26 +52,17 @@ const UserNav = () => {
 
   return (
     <>
-      {/* Mobile toggle button */}
-      <button
-        type="button"
-        onClick={toggleSidebar}
-        className="fixed left-4 top-24 z-40 flex h-10 w-10 items-center justify-center rounded-md bg-primary text-white shadow-md lg:hidden"
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </button>
-
       {/* Overlay for mobile */}
       {isOpen && (
         <div 
           className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
-          onClick={toggleSidebar}
+          onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-200 bg-white shadow-lg transition-transform duration-300 ease-in-out dark:border-dark-3 dark:bg-dark-2 lg:z-10 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-[100] w-64 transform border-r border-gray-200 bg-white shadow-lg transition-transform duration-300 ease-in-out dark:border-dark-3 dark:bg-dark-2 lg:z-10 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -82,7 +73,7 @@ const UserNav = () => {
                 <Link 
                   key={item.href} 
                   href={item.href}
-                  onClick={() => setIsOpen(false)}
+                  onClick={onClose}
                   className={`
                     flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium 
                     ${

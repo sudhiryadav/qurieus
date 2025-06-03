@@ -49,14 +49,14 @@ const Logo = ({
           alt="logo"
           width={width}
           height={height}
-          className="hidden dark:block"
+          className="dark:hidden"
         />
         <Image
           src="/images/logo/logo-white.svg"
           alt="logo"
           width={width}
           height={height}
-          className="dark:hidden"
+          className="dark:block"
         />
         {showBrandName && (
           <span className="ml-2 text-xl font-bold text-black dark:text-white">

@@ -74,7 +74,7 @@ const Header = () => {
       >
         <div className="w-full">
           <div className="relative flex items-center justify-between">
-            <div className="w-60 max-w-full pl-6">
+            <div className="w-60 max-w-full sm:ml-12">
               <Logo width={30} link='/' />
             </div>
             <div className="flex w-full items-center px-4 lg:px-0 lg:ml-64 lg:pr-6">
@@ -145,71 +145,73 @@ const Header = () => {
                   </button>
                   {/* user dropdown and hamburger button (mobile) */}
                   {session?.user ? (
-                    <div className="relative flex items-center" ref={userMenuRef}>
-                      <button
-                        onClick={() => setUserMenuOpen(!userMenuOpen)}
-                        className={`flex items-center space-x-2 px-4 py-3 text-base font-medium ${
-                          !sticky && pathUrl === "/" ? "text-white" : "text-dark"
-                        } dark:text-white`}
-                      >
-                        <span>{session?.user?.name}</span>
-                        <svg 
-                          className={`h-4 w-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
-                          stroke="currentColor"
+                    <div className="flex items-center" ref={userMenuRef}>
+                      <div className="relative">
+                        <button
+                          onClick={() => setUserMenuOpen(!userMenuOpen)}
+                          className={`flex items-center space-x-2 px-4 py-3 text-base font-medium ${
+                            !sticky && pathUrl === "/" ? "text-white" : "text-dark"
+                          } dark:text-white`}
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      {userMenuOpen && (
-                        <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-dark-2">
-                          <div className="py-1">
-                            <Link
-                              href="/user/dashboard"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                            >
-                              Dashboard
-                            </Link>
-                            <Link
-                              href="/user/profile"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                            >
-                              Profile
-                            </Link>
-                            <Link
-                              href="/user/knowledge-base"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                            >
-                              Knowledge Base
-                            </Link>
-                            <Link
-                              href="/user/analytics"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                            >
-                              Analytics
-                            </Link>
-                            <Link
-                              href="/user/embed-code"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                            >
-                              Embed code
-                            </Link>
-                            <hr className="my-1 border-gray-200 dark:border-dark-3" />
-                            <button
-                              onClick={() => signOut()}
-                              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                            >
-                              Sign Out
-                            </button>
+                          <span>{session?.user?.name}</span>
+                          <svg 
+                            className={`h-4 w-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {userMenuOpen && (
+                          <div className="absolute right-0 mt-2 min-w-[10rem] w-max origin-top rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-dark-2 z-[200]">
+                            <div className="py-1">
+                              <Link
+                                href="/user/dashboard"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              >
+                                Dashboard
+                              </Link>
+                              <Link
+                                href="/user/profile"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              >
+                                Profile
+                              </Link>
+                              <Link
+                                href="/user/knowledge-base"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              >
+                                Knowledge Base
+                              </Link>
+                              <Link
+                                href="/user/analytics"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              >
+                                Analytics
+                              </Link>
+                              <Link
+                                href="/user/embed-code"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              >
+                                Embed code
+                              </Link>
+                              <hr className="my-1 border-gray-200 dark:border-dark-3" />
+                              <button
+                                onClick={() => signOut()}
+                                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              >
+                                Sign Out
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                       {/* Hamburger button - mobile only, after user dropdown */}
                       <button
                         onClick={navbarToggleHandler}
