@@ -83,7 +83,6 @@ yarn start
 ```
 qurieus-frontend/
 ├── public/              # Static files
-│   ├── chat.js         # Embedded chat widget
 │   └── embed.js        # Chat widget loader
 ├── src/
 │   ├── app/            # Next.js app directory

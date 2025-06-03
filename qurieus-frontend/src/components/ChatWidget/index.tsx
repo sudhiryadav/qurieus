@@ -118,11 +118,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
           for (const line of lines) {
-            console.log('NDJSON line:', line);
             if (!line.trim()) continue;
             try {
               const data = JSON.parse(line);
-              console.log('NDJSON data:', data);
               if (data.chunk) {
                 if (!gotFirstChunk) {
                   setShowThinking(false);

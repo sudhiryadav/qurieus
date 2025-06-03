@@ -28,8 +28,6 @@ export async function POST(req: NextRequest) {
     // Check if user is authenticated
   const session = await getServerSession(authOptions);
     
-    console.log('Session user ID:', session?.user?.id);
-    
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in.' },
@@ -44,11 +42,6 @@ export async function POST(req: NextRequest) {
       raw: true  // Important: get the raw token string
     });
     
-    console.log('Token available:', !!token);
-    console.log('Token type:', typeof token);
-    console.log('Token preview:', token ? `${token.substring(0, 20)}...` : 'No token');
-    console.log('NEXTAUTH_SECRET preview:', process.env.NEXTAUTH_SECRET ? `${process.env.NEXTAUTH_SECRET.substring(0, 5)}...` : 'Not set');
-    
     if (!token) {
       return NextResponse.json(
         { error: 'Authentication token not found' },
@@ -61,8 +54,6 @@ export async function POST(req: NextRequest) {
     const files = formData.getAll('files') as File[];
     const description = formData.get('description') as string;
     const category = formData.get('category') as string;
-    
-    console.log(`Processing ${files.length} files for upload`);
     
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -99,8 +90,6 @@ export async function POST(req: NextRequest) {
     backendFormData.append('description', description || '');
     backendFormData.append('category', category || '');
     
-    console.log(`Sending request to: ${BACKEND_URL}/api/v1/documents/upload`);
-    
     // Make API call to FastAPI backend with the correct endpoint
     const backendResponse = await fetch(`${BACKEND_URL}/api/v1/documents/upload`, {
     method: 'POST',
@@ -109,8 +98,6 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
-    console.log('Backend response status:', backendResponse.status);
     
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text();
@@ -130,8 +117,7 @@ export async function POST(req: NextRequest) {
     }
     
     const data = await backendResponse.json();
-    console.log('Upload successful', data);
-    
+
     // Return success response with processed files
     const processedFiles = files.map(file => ({
       name: file.name,

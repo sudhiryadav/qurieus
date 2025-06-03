@@ -24,9 +24,6 @@ export async function POST(request: Request) {
     const ipAddress = headersList.get("x-forwarded-for") || "unknown";
     const referrer = headersList.get("referer") || "unknown";
 
-    const setupEnd = performance.now();
-    console.log(`Next.js route setup took: ${(setupEnd - routeStart).toFixed(2)}ms`);
-
     // Parse user agent
     const parser = new UAParser(userAgent);
     const browser = parser.getBrowser().name || "unknown";
@@ -94,8 +91,6 @@ export async function POST(request: Request) {
         role: "user",
       },
     });
-    const dbEnd = performance.now();
-    console.log(`Next.js DB operations took: ${(dbEnd - dbStart).toFixed(2)}ms`);
 
     // Fetch chat history server-side
     const historyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/chat/history?visitorId=${effectiveVisitorId}&userId=${userId}&limit=10`);

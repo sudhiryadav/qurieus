@@ -35,11 +35,6 @@ export default function EmbedCode() {
     );
   }
 
-  // Debug: log session
-  if (typeof window !== 'undefined') {
-    console.log('Session:', session);
-  }
-
   const apiKey = session?.user?.id || '';
 
   const embedCode = `<script 

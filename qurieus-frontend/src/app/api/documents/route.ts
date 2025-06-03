@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/utils/prismaDB";
 import { authOptions } from "@/utils/auth";
 
-export async function GET(request: Request) {
-  // Extract cookies from the request headers
-  const cookie = request.headers.get('cookie') || '';
-  console.log('Cookie header:', cookie);
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
