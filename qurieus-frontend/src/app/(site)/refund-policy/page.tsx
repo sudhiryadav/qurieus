@@ -15,7 +15,7 @@ export default function RefundPolicyPage() {
       />
       <section className="py-16 md:py-20 lg:py-28">
         <div className="container">
-          <div className="prose prose-lg max-w-none dark:prose-invert">
+          <div className="prose prose-lg max-w-none dark:prose-invert bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-xl shadow-lg p-8">
             <h2>Refund Policy</h2>
             <p>Last updated: {new Date().toLocaleDateString()}</p>
 

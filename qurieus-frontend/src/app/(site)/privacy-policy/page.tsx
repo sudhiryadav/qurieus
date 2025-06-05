@@ -3,7 +3,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Qurieus - AI-Powered Document Conversations",
-  description: "Learn about how Qurieus protects your privacy and handles your data.",
+  description: "Read our privacy policy to understand how we handle your data.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -11,58 +11,54 @@ export default function PrivacyPolicyPage() {
     <>
       <Breadcrumb
         pageName="Privacy Policy"
-        pageDescription="Learn about how we protect your privacy"
+        pageDescription="Read our privacy policy"
       />
       <section className="py-16 md:py-20 lg:py-28">
         <div className="container">
-          <div className="prose prose-lg max-w-none dark:prose-invert">
+          <div className="prose prose-lg max-w-none dark:prose-invert bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-xl shadow-lg p-8">
             <h2>Privacy Policy</h2>
             <p>Last updated: {new Date().toLocaleDateString()}</p>
-
             <h3>1. Introduction</h3>
             <p>
-              At Qurieus, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
+              Qurieus is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our service.
             </p>
-
             <h3>2. Information We Collect</h3>
-            <p>We collect information that you provide directly to us, including:</p>
             <ul>
-              <li>Account information (name, email address)</li>
-              <li>Documents you upload to our platform</li>
-              <li>Usage data and analytics</li>
-              <li>Communication preferences</li>
+              <li>Personal information (name, email, etc.)</li>
+              <li>Account and subscription details</li>
+              <li>Uploaded documents and content</li>
+              <li>Usage and analytics data</li>
             </ul>
-
             <h3>3. How We Use Your Information</h3>
-            <p>We use the information we collect to:</p>
             <ul>
-              <li>Provide and maintain our service</li>
-              <li>Process your transactions</li>
-              <li>Send you technical notices and support messages</li>
-              <li>Communicate with you about products, services, and events</li>
-              <li>Improve our service and develop new features</li>
+              <li>To provide and improve our services</li>
+              <li>To communicate with you about your account</li>
+              <li>To ensure security and prevent misuse</li>
+              <li>To comply with legal obligations</li>
             </ul>
-
             <h3>4. Data Security</h3>
             <p>
-              We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.
+              We use industry-standard security measures to protect your data, including encryption, secure authentication, and access controls.
             </p>
-
-            <h3>5. Your Rights</h3>
-            <p>You have the right to:</p>
+            <h3>5. Data Sharing</h3>
+            <p>
+              We do not sell or rent your personal information. We may share data with trusted service providers as necessary to operate Qurieus, or as required by law.
+            </p>
+            <h3>6. Your Rights</h3>
             <ul>
-              <li>Access your personal information</li>
-              <li>Correct inaccurate data</li>
-              <li>Request deletion of your data</li>
-              <li>Object to processing of your data</li>
-              <li>Data portability</li>
+              <li>Access, update, or delete your personal information</li>
+              <li>Opt out of marketing communications</li>
+              <li>Request a copy of your data</li>
             </ul>
-
-            <h3>6. Contact Us</h3>
+            <h3>7. Changes to This Policy</h3>
+            <p>
+              Qurieus may update this Privacy Policy from time to time. We will notify you of any significant changes.
+            </p>
+            <h3>8. Contact Us</h3>
             <p>
               If you have any questions about this Privacy Policy, please contact us at:
               <br />
-              Email: privacy@qurieus.com
+              Email: support@qurieus.com
             </p>
           </div>
         </div>

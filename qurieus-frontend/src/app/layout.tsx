@@ -11,6 +11,7 @@ import ToasterContext from "./api/contex/ToasetContex";
 import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
 import Sidebar from "@/components/Sidebar";
+import { usePathname } from "next/navigation";
 
 export default function RootLayout({
   children,
@@ -19,6 +20,8 @@ export default function RootLayout({
 }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const showSidebar = pathname.startsWith("/user") || pathname.startsWith("/admin");
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
@@ -45,7 +48,9 @@ export default function RootLayout({
               <ToasterContext />
               <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
               <div className="flex">
-                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                {showSidebar && (
+                  <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                )}
                 <main className="flex-1">
                   {children}
                 </main>

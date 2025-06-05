@@ -8,7 +8,7 @@ const Faq = () => {
         <SectionTitle
           subtitle="FAQ"
           title="Any Questions? Answered"
-          paragraph="There are many variations of passages of Lorem Ipsum available but the majority have suffered alteration in some form."
+          paragraph="Find answers to common questions about Qurieus, your AI-powered knowledge base and chat platform."
           width="640px"
           center
         />
@@ -16,31 +16,43 @@ const Faq = () => {
         <div className="-mx-4 mt-[60px] flex flex-wrap lg:mt-20">
           <div className="w-full px-4 lg:w-1/2">
             <SingleFaq
-              question="How to use TailGrids?"
-              answer="It takes 2-3 weeks to get your first blog post ready. That includes the in-depth research & creation of your monthly content marketing strategy that we do before writing your first blog post, Ipsum available ."
+              question="What is Qurieus?"
+              answer="Qurieus is a SaaS platform that lets you manage, search, and interact with your own knowledge base using AI-powered chat and analytics. You can upload documents, organize knowledge, and offer an AI chat widget to your website visitors."
             />
             <SingleFaq
-              question="How to download icons from LineIcons?"
-              answer="It takes 2-3 weeks to get your first blog post ready. That includes the in-depth research & creation of your monthly content marketing strategy that we do before writing your first blog post, Ipsum available ."
+              question="How do I add documents to my knowledge base?"
+              answer="After logging in, go to your dashboard and use the 'Knowledge Base' section to upload, categorize, and manage your documents. Supported formats include PDF, DOCX, and plain text."
             />
             <SingleFaq
-              question="Is GrayGrids part of UIdeck?"
-              answer="It takes 2-3 weeks to get your first blog post ready. That includes the in-depth research & creation of your monthly content marketing strategy that we do before writing your first blog post, Ipsum available ."
+              question="How does the AI chat widget work?"
+              answer="The AI chat widget leverages your uploaded documents and knowledge base to answer questions from your website visitors in real time. You can embed the widget on your site using the provided code snippet."
+            />
+            <SingleFaq
+              question="What happens if my account is deactivated?"
+              answer="If your account is deactivated by an admin, you will not be able to log in, and your chat widget will display: 'AI has temporarily stopped and will be resumed. Please contact admin.'"
+            />
+            <SingleFaq
+              question="How do subscriptions and plans work?"
+              answer="Qurieus offers multiple subscription plans (Free, Basic, Standard, Pro, Enterprise) with different features and usage limits. You can view and manage your subscription from your dashboard."
             />
           </div>
 
           <div className="w-full px-4 lg:w-1/2">
             <SingleFaq
-              question="Can I use this template for commercial project?"
-              answer="It takes 2-3 weeks to get your first blog post ready. That includes the in-depth research & creation of your monthly content marketing strategy that we do before writing your first blog post, Ipsum available ."
+              question="Can I upgrade or change my subscription plan?"
+              answer="Yes! You can upgrade, downgrade, or change your plan at any time from the 'Plans' section in your dashboard. Changes take effect immediately."
             />
             <SingleFaq
-              question="Do you have plan to releasing Play Pro?"
-              answer="It takes 2-3 weeks to get your first blog post ready. That includes the in-depth research & creation of your monthly content marketing strategy that we do before writing your first blog post, Ipsum available ."
+              question="How secure is my data?"
+              answer="Qurieus uses industry-standard security practices, including encrypted storage, secure authentication, and role-based access control to protect your data."
             />
             <SingleFaq
-              question="Where and how to host this template?"
-              answer="It takes 2-3 weeks to get your first blog post ready. That includes the in-depth research & creation of your monthly content marketing strategy that we do before writing your first blog post, Ipsum available ."
+              question="How do I reset my password?"
+              answer="Use the 'Forgot Password' link on the sign-in page. If you are an admin, you can also reset user passwords from the admin panel."
+            />
+            <SingleFaq
+              question="Who do I contact for support?"
+              answer="For any questions or support, please use the 'Contact' page or reach out to your admin if you are part of an organization."
             />
           </div>
         </div>
