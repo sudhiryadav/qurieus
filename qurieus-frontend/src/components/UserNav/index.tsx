@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
   User, 
@@ -13,7 +13,22 @@ import {
 } from "lucide-react";
 import React from "react";
 import Logo from "../Common/Logo";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface UserNavProps {
   isOpen: boolean;
@@ -21,9 +36,16 @@ interface UserNavProps {
 }
 
 const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
-  if (status !== "authenticated") return null;
+  const router = useRouter();
+
+  console.log("UserNav session", session, "status", status);
+  if (!session?.user) {
+    return <div style={{ color: 'red', padding: 16 }}>No user session found</div>;
+  }
+
+  console.log('xxx session' , session?.user?.role);
 
   const navItems = [
     {
@@ -53,48 +75,69 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
     },
   ];
 
-  return (
-    <>
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
-          onClick={onClose}
-        />
-      )}
+  if (!session?.user) {
+    return (
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" onClick={() => router.push("/signin")}>
+          Sign In
+        </Button>
+        <Button onClick={() => router.push("/signup")}>Sign Up</Button>
+      </div>
+    );
+  }
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed top-16 left-0 z-[100] h-[calc(100vh-4rem)] w-64 transform border-r border-gray-200 bg-white shadow-lg transition-transform duration-300 ease-in-out dark:border-dark-3 dark:bg-dark-2 lg:z-10 lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex-grow overflow-y-auto py-2">
-            <nav className="space-y-1 px-2">
-              {navItems.map((item) => (
-                <Link 
-                  key={item.href} 
-                  href={item.href}
-                  onClick={onClose}
-                  className={`
-                    flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium 
-                    ${
-                      pathname === item.href 
-                        ? "bg-primary text-white" 
-                        : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                    }
-                  `}
-                >
-                  {item.icon}
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
+            <AvatarFallback>{session.user.name?.[0] || "U"}</AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{session.user.name}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {session.user.email}
+            </p>
           </div>
-        </div>
-      </aside>
-    </>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          {navItems.map((item) => (
+            <DropdownMenuItem asChild key={item.href}>
+              <Link href={item.href}>{item.name}</Link>
+            </DropdownMenuItem>
+          ))}
+          {session.user.role === "SUPER_ADMIN" && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Admin</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/users">Users</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/subscriptions">Subscriptions</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/plans">Plans</Link>
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600"
+          onClick={() => signOut({ callbackUrl: "/" })}
+        >
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

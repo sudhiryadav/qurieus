@@ -28,7 +28,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-screen flex-col">
       {/* Main content */}
-      <div className="flex-1 lg:ml-64">
+      <div className="flex-1">
         <div className="container mx-auto px-4 py-8 pt-24">
           {children}
         </div>

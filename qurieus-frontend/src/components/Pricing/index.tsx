@@ -1,9 +1,13 @@
 "use client";
 import SectionTitle from "../Common/SectionTitle";
 import PricingBox from "./PricingBox";
-import { pricingData } from "@/stripe/pricingData";
 
-const Pricing = () => {
+interface PricingProps {
+  plans: any[];
+  user: any;
+}
+
+const Pricing = ({ plans, user }: PricingProps) => {
   return (
     <section
       id="pricing"
@@ -20,9 +24,9 @@ const Pricing = () => {
         </div>
 
         <div className="-mx-4 flex flex-wrap justify-center">
-          {pricingData.map((product, i) => (
-            <PricingBox key={i} product={product} />
-          ))}     
+          {plans.map((plan, i) => (
+            <PricingBox key={plan.id} plan={plan} user={user} />
+          ))}
         </div>
       </div>
     </section>

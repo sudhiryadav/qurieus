@@ -14,15 +14,23 @@ generator client {
 
 // Enums
 enum SubscriptionType {
-  monthly
-  quarterly
-  yearly
+  TRIAL
+  MONTHLY
+  YEARLY
 }
 
 enum PlanType {
-  basic
-  pro
-  enterprise
+  FREE
+  BASIC
+  STANDARD
+  PRO
+  ENTERPRISE
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 model Account {
@@ -61,6 +69,7 @@ model Users {
   password              String
   passwordResetToken    String?   @unique
   passwordResetTokenExp DateTime?
+  role                  UserRole  @default(USER)
   
   // Profile fields
   company              String
@@ -100,12 +109,25 @@ model SubscriptionPlan {
   name        String   @unique
   description String
   price       Float
-  currency    String   @default("USD")
+  currency    String   @default("INR")
   features    String[]
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   subscriptions Subscription[]
+  paddleConfig PaddleConfig?
+}
+
+model PaddleConfig {
+  id                String   @id @default(cuid())
+  subscriptionPlanId String  @unique
+  productId         String
+  priceId           String
+  trialDays         Int      @default(0)
+  billingCycle      String   @default("monthly")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  subscriptionPlan  SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {

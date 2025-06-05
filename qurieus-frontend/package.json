@@ -14,7 +14,12 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.5.0",
+    "@paddle/paddle-js": "^1.4.1",
+    "@paddle/paddle-node-sdk": "^2.7.2",
     "@prisma/client": "^5.11.0",
+    "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-scroll-area": "^1.2.9",
     "@radix-ui/react-slot": "^1.2.3",
     "@types/ua-parser-js": "^0.7.39",
@@ -27,7 +32,7 @@
     "express-handlebars": "^8.0.3",
     "gray-matter": "^4.0.3",
     "handlebars": "^4.7.8",
-    "lucide-react": "^0.511.0",
+    "lucide-react": "^0.513.0",
     "next": "15.3.0",
     "next-auth": "4.24.11",
     "next-themes": "^0.4.6",
@@ -44,6 +49,7 @@
     "react-hot-toast": "^2.4.1",
     "remark": "^15.0.1",
     "remark-html": "^16.0.1",
+    "sonner": "^2.0.5",
     "stripe": "^14.7.0",
     "tailgrids": "^2.2.7",
     "tailwind-merge": "^3.3.0",
@@ -60,14 +66,14 @@
     "autoprefixer": "^10.4.21",
     "babel-loader": "^10.0.0",
     "cross-env": "^7.0.3",
+    "esbuild": "^0.19.0",
     "eslint": "^8",
     "eslint-config-next": "15.1.6",
     "ngrok": "^5.0.0-beta.2",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5",
-    "esbuild": "^0.19.0"
+    "typescript": "^5"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

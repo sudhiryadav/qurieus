@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     });
 
     if (!signature) {
-      return NextResponse.json(
+    return NextResponse.json(
         { error: "No signature found" },
         { status: 400 }
       );

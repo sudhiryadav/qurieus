@@ -28,8 +28,8 @@ export async function POST(request: any) {
       email: email.toLowerCase(),
       password: hashedPassword,
       company: "", // Required field
-      plan: "basic", // Default plan
-      subscription_type: "monthly", // Default subscription type
+      plan: "BASIC", // Default plan
+      subscription_type: "MONTHLY", // Default subscription type
       subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     },
   });
