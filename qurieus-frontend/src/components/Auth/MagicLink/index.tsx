@@ -26,7 +26,12 @@ const MagicLink = () => {
 
     try {
       setLoader(true);
-      
+      // Pre-create user for magic link sign-up
+      await fetch("/api/register-magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
       const result = await signIn("email", {
         email,
         redirect: false,

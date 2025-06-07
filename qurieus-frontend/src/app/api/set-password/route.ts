@@ -13,10 +13,15 @@ export async function POST(request: Request) {
   if (!password) {
     return NextResponse.json({ error: "Password is required" }, { status: 400 });
   }
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  const wasFirstPassword = !user.password;
   const hashed = await bcrypt.hash(password, 10);
   await prisma.user.update({
     where: { email: session.user.email },
     data: { password: hashed },
   });
-  return NextResponse.json({ message: "Password set successfully" });
+  return NextResponse.json({ message: "Password set successfully", wasFirstPassword });
 } 

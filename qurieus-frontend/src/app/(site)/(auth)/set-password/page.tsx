@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -45,7 +45,19 @@ export default function SetPasswordPage() {
         toast.error(data.error);
       } else {
         toast.success("Password set successfully!");
-        router.replace("/user/dashboard");
+        // Refresh session by signing in with new credentials
+        await signIn("credentials", {
+          redirect: false,
+          email: session?.user?.email,
+          password,
+        });
+        setTimeout(() => {
+          if (data.wasFirstPassword) {
+            router.replace("/user/knowledge-base");
+          } else {
+            router.replace("/user/dashboard");
+          }
+        }, 1000);
       }
     } catch (err) {
       toast.error("Failed to set password");
