@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import PasswordInput from "@/components/Common/PasswordInput";
 
 interface PasswordFormProps {
   onSubmit: (password: string) => Promise<void>;
@@ -21,6 +22,11 @@ export default function PasswordForm({
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -28,18 +34,45 @@ export default function PasswordForm({
       ...prev,
       [name]: value,
     }));
+    // Clear error when user starts typing
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    };
+
+    if (requireCurrentPassword && !formData.currentPassword) {
+      newErrors.currentPassword = "Current password is required";
+    }
+
+    if (!formData.newPassword) {
+      newErrors.newPassword = "New password is required";
+    } else if (formData.newPassword.length < 8) {
+      newErrors.newPassword = "Password must be at least 8 characters long";
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+    } else if (formData.newPassword !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).some((error) => error);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setLoading(true);
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      toast.error("New passwords do not match");
-      setLoading(false);
-      return;
-    }
-
     try {
       await onSubmit(formData.newPassword);
       setFormData({
@@ -57,53 +90,38 @@ export default function PasswordForm({
   return (
     <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
       {requireCurrentPassword && (
-        <div>
-          <label htmlFor="currentPassword" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Current Password
-          </label>
-          <input
-            type="password"
-            id="currentPassword"
-            name="currentPassword"
-            value={formData.currentPassword}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white sm:text-sm"
-          />
-        </div>
+        <PasswordInput
+          id="currentPassword"
+          name="currentPassword"
+          label="Current Password"
+          value={formData.currentPassword}
+          onChange={handleChange}
+          required
+          error={errors.currentPassword}
+        />
       )}
 
-      <div>
-        <label htmlFor="newPassword" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          New Password
-        </label>
-        <input
-          type="password"
-          id="newPassword"
-          name="newPassword"
-          value={formData.newPassword}
-          onChange={handleChange}
-          required
-          minLength={8}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white sm:text-sm"
-        />
-      </div>
+      <PasswordInput
+        id="newPassword"
+        name="newPassword"
+        label="New Password"
+        value={formData.newPassword}
+        onChange={handleChange}
+        required
+        minLength={8}
+        error={errors.newPassword}
+      />
 
-      <div>
-        <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Confirm New Password
-        </label>
-        <input
-          type="password"
-          id="confirmPassword"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          required
-          minLength={8}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white sm:text-sm"
-        />
-      </div>
+      <PasswordInput
+        id="confirmPassword"
+        name="confirmPassword"
+        label="Confirm New Password"
+        value={formData.confirmPassword}
+        onChange={handleChange}
+        required
+        minLength={8}
+        error={errors.confirmPassword}
+      />
 
       <div className="flex justify-end">
         <button

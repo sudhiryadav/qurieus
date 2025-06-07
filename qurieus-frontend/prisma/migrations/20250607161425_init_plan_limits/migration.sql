@@ -84,6 +84,11 @@ CREATE TABLE "SubscriptionPlan" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "idealFor" TEXT NOT NULL,
+    "keyLimits" TEXT NOT NULL,
+    "maxDocs" INTEGER,
+    "maxStorageMB" INTEGER,
+    "maxQueriesPerDay" INTEGER,
 
     CONSTRAINT "SubscriptionPlan_pkey" PRIMARY KEY ("id")
 );

@@ -2,6 +2,21 @@ import { NextResponse } from "next/server";
 import { createSubscription, createPlan, createCustomer } from "@/utils/razorpay";
 import { prisma } from "@/utils/prismaDB";
 
+// Add a GET endpoint to return all subscriptions with plan details (including maxDocs, maxStorageMB, maxQueriesPerDay)
+export async function GET() {
+  try {
+    const subscriptions = await prisma.subscription.findMany({
+      include: {
+        plan: true,
+      },
+    });
+    return NextResponse.json(subscriptions);
+  } catch (error) {
+    console.error("Error fetching subscriptions:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();

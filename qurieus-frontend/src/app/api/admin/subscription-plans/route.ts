@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import prisma from '@/utils/prismaDB';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/utils/prismaDB";
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // Check if user is super admin
@@ -16,27 +16,26 @@ export async function GET() {
       where: { email: session.user?.email! },
     });
 
-    if (!user || user.role !== 'SUPER_ADMIN') {
-      return new NextResponse('Forbidden', { status: 403 });
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 });
     }
-
-    const plans = await prisma.subscriptionPlan.findMany({
-      orderBy: { price: 'asc' },
+    const plans = await prisma.subscriptionPlan?.findMany({
+      orderBy: { price: "asc" }
     });
 
     return NextResponse.json(plans);
   } catch (error) {
-    console.error('Error fetching subscription plans:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error("Error fetching subscription plans:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // Check if user is super admin
@@ -44,12 +43,12 @@ export async function POST(req: Request) {
       where: { email: session.user?.email! },
     });
 
-    if (!user || user.role !== 'SUPER_ADMIN') {
-      return new NextResponse('Forbidden', { status: 403 });
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 });
     }
 
     const body = await req.json();
-    const { name, description, price, currency, features, isActive } = body;
+    const { name, description, price, currency, features, isActive, idealFor, keyLimits, maxDocs, maxStorageMB, maxQueriesPerDay } = body;
 
     const plan = await prisma.subscriptionPlan.create({
       data: {
@@ -59,12 +58,79 @@ export async function POST(req: Request) {
         currency,
         features,
         isActive,
+        idealFor,
+        keyLimits,
+        maxDocs,
+        maxStorageMB,
+        maxQueriesPerDay,
       },
     });
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error('Error creating subscription plan:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error("Error creating subscription plan:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
-} 
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    // Check if user is super admin
+    const user = await prisma.user.findUnique({
+      where: { email: session.user?.email! },
+    });
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+    const body = await req.json();
+    const { id, name, description, price, currency, features, isActive, idealFor, keyLimits, maxDocs, maxStorageMB, maxQueriesPerDay } = body;
+    if (!id) return NextResponse.json({ error: "Missing plan id" }, { status: 400 });
+    const plan = await prisma.subscriptionPlan.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        price,
+        currency,
+        features,
+        isActive,
+        idealFor,
+        keyLimits,
+        maxDocs,
+        maxStorageMB,
+        maxQueriesPerDay,
+      },
+    });
+    return NextResponse.json(plan);
+  } catch (error) {
+    console.error("Error updating subscription plan:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    // Check if user is super admin
+    const user = await prisma.user.findUnique({
+      where: { email: session.user?.email! },
+    });
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+    const { id } = await req.json();
+    if (!id) return NextResponse.json({ error: "Missing plan id" }, { status: 400 });
+    await prisma.subscriptionPlan.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting subscription plan:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}

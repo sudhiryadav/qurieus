@@ -20,13 +20,15 @@ type SubscriptionPlan = {
   currency: string;
   features: string[];
   isActive: boolean;
+  maxDocs: number;
+  maxStorageMB: number;
+  maxQueriesPerDay: number;
 };
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions);
   const plans = await prisma.subscriptionPlan.findMany({
-    where: { isActive: true, price: { gt: 0 } },
-    orderBy: { id: 'asc' },
+    orderBy: { price: "asc" },
   });
 
   async function handleSubscription(planId: string) {

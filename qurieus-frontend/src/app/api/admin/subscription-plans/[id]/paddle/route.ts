@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import prisma from '@/utils/prismaDB';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/utils/prismaDB";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // Check if user is super admin
@@ -19,8 +19,8 @@ export async function GET(
       where: { email: session.user?.email! },
     });
 
-    if (!user || user.role !== 'SUPER_ADMIN') {
-      return new NextResponse('Forbidden', { status: 403 });
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 });
     }
 
     const plan = await prisma.subscriptionPlan.findUnique({
@@ -31,30 +31,32 @@ export async function GET(
     });
 
     if (!plan) {
-      return new NextResponse('Plan not found', { status: 404 });
+      return new NextResponse("Plan not found", { status: 404 });
     }
 
-    return NextResponse.json(plan.paddleConfig || {
-      productId: '',
-      priceId: '',
-      trialDays: 0,
-      billingCycle: 'monthly',
-    });
+    return NextResponse.json(
+      plan.paddleConfig || {
+        productId: "",
+        priceId: "",
+        trialDays: 0,
+        billingCycle: "monthly",
+      },
+    );
   } catch (error) {
-    console.error('Error fetching Paddle configuration:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error("Error fetching Paddle configuration:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // Check if user is super admin
@@ -62,8 +64,8 @@ export async function PUT(
       where: { email: session.user?.email! },
     });
 
-    if (!user || user.role !== 'SUPER_ADMIN') {
-      return new NextResponse('Forbidden', { status: 403 });
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 });
     }
 
     const body = await req.json();
@@ -77,7 +79,7 @@ export async function PUT(
     });
 
     if (!plan) {
-      return new NextResponse('Plan not found', { status: 404 });
+      return new NextResponse("Plan not found", { status: 404 });
     }
 
     const updatedConfig = await prisma.paddleConfig.upsert({
@@ -101,7 +103,7 @@ export async function PUT(
 
     return NextResponse.json(updatedConfig);
   } catch (error) {
-    console.error('Error updating Paddle configuration:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error("Error updating Paddle configuration:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
-} 
+}

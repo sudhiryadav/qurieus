@@ -13,7 +13,7 @@ const AboutPage = () => {
     <main>
       <Breadcrumb pageName="About Us Page" />
       <About />
-      <Team />
+      {/* <Team /> */}
     </main>
   );
 };

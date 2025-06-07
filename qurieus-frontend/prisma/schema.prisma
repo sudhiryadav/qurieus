@@ -121,6 +121,11 @@ model SubscriptionPlan {
   updatedAt   DateTime @updatedAt
   subscriptions Subscription[]
   paddleConfig PaddleConfig?
+  idealFor    String   // NEW: e.g. "Individuals", "Small Teams"
+  keyLimits   String   // NEW: e.g. "5 docs · 10 MB · 25 queries/day"
+  maxDocs     Int?
+  maxStorageMB Int?
+  maxQueriesPerDay Int?
 }
 
 model PaddleConfig {

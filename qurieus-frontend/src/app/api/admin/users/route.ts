@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/utils/prismaDB";
+import { prisma } from "@/utils/prismaDB";
 
 // Helper to check SUPER_ADMIN
 async function requireSuperAdmin(req: NextRequest) {

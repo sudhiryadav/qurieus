@@ -41,6 +41,11 @@ const PricingBox = ({ plan, user }: { plan: any; user: any }) => {
             ))}
           </div>
         </div>
+        <div className="mb-5 text-sm text-dark dark:text-white">
+          <div><b>Max Docs:</b> {plan.maxDocs ?? 'Custom'}</div>
+          <div><b>Max Storage:</b> {plan.maxStorageMB ? plan.maxStorageMB + ' MB' : 'Custom'}</div>
+          <div><b>Max Queries/Day:</b> {plan.maxQueriesPerDay ?? 'Custom'}</div>
+        </div>
         <div className="w-full">
           {/* Paddle.js integration and guest/user logic will be added here */}
         </div>

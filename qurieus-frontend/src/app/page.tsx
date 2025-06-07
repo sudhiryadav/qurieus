@@ -27,7 +27,7 @@ export default function Home() {
       <Pricing />
       <Testimonials />
       <Faq />
-      <Team />
+      {/* <Team /> */}
       <Contact />
     </main>
   );
