@@ -30,39 +30,43 @@ const SignUp = () => {
   const [isPassword, setIsPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     
-    const data = new FormData(e.currentTarget);
-    const value = Object.fromEntries(data.entries());
-    const finalData = { ...value };
-    const email = finalData.email as string;
+    try {
+      const formData = new FormData(e.currentTarget);
+      const formValues = Object.fromEntries(formData.entries());
+      const email = formValues.email as string;
 
-    // Check for business email in non-development environment
-    if (process.env.NODE_ENV !== 'development' && !isBusinessEmail(email)) {
-      toast.error('Please use a business email address');
-      setLoading(false);
-      return;
-    }
+      // Check for business email in non-development environment
+      if (process.env.NODE_ENV !== 'development' && !isBusinessEmail(email)) {
+        toast.error('Please use a business email address');
+        setLoading(false);
+        return;
+      }
 
-    fetch("/api/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(finalData),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        toast.success("Successfully registered");
-        setLoading(false);
-        router.push("/signin");
-      })
-      .catch((err) => {
-        toast.error(err.message);
-        setLoading(false);
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formValues),
       });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || "Registration failed");
+      }
+
+      toast.success(responseData.message || "Registration successful! Please check your email to verify your account.");
+      router.push("/signin");
+    } catch (err: any) {
+      toast.error(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,16 +81,6 @@ const SignUp = () => {
               <div className="mb-10 text-center">
                 <Logo />
               </div>
-
-              {/* <SocialSignIn />
-
-              <span className="z-1 relative my-8 block text-center">
-                <span className="-z-1 absolute left-0 top-1/2 block h-px w-full bg-stroke dark:bg-dark-3"></span>
-                <span className="text-body-secondary relative z-10 inline-block bg-white px-3 text-base dark:bg-dark-2">
-                  OR
-                </span>
-              </span> */}
-
               <SwitchOption
                 isPassword={isPassword}
                 setIsPassword={setIsPassword}
@@ -124,7 +118,8 @@ const SignUp = () => {
                   <div className="mb-9">
                     <button
                       type="submit"
-                      className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark"
+                      disabled={loading}
+                      className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Sign Up {loading && <Loader />}
                     </button>

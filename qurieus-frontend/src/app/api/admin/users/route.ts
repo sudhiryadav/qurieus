@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import prisma from "@/utils/prismaDB";
 
 // Helper to check SUPER_ADMIN
 async function requireSuperAdmin(req: NextRequest) {
@@ -15,7 +15,7 @@ async function requireSuperAdmin(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const guard = await requireSuperAdmin(req);
   if (guard) return guard;
-  const users = await prisma.users.findMany({
+  const users = await prisma.user.findMany({
     include: {
       subscription: {
         include: { plan: true },
@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest) {
   const data = await req.json();
   const { id, ...update } = data;
   if (!id) return NextResponse.json({ error: "Missing user id" }, { status: 400 });
-  const user = await prisma.users.update({
+  const user = await prisma.user.update({
     where: { id },
     data: update,
   });
@@ -43,6 +43,6 @@ export async function POST(req: NextRequest) {
   const guard = await requireSuperAdmin(req);
   if (guard) return guard;
   const data = await req.json();
-  const user = await prisma.users.create({ data });
+  const user = await prisma.user.create({ data });
   return NextResponse.json(user);
 } 

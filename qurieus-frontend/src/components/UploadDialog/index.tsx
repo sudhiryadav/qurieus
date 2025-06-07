@@ -49,6 +49,12 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isSuperAdmin = session?.user?.role?.toLowerCase() === "super_admin";
+  
+  // Add debug logging
+  console.log('Session:', session);
+  console.log('Is Super Admin:', isSuperAdmin);
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -61,7 +67,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     const newFilesArray = Array.from(files);
     let currentValidationErrors: string[] = [];
 
-    if (selectedFiles.length + newFilesArray.length > MAX_FILES_PER_UPLOAD) {
+    if (!isSuperAdmin && selectedFiles.length + newFilesArray.length > MAX_FILES_PER_UPLOAD) {
       toast.error(`Cannot add more files. Maximum ${MAX_FILES_PER_UPLOAD} files allowed.`);
       return;
     }
@@ -76,8 +82,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
           filesToAdd.some(nf => nf.file.name === file.name)) {
         errorMsg = `File "${file.name}" is already selected.`;
       }
-      // Check file size
-      else if (file.size > MAX_FILE_SIZE_BYTES) {
+      // Check file size (only for non-super-admin users)
+      else if (!isSuperAdmin && file.size > MAX_FILE_SIZE_BYTES) {
         errorMsg = `File "${file.name}" (${formatFileSize(file.size)}) exceeds the ${formatFileSize(MAX_FILE_SIZE_BYTES)} size limit.`;
       }
       // Check file type
@@ -135,6 +141,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     e.preventDefault();
     
     const validFiles = selectedFiles.filter(f => !f.error);
+    console.log('Valid files to upload:', validFiles);
+
     if (validFiles.length === 0) {
       toast.error("Please select at least one valid file to upload");
       return;
@@ -156,12 +164,21 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       formData.append("category", category);
       formData.append("userId", session?.user?.id || "");
 
+      console.log('Uploading files with data:', {
+        fileCount: validFiles.length,
+        description,
+        category,
+        userId: session?.user?.id
+      });
+
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
 
+      console.log('Upload response status:', response.status);
       const data = await response.json();
+      console.log('Upload response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to upload files");
@@ -177,8 +194,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         throw new Error(data.error || "Upload completed with unclear results");
       }
     } catch (error: any) {
+      console.error("Upload error details:", error);
       toast.error(error.message || "Failed to upload files");
-      console.error("Upload error:", error);
     } finally {
       setLoading(false);
     }
@@ -197,6 +214,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       </button>
       <button
         type="submit"
+        form="upload-form"
         disabled={loading || selectedFiles.length === 0 || selectedFiles.some(f => f.error)}
         className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 ml-3"
       >
@@ -221,14 +239,24 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
 
   return (
     <ModalDialog isOpen={isOpen} onClose={onClose} header={header} footer={footer}>
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form id="upload-form" onSubmit={handleSubmit} className="space-y-5">
         {/* Guidelines */}
         <div className="mb-6 rounded-lg bg-[#2d3543] p-5 text-white">
           <h3 className="mb-2 text-lg font-semibold">Guidelines</h3>
           <ul className="list-disc pl-5 text-sm space-y-1">
             <li>Supported formats: {ALLOWED_EXTENSIONS_DISPLAY}</li>
-            <li>Maximum {MAX_FILES_PER_UPLOAD} files per upload</li>
-            <li>Maximum file size: {formatFileSize(MAX_FILE_SIZE_BYTES)} per file</li>
+            {!isSuperAdmin && (
+              <>
+                <li>Maximum {MAX_FILES_PER_UPLOAD} files per upload</li>
+                <li>Maximum file size: {formatFileSize(MAX_FILE_SIZE_BYTES)} per file</li>
+              </>
+            )}
+            {isSuperAdmin && (
+              <>
+                <li className="text-green-400">Unlimited files per upload (Super Admin)</li>
+                <li className="text-green-400">No file size limit (Super Admin)</li>
+              </>
+            )}
             <li>Files will be processed and made available for searching</li>
             <li>Provide clear descriptions to improve searchability</li>
           </ul>
@@ -238,110 +266,100 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
           <label className="mb-2 block text-base font-semibold text-white">Upload Files</label>
           <div
             className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-500 bg-[#2d3543] py-8 transition hover:border-primary ${
-              selectedFiles.length >= MAX_FILES_PER_UPLOAD ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+              !isSuperAdmin && selectedFiles.length >= MAX_FILES_PER_UPLOAD ? "cursor-not-allowed opacity-60" : "cursor-pointer"
             }`}
-            onDrop={selectedFiles.length < MAX_FILES_PER_UPLOAD ? handleDrop : undefined}
+            onDrop={(!isSuperAdmin && selectedFiles.length >= MAX_FILES_PER_UPLOAD) ? undefined : handleDrop}
             onDragOver={handleDragOver}
-            onClick={() => selectedFiles.length < MAX_FILES_PER_UPLOAD && fileInputRef.current?.click()}
+            onClick={() => (!isSuperAdmin && selectedFiles.length >= MAX_FILES_PER_UPLOAD) ? undefined : fileInputRef.current?.click()}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-8m0 0l-4 4m4-4l4 4m-8 4h8" />
             </svg>
             <span className="text-blue-400 font-medium underline">Upload files</span> or drag and drop
-            <div className="text-xs text-gray-400 mt-1">
-              {ALLOWED_EXTENSIONS_DISPLAY} up to {formatFileSize(MAX_FILE_SIZE_BYTES)} each
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileChange}
-              className="hidden"
-              accept=".pdf,.doc,.docx,.txt,.csv,.md,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,text/markdown,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              disabled={selectedFiles.length >= MAX_FILES_PER_UPLOAD}
-            />
-            {/* Show valid files in the drag-drop area */}
-            {selectedFiles.filter(f => !f.error).length > 0 && (
-              <div className="mt-4 w-full px-4">
-                <div className="rounded-md bg-[#232a36] p-2">
-                  {selectedFiles.filter(f => !f.error).map((sf) => (
-                    <div key={sf.id} className="flex items-center justify-between py-1">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-white truncate" title={sf.file.name}>
-                          {sf.file.name} ({formatFileSize(sf.file.size)})
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(sf.id)}
-                        className="text-gray-400 hover:text-red-400 disabled:opacity-50"
-                        title="Remove file"
-                        disabled={loading}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <span className="text-sm text-gray-400 mt-2">
+              {isSuperAdmin ? "Unlimited files allowed" : `Maximum ${MAX_FILES_PER_UPLOAD} files`}
+            </span>
           </div>
-          {/* Show only rejected files */}
-          {selectedFiles.filter(f => f.error).length > 0 && (
-            <div className="mt-4 space-y-2">
-              <h4 className="text-sm font-medium text-red-400">Rejected Files:</h4>
-              <ul className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-red-500/50 bg-[#2d3543] p-2">
-                {selectedFiles.filter(f => f.error).map((sf) => (
-                  <li key={sf.id} className="flex items-center justify-between rounded-md p-2 even:bg-[#232a36]">
-                    <div className="flex items-center space-x-2 overflow-hidden">
-                      <FileText className="h-5 w-5 flex-shrink-0 text-red-400" />
-                      <span className="truncate text-sm text-white" title={sf.file.name}>
-                        {sf.file.name} ({formatFileSize(sf.file.size)})
-                      </span>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            multiple
+            accept={ALLOWED_MIME_TYPES.join(",")}
+          />
+        </div>
+
+        {/* Selected Files */}
+        {selectedFiles.length > 0 && (
+          <div className="space-y-2">
+            <label className="block text-base font-semibold text-white">Selected Files</label>
+            <div className="max-h-48 overflow-y-auto space-y-2">
+              {selectedFiles.map((sf) => (
+                <div
+                  key={sf.id}
+                  className={`flex items-center justify-between rounded-lg bg-[#2d3543] p-3 ${
+                    sf.error ? "border border-red-500" : ""
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-white">{sf.file.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {formatFileSize(sf.file.size)}
+                      </p>
+                      {sf.error && (
+                        <p className="text-xs text-red-400 mt-1">{sf.error}</p>
+                      )}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-red-400 truncate" title={sf.error}>{sf.error}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(sf.id)}
-                        className="text-gray-400 hover:text-red-400 disabled:opacity-50"
-                        title="Remove file"
-                        disabled={loading}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(sf.id)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-        {/* Category Dropdown */}
-        <div>
-          <label className="mb-2 block text-base font-semibold text-white">Category</label>
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-            className="w-full rounded-md border border-gray-600 bg-[#232a36] p-2 text-white focus:border-primary focus:outline-none"
-          >
-            <option value="">Select a category</option>
-            {CATEGORY_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        </div>
+          </div>
+        )}
+
         {/* Description */}
         <div>
-          <label className="mb-2 block text-base font-semibold text-white">Description</label>
+          <label htmlFor="description" className="mb-2 block text-base font-semibold text-white">
+            Description
+          </label>
           <textarea
+            id="description"
             value={description}
-            onChange={e => setDescription(e.target.value)}
-            className="w-full rounded-md border border-gray-600 bg-[#393f4a] p-2 text-white placeholder-gray-400 focus:border-primary focus:outline-none"
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full rounded-lg bg-[#2d3543] p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Enter a description for the uploaded files..."
             rows={3}
-            placeholder="Provide a brief description of the uploaded files"
           />
+        </div>
+
+        {/* Category */}
+        <div>
+          <label htmlFor="category" className="mb-2 block text-base font-semibold text-white">
+            Category
+          </label>
+          <select
+            id="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full rounded-lg bg-[#2d3543] p-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Select a category</option>
+            {CATEGORY_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
       </form>
     </ModalDialog>

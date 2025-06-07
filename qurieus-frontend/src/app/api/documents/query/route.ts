@@ -1,11 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { headers } from "next/headers";
-import { UAParser } from "ua-parser-js";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from '@/utils/prismaDB';
-import { PrismaClient, Prisma } from "@prisma/client";
-import { ReadonlyHeaders } from "next/dist/server/web/spec-extension/adapters/headers";
+import { getServerSession } from "next-auth";
+import { headers } from "next/headers";
+import { NextResponse } from 'next/server';
+import { UAParser } from "ua-parser-js";
 
 export async function POST(request: Request) {
   try {
@@ -41,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     // Verify user exists before creating chat conversation
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId }
     });
 
@@ -93,7 +91,7 @@ export async function POST(request: Request) {
     });
 
     // Fetch chat history server-side
-    const historyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/chat/history?visitorId=${effectiveVisitorId}&userId=${userId}&limit=10`);
+    const historyRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/chat/history?visitorId=${effectiveVisitorId}&userId=${userId}&limit=10`);
     let history = [];
     if (historyRes.ok) {
       history = await historyRes.json();

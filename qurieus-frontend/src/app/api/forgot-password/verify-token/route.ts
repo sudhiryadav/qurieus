@@ -9,7 +9,7 @@ export const POST = async (request: Request) => {
     return new NextResponse("Missing Fields", { status: 400 });
   }
 
-  const user = await prisma.users.findUnique({
+  const user = await prisma.user.findUnique({
     where: {
       passwordResetToken: token,
       passwordResetTokenExp: {

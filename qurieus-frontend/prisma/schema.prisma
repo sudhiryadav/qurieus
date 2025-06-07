@@ -9,7 +9,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  output   = "./generated/client"
+  output   = "../node_modules/.prisma/client"
 }
 
 // Enums
@@ -28,9 +28,9 @@ enum PlanType {
 }
 
 enum UserRole {
-  USER
-  ADMIN
-  SUPER_ADMIN
+  USER        @map("User")        /// Regular user with basic access
+  ADMIN       @map("Admin")       /// Administrator with elevated privileges
+  SUPER_ADMIN @map("Super Admin") /// Super administrator with full system access
 }
 
 model Account {
@@ -47,7 +47,7 @@ model Account {
   id_token          String? @db.Text
   session_state     String?
 
-  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -57,10 +57,10 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Users {
+model User {
   id                    String    @id @default(cuid())
   name                  String
   email                 String    @unique
@@ -72,28 +72,33 @@ model Users {
   role                  UserRole  @default(USER)
   
   // Profile fields
-  company              String
-  plan                 PlanType
-  subscription_type    SubscriptionType
+  company               String
+  plan                  PlanType
+  subscription_type     SubscriptionType
   subscription_start_date DateTime @default(now())
-  subscription_end_date   DateTime
-  is_active            Boolean   @default(true)
-  is_verified          Boolean   @default(false)
-  login_attempts       Int       @default(0)
-  locked_until         DateTime?
-  created_at           DateTime  @default(now())
-  updated_at           DateTime  @updatedAt
-  jobTitle             String?
-  bio                  String?
-  phone                String?
+  subscription_end_date DateTime
+  is_active             Boolean   @default(true)
+  is_verified           Boolean   @default(false)
+  verification_token    String?   @unique
+  verification_expires  DateTime?
+  login_attempts        Int       @default(0)
+  locked_until          DateTime?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+  jobTitle              String?
+  bio                   String?
+  phone                 String?
   
-  accounts             Account[]
-  sessions             Session[]
-  subscription         Subscription?
-  messages             Message[]
-  documents            Document[]
-  embeddings           Embedding[]
-  chatConversations    ChatConversation[]
+  accounts              Account[]
+  sessions              Session[]
+  subscription          Subscription?
+  messages              Message[]
+  documents             Document[]
+  embeddings            Embedding[]
+  chatConversations     ChatConversation[]
+  logs                  Log[]
+
+  @@map("Users")
 }
 
 model VerificationToken {
@@ -133,10 +138,10 @@ model PaddleConfig {
 model Subscription {
   id                    String   @id @default(cuid())
   userId                String   @unique
-  user                  Users    @relation(fields: [userId], references: [id])
+  user                  User    @relation(fields: [userId], references: [id])
   planId                String
   plan                  SubscriptionPlan @relation(fields: [planId], references: [id])
-  razorpaySubscriptionId String  @unique
+  razorpaySubscriptionId String   @unique
   razorpayCustomerId    String
   status                String
   currentPeriodStart    DateTime
@@ -156,7 +161,7 @@ model Message {
   role      String   // "user" or "assistant"
   createdAt DateTime @default(now())
   userId    String
-  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ContactMessage {
@@ -173,7 +178,7 @@ model ChatConversation {
   id            String        @id @default(cuid())
   visitorId     String
   userId        String
-  user          Users         @relation(fields: [userId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
   userAgent     String?
   deviceType    String?
   browser       String?
@@ -211,7 +216,7 @@ model Document {
   uploadedAt   DateTime @default(now())
   userId       String
   metadata     String?
-  user         Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
   chunks       DocumentChunk[]
   
   @@index([userId])
@@ -234,20 +239,19 @@ model DocumentChunk {
 model Embedding {
   id        String   @id @default(cuid())
   userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   chunkId   String   @unique
+  chunk     DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
   vector    Float[]
   createdAt DateTime @default(now())
   
-  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chunk     DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
-  
   @@index([userId])
-  @@index([chunkId])
 }
 
 model Log {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   level     String
   message   String
   meta      Json?

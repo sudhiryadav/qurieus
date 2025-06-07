@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest) {
     const { name, company, jobTitle, bio } = await req.json();
     
     // Update user profile in the database
-    const updatedUser = await prisma.users.update({
+    const updatedUser = await prisma.user.update({
       where: {
         id: session.user.id,
       },
@@ -64,7 +64,7 @@ export async function GET() {
     }
     
     // Get user profile from the database
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: {
         id: session.user.id,
       },

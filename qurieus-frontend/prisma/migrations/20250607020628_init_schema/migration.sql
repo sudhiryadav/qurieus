@@ -1,3 +1,12 @@
+-- CreateEnum
+CREATE TYPE "SubscriptionType" AS ENUM ('TRIAL', 'MONTHLY', 'YEARLY');
+
+-- CreateEnum
+CREATE TYPE "PlanType" AS ENUM ('FREE', 'BASIC', 'STANDARD', 'PRO', 'ENTERPRISE');
+
+-- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('User', 'Admin', 'Super Admin');
+
 -- CreateTable
 CREATE TABLE "Account" (
     "id" TEXT NOT NULL,
@@ -29,16 +38,30 @@ CREATE TABLE "Session" (
 -- CreateTable
 CREATE TABLE "Users" (
     "id" TEXT NOT NULL,
-    "name" TEXT,
-    "email" TEXT,
+    "name" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
-    "password" TEXT,
+    "password" TEXT NOT NULL,
     "passwordResetToken" TEXT,
     "passwordResetTokenExp" TIMESTAMP(3),
-    "company" TEXT,
+    "role" "UserRole" NOT NULL DEFAULT 'User',
+    "company" TEXT NOT NULL,
+    "plan" "PlanType" NOT NULL,
+    "subscription_type" "SubscriptionType" NOT NULL,
+    "subscription_start_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "subscription_end_date" TIMESTAMP(3) NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "is_verified" BOOLEAN NOT NULL DEFAULT false,
+    "verification_token" TEXT,
+    "verification_expires" TIMESTAMP(3),
+    "login_attempts" INTEGER NOT NULL DEFAULT 0,
+    "locked_until" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
     "jobTitle" TEXT,
     "bio" TEXT,
+    "phone" TEXT,
 
     CONSTRAINT "Users_pkey" PRIMARY KEY ("id")
 );
@@ -56,13 +79,27 @@ CREATE TABLE "SubscriptionPlan" (
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "price" DOUBLE PRECISION NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "currency" TEXT NOT NULL DEFAULT 'INR',
     "features" TEXT[],
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "SubscriptionPlan_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PaddleConfig" (
+    "id" TEXT NOT NULL,
+    "subscriptionPlanId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "priceId" TEXT NOT NULL,
+    "trialDays" INTEGER NOT NULL DEFAULT 0,
+    "billingCycle" TEXT NOT NULL DEFAULT 'monthly',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PaddleConfig_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -110,14 +147,30 @@ CREATE TABLE "ContactMessage" (
 );
 
 -- CreateTable
+CREATE TABLE "ChatConversation" (
+    "id" TEXT NOT NULL,
+    "visitorId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "userAgent" TEXT,
+    "deviceType" TEXT,
+    "browser" TEXT,
+    "os" TEXT,
+    "ipAddress" TEXT,
+    "referrer" TEXT,
+    "firstSeen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastSeen" TIMESTAMP(3) NOT NULL,
+    "totalMessages" INTEGER NOT NULL DEFAULT 0,
+    "avgResponseTime" DOUBLE PRECISION,
+
+    CONSTRAINT "ChatConversation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ChatMessage" (
     "id" TEXT NOT NULL,
+    "conversationId" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "role" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "ipAddress" TEXT,
-    "keywords" TEXT,
-    "responseTime" DOUBLE PRECISION,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ChatMessage_pkey" PRIMARY KEY ("id")
@@ -132,11 +185,46 @@ CREATE TABLE "Document" (
     "fileSize" INTEGER NOT NULL,
     "category" TEXT,
     "description" TEXT,
+    "content" TEXT NOT NULL,
     "keywords" TEXT,
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "userId" TEXT NOT NULL,
+    "metadata" TEXT,
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "DocumentChunk" (
+    "id" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "chunkIndex" INTEGER NOT NULL,
+
+    CONSTRAINT "DocumentChunk_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Embedding" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "chunkId" TEXT NOT NULL,
+    "vector" DOUBLE PRECISION[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Embedding_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Log" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT,
+    "level" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "meta" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Log_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -152,6 +240,9 @@ CREATE UNIQUE INDEX "Users_email_key" ON "Users"("email");
 CREATE UNIQUE INDEX "Users_passwordResetToken_key" ON "Users"("passwordResetToken");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Users_verification_token_key" ON "Users"("verification_token");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token");
 
 -- CreateIndex
@@ -161,19 +252,16 @@ CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationTok
 CREATE UNIQUE INDEX "SubscriptionPlan_name_key" ON "SubscriptionPlan"("name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "PaddleConfig_subscriptionPlanId_key" ON "PaddleConfig"("subscriptionPlanId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Subscription_razorpaySubscriptionId_key" ON "Subscription"("razorpaySubscriptionId");
 
 -- CreateIndex
-CREATE INDEX "ChatMessage_userId_idx" ON "ChatMessage"("userId");
-
--- CreateIndex
-CREATE INDEX "ChatMessage_createdAt_idx" ON "ChatMessage"("createdAt");
-
--- CreateIndex
-CREATE INDEX "ChatMessage_keywords_idx" ON "ChatMessage"("keywords");
+CREATE UNIQUE INDEX "ChatConversation_visitorId_userId_key" ON "ChatConversation"("visitorId", "userId");
 
 -- CreateIndex
 CREATE INDEX "Document_userId_idx" ON "Document"("userId");
@@ -184,11 +272,23 @@ CREATE INDEX "Document_category_idx" ON "Document"("category");
 -- CreateIndex
 CREATE INDEX "Document_keywords_idx" ON "Document"("keywords");
 
+-- CreateIndex
+CREATE INDEX "DocumentChunk_documentId_idx" ON "DocumentChunk"("documentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Embedding_chunkId_key" ON "Embedding"("chunkId");
+
+-- CreateIndex
+CREATE INDEX "Embedding_userId_idx" ON "Embedding"("userId");
+
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PaddleConfig" ADD CONSTRAINT "PaddleConfig_subscriptionPlanId_fkey" FOREIGN KEY ("subscriptionPlanId") REFERENCES "SubscriptionPlan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -200,7 +300,22 @@ ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_planId_fkey" FOREIGN KEY
 ALTER TABLE "Message" ADD CONSTRAINT "Message_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ChatConversation" ADD CONSTRAINT "ChatConversation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "ChatConversation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DocumentChunk" ADD CONSTRAINT "DocumentChunk_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Embedding" ADD CONSTRAINT "Embedding_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Embedding" ADD CONSTRAINT "Embedding_chunkId_fkey" FOREIGN KEY ("chunkId") REFERENCES "DocumentChunk"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Log" ADD CONSTRAINT "Log_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

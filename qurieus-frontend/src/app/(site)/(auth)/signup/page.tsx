@@ -1,5 +1,5 @@
 import SignUp from "@/components/Auth/SignUp";
-import Breadcrumb from "@/components/Common/Breadcrumb";
+import Logo from "@/components/Common/Logo";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,11 +9,9 @@ export const metadata: Metadata = {
 
 const SignupPage = () => {
   return (
-    <>
-      <Breadcrumb pageName="Sign Up Page" />
-
-      <SignUp />
-    </>
+    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <SignUp />
+    </section>
   );
 };
 

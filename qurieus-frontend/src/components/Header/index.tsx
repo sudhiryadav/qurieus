@@ -215,7 +215,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
                           </Link>
                           <hr className="my-1 border-gray-200 dark:border-dark-3" />
                           <button
-                            onClick={() => signOut()}
+                            onClick={() => signOut({ callbackUrl: "/" })}
                             className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                           >
                             Sign Out

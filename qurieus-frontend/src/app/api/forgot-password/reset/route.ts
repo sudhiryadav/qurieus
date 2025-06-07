@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
 	const formatedEmail = email.toLowerCase();
 
-	const user = await prisma.users.findUnique({
+	const user = await prisma.user.findUnique({
 		where: {
 			email: formatedEmail,
 		},
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 	const passwordResetTokenExp = new Date();
 	passwordResetTokenExp.setMinutes(passwordResetTokenExp.getMinutes() + 10);
 
-	await prisma.users.update({
+	await prisma.user.update({
 		where: {
 			email: formatedEmail,
 		},

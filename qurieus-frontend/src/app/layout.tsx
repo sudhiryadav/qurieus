@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
 import Sidebar from "@/components/Sidebar";
 import { usePathname } from "next/navigation";
+import SessionRedirector from "@/components/SessionRedirector";
 
 export default function RootLayout({
   children,
@@ -36,10 +37,11 @@ export default function RootLayout({
       <head />
 
       <body>
-        {loading ? (
-          <PreLoader />
-        ) : (
-          <SessionProvider>
+        <SessionProvider>
+          <SessionRedirector />
+          {loading ? (
+            <PreLoader />
+          ) : (
             <ThemeProvider
               attribute="class"
               enableSystem={false}
@@ -58,8 +60,8 @@ export default function RootLayout({
               <Footer />
               <ScrollToTop />
             </ThemeProvider>
-          </SessionProvider>
-        )}
+          )}
+        </SessionProvider>
       </body>
     </html>
   );

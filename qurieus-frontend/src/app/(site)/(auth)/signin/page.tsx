@@ -1,20 +1,25 @@
 "use client";
 
+import Loader from "@/components/Common/Loader";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import MagicLink from "@/components/Auth/MagicLink";
+import SwitchOption from "@/components/Auth/SwitchOption";
+import Logo from "@/components/Common/Logo";
 
 export default function SignIn() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/user/dashboard";
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPassword, setIsPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [email, setEmail] = useState("er.sudhir.yadav@gmail.com");
-  const [password, setPassword] = useState("Sidrules@123");
-  
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
+
   // Redirect if already authenticated
   useEffect(() => {
     if (status === "authenticated") {
@@ -22,151 +27,126 @@ export default function SignIn() {
     }
   }, [status, router, callbackUrl]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const loginUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
-
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
+    if (!loginData.email || !loginData.password) {
+      setError("Please enter both email and password");
+      return;
+    }
     try {
+      setLoading(true);
       const result = await signIn("credentials", {
-        email,
-        password,
+        ...loginData,
         redirect: false,
-        callbackUrl
+        callbackUrl,
       });
-
       if (result?.error) {
-        setError(result.error);
+        if (result.error === "Please verify your email before signing in") {
+          setError("Please verify your email before signing in. Check your inbox for the verification link.");
+        } else {
+          setError(result.error);
+        }
       } else if (result?.url) {
-        // Wait a bit for the session to be updated
         setTimeout(() => {
           router.push(result.url || callbackUrl);
         }, 100);
       }
-    } catch (error) {
-      setError("An error occurred during sign in");
-      console.error("Sign in error:", error);
+    } catch (err: any) {
+      setError(err.message || "An error occurred during sign in");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Don't render the sign-in form if already authenticated
   if (status === "authenticated") {
     return null;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg dark:bg-dark-2">
-        <h1 className="mb-6 text-2xl font-bold text-dark dark:text-white">
-          Sign In to Your Account
-        </h1>
-
-        {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-4 text-red-500">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-2.5 block text-sm font-medium text-dark dark:text-white"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              id="email"
-              required
-              className="w-full rounded-lg border border-gray-4 bg-transparent px-5 py-3 text-dark outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-gray-2 dark:border-dark-3 dark:text-white dark:focus:border-primary"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}  
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-2.5 block text-sm font-medium text-dark dark:text-white"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              id="password"
-              required
-              className="w-full rounded-lg border border-gray-4 bg-transparent px-5 py-3 text-dark outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-gray-2 dark:border-dark-3 dark:text-white dark:focus:border-primary"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="remember"
-                className="h-4 w-4 rounded border-gray-4 text-primary focus:ring-primary"
-              />
-              <label
-                htmlFor="remember"
-                className="ml-2 text-sm text-gray-6 dark:text-gray-4"
-              >
-                Remember me
-              </label>
-            </div>
-            <Link
-              href="/forgot-password"
-              className="text-sm text-primary hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 text-white hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isLoading ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            ) : (
-              "Sign In"
-            )}
-          </button>
-        </form>
-
-        {/* <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-4 dark:border-dark-3"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-2 text-gray-6 dark:bg-dark-2 dark:text-gray-4">
-              Or continue with
-            </span>
-          </div>
-        </div> */}
-
-        {/* <SocialSignIn /> */}
-
-        <p className="mt-6 text-center text-sm text-gray-6 dark:text-gray-4">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            Sign up
+    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[480px] rounded-lg bg-white dark:bg-dark-2 p-8 shadow-lg mx-auto">
+        <div className="mb-6">
+          <Logo width={40} height={40} showBrandName />
+        </div>
+        <h2 className="mb-2 text-center text-3xl font-bold text-dark dark:text-white">Sign in to your account</h2>
+        <p className="mb-8 text-center text-base text-body-color dark:text-dark-6">
+          Or{' '}
+          <Link href="/signup" className="font-medium text-primary hover:text-primary-dark">
+            create a new account
           </Link>
         </p>
+        <SwitchOption isPassword={isPassword} setIsPassword={setIsPassword} />
+        {isPassword ? (
+          <form onSubmit={loginUser}>
+            {error && (
+              <div className="rounded-md bg-red-50 dark:bg-red-900 p-4 mb-4">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+                    {error}
+                  </h3>
+                  {error.includes("verify your email") && loginData.email && (
+                    <button
+                      type="button"
+                      className="underline text-primary text-left w-fit"
+                      disabled={loading}
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const res = await fetch("/api/resend-verification", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: loginData.email }),
+                          });
+                          const data = await res.json();
+                          toast[data.error ? "error" : "success"](data.error || data.message);
+                        } catch (err) {
+                          toast.error("Failed to resend verification email");
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                    >
+                      Resend verification email
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="mb-[22px]">
+              <input
+                type="email"
+                placeholder="Email"
+                required
+                value={loginData.email}
+                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              />
+            </div>
+            <div className="mb-[22px]">
+              <input
+                type="password"
+                placeholder="Password"
+                required
+                value={loginData.password}
+                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              />
+            </div>
+            <div className="mb-9">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Sign In {loading && <Loader />}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <MagicLink />
+        )}
       </div>
-    </div>
+    </section>
   );
 }

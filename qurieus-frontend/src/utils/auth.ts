@@ -3,7 +3,6 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import EmailProvider from "next-auth/providers/email";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 import { prisma } from "./prismaDB";
 import type { Adapter } from "next-auth/adapters";
 import { createTransport } from "nodemailer";
@@ -18,6 +17,7 @@ declare module "next-auth" {
       image?: string | null;
       accessToken?: string;
       role: string;
+      hasPassword: boolean;
     };
   }
 
@@ -95,7 +95,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please enter an email or password");
         }
 
-        const user = await prisma.users.findUnique({
+        const user = await prisma.user.findUnique({
           where: {
             email: credentials.email,
           },
@@ -103,6 +103,10 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || !user?.password) {
           throw new Error("Invalid email or password");
+        }
+
+        if (!user.is_verified) {
+          throw new Error("Please verify your email before signing in");
         }
 
         const passwordMatch = await bcrypt.compare(
@@ -173,6 +177,8 @@ export const authOptions: NextAuthOptions = {
       if (session?.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        const dbUser = await prisma.user.findUnique({ where: { id: token.id } });
+        session.user.hasPassword = !!dbUser?.password;
       }
       return session;
     },
