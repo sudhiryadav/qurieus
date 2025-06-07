@@ -8,47 +8,33 @@ const Breadcrumb = ({
   pageDescription?: string;
 }) => {
   return (
-    <>
-      <div className="dark:bg-dark relative z-10 overflow-hidden pb-[30px] pt-[60px] md:pt-[70px] lg:pt-[80px]">
-        <div className="from-stroke/0 via-stroke to-stroke/0 dark:via-dark-3 absolute bottom-0 left-0 h-px w-full bg-gradient-to-r"></div>
-        <div className="container">
-          <div className="-mx-4 flex flex-wrap items-center">
-            <div className="w-full px-4">
-              <div className="text-center">
-                <h1 className="text-dark mb-2 text-2xl font-bold dark:text-white sm:text-3xl md:text-[32px] md:leading-[1.2]">
-                  {pageName}
-                </h1>
-                {pageDescription && (
-                  <p className="text-body-color dark:text-dark-6 mb-3 text-sm">
-                    {pageDescription}
-                  </p>
-                )}
-
-                <ul className="flex items-center justify-center gap-[8px]">
-                  <li>
-                    <Link
-                      href="/"
-                      className="text-dark flex items-center gap-[8px] text-sm font-medium dark:text-white"
-                    >
-                      Home
-                    </Link>
-                  </li>
-                  <li>
-                    <p className="text-body-color flex items-center gap-[8px] text-sm font-medium">
-                      <span className="text-body-color dark:text-dark-6">
-                        {" "}
-                        /{" "}
-                      </span>
-                      {pageName}
-                    </p>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
+    <nav
+      className="bg-white dark:bg-dark-2 border-b border-gray-100 dark:border-dark-3 px-4 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 items-start"
+      aria-label="Breadcrumb"
+    >
+      <div className="flex items-center gap-2">
+        <Link
+          href="/"
+          className="text-gray-500 dark:text-gray-300 hover:text-primary transition-colors text-sm font-medium"
+        >
+          Home
+        </Link>
+        <span className="text-gray-400 dark:text-dark-6">/</span>
+        <span className="text-gray-700 dark:text-white text-sm font-semibold">
+          {pageName}
+        </span>
       </div>
-    </>
+      <div className="flex flex-col sm:items-end">
+        <h1 className="text-lg font-bold text-dark dark:text-white leading-tight mb-0">
+          {pageName}
+        </h1>
+        {pageDescription && (
+          <p className="text-xs text-gray-500 dark:text-dark-6 mt-0.5 max-w-xs truncate">
+            {pageDescription}
+          </p>
+        )}
+      </div>
+    </nav>
   );
 };
 

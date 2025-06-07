@@ -81,7 +81,7 @@ export default async function PricingPage() {
     <>
       <Breadcrumb
         pageName="Pricing"
-        pageDescription="Choose the perfect plan for your needs"
+        // pageDescription="Choose the perfect plan for your needs"
       />
       <Pricing 
         plans={plans as SubscriptionPlan[]} 

@@ -53,7 +53,7 @@ export default function RootLayout({
                 {showSidebar && (
                   <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 )}
-                <main className="flex-1">
+                <main className="flex-1 pt-16">
                   {children}
                 </main>
               </div>

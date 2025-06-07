@@ -53,7 +53,7 @@ export default function Pricing({ plans, handleSubscription, isAuthenticated }: 
   return (
     <section
       id="about"
-      className="bg-gray-1 pb-8 pt-20 dark:bg-dark-2 lg:pb-[70px] lg:pt-[120px]"
+      className="bg-gray-1 pb-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-[120px]"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {error && (
