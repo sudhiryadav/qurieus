@@ -20,6 +20,13 @@ export async function GET(request: Request) {
     });
 
     if (!user) {
+      // Try to find user by token (even if expired or already used)
+      const userByToken = await prisma.user.findFirst({
+        where: { verification_token: token },
+      });
+      if (userByToken && userByToken.is_verified) {
+        return NextResponse.json({ message: "Email already verified", email: userByToken.email }, { status: 200 });
+      }
       return NextResponse.json("Invalid or expired verification token", { status: 400 });
     }
 
@@ -32,7 +39,7 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json("Email verified successfully", { status: 200 });
+    return NextResponse.json({ message: "Email verified successfully", email: user.email }, { status: 200 });
   } catch (error) {
     console.error("Error verifying email:", error);
     return NextResponse.json("Error verifying email", { status: 500 });

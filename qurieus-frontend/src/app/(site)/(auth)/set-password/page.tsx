@@ -1,15 +1,13 @@
 "use client";
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import toast from "react-hot-toast";
+import PasswordForm from "@/components/Auth/PasswordForm";
 
 export default function SetPasswordPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -23,47 +21,31 @@ export default function SetPasswordPage() {
     }
   }, [session, status, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!password || !confirmPassword) {
-      toast.error("Please fill in both fields");
-      return;
+  const handleSetPassword = async (password: string) => {
+    const res = await fetch("/api/set-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      throw new Error(data.error);
     }
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/set-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
+    
+    toast.success("Password set successfully!");
+    // Refresh session by signing in with new credentials
+    await signIn("credentials", {
+      redirect: false,
+      email: session?.user?.email,
+      password,
+    });
+    setTimeout(() => {
+      if (data.wasFirstPassword) {
+        router.replace("/user/knowledge-base");
       } else {
-        toast.success("Password set successfully!");
-        // Refresh session by signing in with new credentials
-        await signIn("credentials", {
-          redirect: false,
-          email: session?.user?.email,
-          password,
-        });
-        setTimeout(() => {
-          if (data.wasFirstPassword) {
-            router.replace("/user/knowledge-base");
-          } else {
-            router.replace("/user/dashboard");
-          }
-        }, 1000);
+        router.replace("/user/dashboard");
       }
-    } catch (err) {
-      toast.error("Failed to set password");
-    } finally {
-      setLoading(false);
-    }
+    }, 1000);
   };
 
   return (
@@ -74,37 +56,11 @@ export default function SetPasswordPage() {
             Set Your Password
           </h2>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <input
-              type="password"
-              placeholder="New Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
-              required
-            />
-          </div>
-          <div>
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
-              required
-            />
-          </div>
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {loading ? "Setting..." : "Set Password"}
-            </button>
-          </div>
-        </form>
+        <PasswordForm
+          onSubmit={handleSetPassword}
+          submitButtonText="Set Password"
+          requireCurrentPassword={false}
+        />
       </div>
     </div>
   );

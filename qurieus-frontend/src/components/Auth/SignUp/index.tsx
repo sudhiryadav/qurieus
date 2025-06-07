@@ -29,17 +29,19 @@ const SignUp = () => {
   const router = useRouter();
   const [isPassword, setIsPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState({
+    name: 'Sudhir Yadav',
+    email: 'er.sudhir.yadav@gmail.com',
+    password: 'Sidrules@123'
+  });
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      const formData = new FormData(e.currentTarget);
-      const formValues = Object.fromEntries(formData.entries());
-      const email = formValues.email as string;
+      const email = user.email;
 
-      // Check for business email in non-development environment
       if (process.env.NODE_ENV !== 'development' && !isBusinessEmail(email)) {
         toast.error('Please use a business email address');
         setLoading(false);
@@ -51,7 +53,7 @@ const SignUp = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formValues),
+        body: JSON.stringify(user),
       });
 
       const responseData = await response.json();
@@ -95,6 +97,8 @@ const SignUp = () => {
                       name="name"
                       required
                       className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+                      value={user.name}
+                      onChange={(e) => setUser({ ...user, name: e.target.value })}
                     />
                   </div>
                   <div className="mb-[22px]">
@@ -104,6 +108,8 @@ const SignUp = () => {
                       name="email"
                       required
                       className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+                      value={user.email}
+                      onChange={(e) => setUser({ ...user, email: e.target.value })}
                     />
                   </div>
                   <div className="mb-[22px]">
@@ -113,6 +119,8 @@ const SignUp = () => {
                       name="password"
                       required
                       className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+                      onChange={(e) => setUser({ ...user, password: e.target.value })}
+                      value={user.password}
                     />
                   </div>
                   <div className="mb-9">
