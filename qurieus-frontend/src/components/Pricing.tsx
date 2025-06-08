@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -24,20 +25,23 @@ type PricingProps = {
   plans?: SubscriptionPlan[];
   handleSubscription?: (planId: string) => Promise<{ success: boolean; subscription?: any; error?: string }>;
   isAuthenticated?: boolean;
+  onOpenAuthModal?: () => void;
 };
 
-export default function Pricing({ plans, handleSubscription, isAuthenticated }: PricingProps) {
+
+export default function Pricing({ plans, handleSubscription, onOpenAuthModal }: PricingProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { data: session } = useSession();
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId);
     setError(null);
     
     try {
-      if (!isAuthenticated) {
-        router.push(`/login?callbackUrl=/pricing`);
+      if (!session) {
+        onOpenAuthModal?.();
         return;
       }
 
@@ -147,7 +151,7 @@ export default function Pricing({ plans, handleSubscription, isAuthenticated }: 
               >
                 {loading === plan.id ? (
                   "Processing..."
-                ) : isAuthenticated ? (
+                ) : session ? (
                   "Get started today"
                 ) : (
                   "Sign in to subscribe"

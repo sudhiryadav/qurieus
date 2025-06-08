@@ -1,11 +1,14 @@
-import Breadcrumb from "@/components/Common/Breadcrumb";
-import Faq from "@/components/Faq";
+import React from "react";
 import Pricing from "@/components/Pricing";
 import { Metadata } from "next";
 import { prisma } from "@/utils/prismaDB";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/utils/auth";
+import { authOptions } from "@/lib/auth";
 import { createSubscription, createCustomer } from "@/utils/razorpay";
+import Breadcrumb from "@/components/Common/Breadcrumb";
+import Faq from "@/components/Faq";
+import AuthModal from "@/components/Auth/AuthModal";
+import ClientPricing from "./ClientPricing";
 
 export const metadata: Metadata = {
   title: "Pricing | Qurieus - AI-Powered Document Conversations",
@@ -28,10 +31,11 @@ type SubscriptionPlan = {
 export default async function PricingPage() {
   const session = await getServerSession(authOptions);
   const plans = await prisma.subscriptionPlan.findMany({
-    orderBy: { price: "asc" },
+    where: { isActive: true },
+    orderBy: { price: 'asc' },
   });
 
-  async function handleSubscription(planId: string) {
+  const handleSubscription = async (planId: string) => {
     'use server';
     
     const currentSession = await getServerSession(authOptions);
@@ -75,20 +79,20 @@ export default async function PricingPage() {
       console.error("Error creating subscription:", error);
       throw error;
     }
-  }
+  };
 
   return (
-    <>
+    <div className="container mx-auto py-12">
       <Breadcrumb
         pageName="Pricing"
         // pageDescription="Choose the perfect plan for your needs"
       />
-      <Pricing 
-        plans={plans as SubscriptionPlan[]} 
+      <ClientPricing 
+        plans={plans} 
         handleSubscription={handleSubscription} 
         isAuthenticated={!!session?.user}
       />
       <Faq />
-    </>
+    </div>
   );
 }

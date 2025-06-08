@@ -1,12 +1,11 @@
-"use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
-import Logo from "@/components/Common/Logo";
-import SwitchOption from "@/components/Auth/SwitchOption";
-import Loader from "@/components/Common/Loader";
-import MagicLink from "@/components/Auth/MagicLink";
+import { Logo } from "@/components/Logo";
+import { SwitchOption } from "./SwitchOption";
+import { Loader } from "@/components/Loader";
+import { MagicLink } from "./MagicLink";
 
 interface SignUpFormProps {
   onSuccess?: () => void;
