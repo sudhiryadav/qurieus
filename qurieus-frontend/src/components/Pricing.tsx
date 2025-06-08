@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 type SubscriptionPlan = {
   id: string;
@@ -48,8 +49,7 @@ export default function Pricing({ plans, handleSubscription, isAuthenticated }: 
         setError(result?.error || "Failed to create subscription");
       }
     } catch (error) {
-      setError("An error occurred while processing your request");
-      console.error("Error:", error);
+      toast.error("An error occurred while processing your request");
     } finally {
       setLoading(null);
     }
