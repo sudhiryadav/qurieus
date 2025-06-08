@@ -109,7 +109,12 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
         <DropdownMenuGroup>
           {navItems.map((item) => (
             <DropdownMenuItem asChild key={item.href}>
-              <Link href={item.href}>{item.name}</Link>
+              <Link
+                href={item.href}
+                className={pathname === item.href ? "text-primary font-semibold" : ""}
+              >
+                {item.name}
+              </Link>
             </DropdownMenuItem>
           ))}
           {session.user.role === "SUPER_ADMIN" && (
@@ -117,13 +122,19 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
               <DropdownMenuSubTrigger>Admin</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuItem asChild>
-                  <Link href="/admin/users">Users</Link>
+                  <Link href="/admin/users" className={pathname === "/admin/users" ? "text-primary font-semibold" : ""}>
+                    <User className="mr-2 h-4 w-4 inline" /> Users
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/admin/subscriptions">Subscriptions</Link>
+                  <Link href="/admin/subscriptions" className={pathname === "/admin/subscriptions" ? "text-primary font-semibold" : ""}>
+                    <BarChart3 className="mr-2 h-4 w-4 inline" /> Subscriptions
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/admin/plans">Plans</Link>
+                  <Link href="/admin/plans" className={pathname === "/admin/plans" ? "text-primary font-semibold" : ""}>
+                    <Code className="mr-2 h-4 w-4 inline" /> Plans
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>

@@ -28,7 +28,7 @@ async function main() {
   const plans = [
     {
       name: 'Free Trial',
-      description: '7-14 days',
+      description: '7 days',
       price: 0,
       currency: 'INR',
       features: [],

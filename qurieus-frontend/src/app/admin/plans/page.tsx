@@ -166,7 +166,7 @@ export default function AdminPlansPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 mt-16 md:mt-20">
+    <div className="p-4 md:p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Plans</h1>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
@@ -193,12 +193,12 @@ export default function AdminPlansPage() {
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Name</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Description</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Price</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Currency</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Features</th>
+              {/* <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Currency</th> */}
+              {/* <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Features</th> */}
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Created</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Ideal For</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Key Limits</th>
+              {/* <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Key Limits</th> */}
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Max Docs</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Max Storage (MB)</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Max Queries/Day</th>
@@ -210,17 +210,17 @@ export default function AdminPlansPage() {
               <tr key={plan.id} className="border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800">
                 <td className="px-4 py-3 text-sm font-medium text-dark dark:text-white">{plan.name}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.description}</td>
-                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.price}</td>
-                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.currency}</td>
-                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.price === 0 ? '-' : `${plan.currency} ${plan.price}`}</td>
+                {/* <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.currency}</td> */}
+                {/* <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                   <ul className="list-disc pl-4">
                     {plan.features.map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
-                </td>
+                </td> */}
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.isActive ? "Active" : "Inactive"}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(plan.createdAt).toLocaleDateString()}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.idealFor}</td>
-                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.keyLimits}</td>
+                {/* <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.keyLimits}</td> */}
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxDocs ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxStorageMB ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxQueriesPerDay ?? 'Custom'}</td>

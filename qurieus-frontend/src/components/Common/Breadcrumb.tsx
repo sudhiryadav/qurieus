@@ -9,7 +9,7 @@ const Breadcrumb = ({
 }) => {
   return (
     <nav
-      className="bg-white dark:bg-dark-2 border-b border-gray-100 dark:border-dark-3 px-4 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 items-start"
+      className="bg-white dark:bg-dark border-b border-gray-100 dark:border-dark-3 px-4 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 items-start"
       aria-label="Breadcrumb"
     >
       <div className="flex items-center gap-2">

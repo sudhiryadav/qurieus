@@ -221,7 +221,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 mt-16 md:mt-20">
+    <div className="p-4 md:p-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Users List</h1>
