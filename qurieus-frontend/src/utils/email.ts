@@ -1,29 +1,4 @@
-import nodemailer from "nodemailer";
-import hbs from "nodemailer-express-handlebars";
-import path from "path";
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USERNAME,
-    pass: process.env.SMTP_PASSWORD,
-  },
-});
-
-// Configure Handlebars
-const handlebarOptions = {
-  viewEngine: {
-    extName: ".hbs",
-    partialsDir: path.resolve("./src/templates/emails/"),
-    defaultLayout: false,
-  },
-  viewPath: path.resolve("./src/templates/emails/"),
-  extName: ".hbs",
-};
-
-transporter.use("compile", hbs(handlebarOptions));
+import { sendEmail, transporter } from "@/lib/email";
 
 export async function sendContactEmail(data: {
   fullName: string;
@@ -33,38 +8,22 @@ export async function sendContactEmail(data: {
 }) {
   const { fullName, email, phone, message } = data;
 
-  const mailOptions = {
-    from: process.env.SMTP_USERNAME,
-    to: process.env.CONTACT_EMAIL || 'er.sudhir.yadav@gmail.com',
-    subject: `New Contact Form Submission from ${fullName}`,
-    template: "contact",
-    context: {
-      fullName,
-      email,
-      phone,
-      message,
-    },
-  };
+  const html = `
+    <div>
+      <h1>New Contact Form Submission</h1>
+      <p><strong>Name:</strong> ${fullName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Phone:</strong> ${phone}</p>
+      <p><strong>Message:</strong> ${message}</p>
+    </div>
+  `;
 
   try {
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (error) {
-    console.error("Error sending email:", error);
-    return false;
-  }
-}
-
-export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-  const mailOptions = {
-    from: process.env.SMTP_USERNAME,
-    to,
-    subject,
-    html,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
+    await sendEmail({
+      to: process.env.CONTACT_EMAIL || 'er.sudhir.yadav@gmail.com',
+      subject: `New Contact Form Submission from ${fullName}`,
+      html,
+    });
     return true;
   } catch (error) {
     console.error("Error sending email:", error);

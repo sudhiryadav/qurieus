@@ -1,59 +1,56 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/utils/prismaDB";
-import { createTransport } from "nodemailer";
-import crypto from "crypto";
+import { hash } from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { sendVerificationEmail } from "@/lib/email";
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { email } = await request.json();
-    if (!email) return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    const { email } = await req.json();
 
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-    if (user.is_verified) {
-      return NextResponse.json({ error: "User is already verified" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    if (user.emailVerified) {
+      return NextResponse.json(
+        { error: "Email is already verified" },
+        { status: 400 }
+      );
+    }
 
+    // Generate new verification code
+    const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const hashedCode = await hash(verificationCode, 12);
+
+    // Update user with new verification code
     await prisma.user.update({
-      where: { email: email.toLowerCase() },
+      where: { id: user.id },
       data: {
-        verification_token: verificationToken,
-        verification_expires: verificationExpires,
+        verificationCode: hashedCode,
+        verificationCodeExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       },
     });
 
-    // Send verification email
-    const transport = createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      auth: {
-        user: process.env.SMTP_USERNAME,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verificationToken}`;
-    await transport.sendMail({
-      to: email,
-      from: process.env.SMTP_FROM_EMAIL,
-      subject: "Verify your email address",
-      html: `
-        <div>
-          <h1>Welcome to Qurieus!</h1>
-          <p>Please verify your email address by clicking the link below:</p>
-          <a href="${verificationUrl}">Verify Email</a>
-          <p>This link will expire in 24 hours.</p>
-          <p>If you didn't create an account, you can safely ignore this email.</p>
-        </div>
-      `,
-    });
+    // Send new verification email
+    await sendVerificationEmail(email, verificationCode);
 
-    return NextResponse.json({ message: "Verification email sent!" });
+    return NextResponse.json(
+      { message: "Verification code resent successfully" },
+      { status: 200 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "An error occurred" }, { status: 500 });
+    console.error("Resend verification error:", error);
+    return NextResponse.json(
+      { error: "Failed to resend verification code" },
+      { status: 500 }
+    );
   }
 } 

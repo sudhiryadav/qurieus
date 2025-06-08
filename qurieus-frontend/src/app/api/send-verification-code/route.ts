@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/utils/prismaDB";
-import { createTransport } from "nodemailer";
 import crypto from "crypto";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -27,28 +27,7 @@ export async function POST(request: Request) {
       },
     });
 
-    const transport = createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      auth: {
-        user: process.env.SMTP_USERNAME,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-
-    await transport.sendMail({
-      to: email,
-      from: process.env.SMTP_FROM_EMAIL,
-      subject: "Verify your email address",
-      html: `
-        <div>
-          <h1>Welcome to Qurieus!</h1>
-          <p>Your verification code is: <strong>${verificationCode}</strong></p>
-          <p>This code will expire in 24 hours.</p>
-          <p>If you didn't create an account, you can safely ignore this email.</p>
-        </div>
-      `,
-    });
+    await sendVerificationEmail(email, verificationCode);
 
     return NextResponse.json({ message: "Verification code sent!" });
   } catch (error) {

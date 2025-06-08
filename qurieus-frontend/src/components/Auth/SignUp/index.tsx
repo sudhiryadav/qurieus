@@ -12,16 +12,22 @@ interface SignUpFormProps {
   onSuccess?: () => void;
   className?: string;
   handleOpenAuthModal?: (mode: "signin" | "signup") => void;
+  startSubscriptionProcess?: () => void;
 }
 
 export default function SignUpForm({
   onSuccess,
   className = "",
   handleOpenAuthModal,
+  startSubscriptionProcess,
 }: SignUpFormProps) {
   const router = useRouter();
   const [isPassword, setIsPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [resendTimer, setResendTimer] = useState(60);
   const [user, setUser] = useState({
     name: "",
     email: "",
@@ -55,12 +61,8 @@ export default function SignUpForm({
         throw new Error(responseData.error || "Registration failed");
       }
 
-      toast.success(
-        responseData.message ||
-          "Registration successful! Please check your email to verify your account.",
-      );
-      onSuccess?.();
-      router.push("/signin");
+      toast.success("Verification code sent to your email!");
+      setShowVerification(true);
     } catch (err: any) {
       toast.error(err.message || "Registration failed. Please try again.");
     } finally {
@@ -68,10 +70,131 @@ export default function SignUpForm({
     }
   };
 
+  const handleVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/verify-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: user.email,
+          code: verificationCode,
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || "Verification failed");
+      }
+
+      toast.success("Email verified successfully!");
+      onSuccess?.();
+      if (startSubscriptionProcess) {
+        startSubscriptionProcess();
+      } else {
+        router.push("/signin");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Verification failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setResendDisabled(true);
+    setResendTimer(60);
+
+    try {
+      const response = await fetch("/api/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || "Failed to resend code");
+      }
+
+      toast.success("Verification code resent!");
+      
+      // Start countdown timer
+      const timer = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setResendDisabled(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to resend code");
+      setResendDisabled(false);
+    }
+  };
+
+  if (showVerification) {
+    return (
+      <div className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}>
+        <div className="mb-6">
+          <Logo width={40} height={40} showBrandName />
+        </div>
+        <h2 className="mb-2 text-center text-3xl font-bold text-dark dark:text-white">
+          Verify your email
+        </h2>
+        <p className="mb-8 text-center text-base text-body-color dark:text-dark-6">
+          We've sent a 4-digit code to {user.email}
+        </p>
+        <form onSubmit={handleVerification}>
+          <div className="mb-[22px]">
+            <input
+              type="text"
+              placeholder="Enter 4-digit code"
+              maxLength={4}
+              pattern="[0-9]{4}"
+              required
+              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            />
+          </div>
+          <div className="mb-9">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Verify Email {loading && <Loader />}
+            </button>
+          </div>
+        </form>
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={handleResendCode}
+            disabled={resendDisabled}
+            className="text-primary hover:text-primary-dark font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {resendDisabled ? `Resend code in ${resendTimer}s` : "Resend code"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}
-    >
+    <div className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}>
       <div className="mb-6">
         <Logo width={40} height={40} showBrandName />
       </div>

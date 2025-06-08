@@ -1,47 +1,56 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/utils/prismaDB";
+import { compare } from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const token = searchParams.get("token");
-
-  if (!token) {
-    return NextResponse.json("Verification token is required", { status: 400 });
-  }
-
+export async function POST(req: Request) {
   try {
+    const { email, code } = await req.json();
+
+    // Find user with unexpired verification code
     const user = await prisma.user.findFirst({
       where: {
-        verification_token: token,
-        verification_expires: {
+        email,
+        verificationCodeExpires: {
           gt: new Date(),
         },
       },
     });
 
     if (!user) {
-      // Try to find user by token (even if expired or already used)
-      const userByToken = await prisma.user.findFirst({
-        where: { verification_token: token },
-      });
-      if (userByToken && userByToken.is_verified) {
-        return NextResponse.json({ message: "Email already verified", email: userByToken.email }, { status: 200 });
-      }
-      return NextResponse.json("Invalid or expired verification token", { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid or expired verification code" },
+        { status: 400 }
+      );
     }
 
+    // Verify code
+    const isValid = await compare(code, user.verificationCode!);
+    if (!isValid) {
+      return NextResponse.json(
+        { error: "Invalid verification code" },
+        { status: 400 }
+      );
+    }
+
+    // Update user as verified
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        is_verified: true,
-        verification_token: null,
-        verification_expires: null,
+        emailVerified: true,
+        verificationCode: null,
+        verificationCodeExpires: null,
       },
     });
 
-    return NextResponse.json({ message: "Email verified successfully", email: user.email }, { status: 200 });
-  } catch (error) {
-    console.error("Error verifying email:", error);
-    return NextResponse.json("Error verifying email", { status: 500 });
+    return NextResponse.json(
+      { message: "Email verified successfully" },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("Verification error:", error);
+    return NextResponse.json(
+      { error: "Verification failed. Please try again." },
+      { status: 500 }
+    );
   }
 } 
