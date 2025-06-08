@@ -13,8 +13,7 @@ const Faq = () => {
           center
         />
 
-        <div className="-mx-4 mt-[60px] flex flex-wrap lg:mt-20">
-          <div className="w-full px-4 lg:w-1/2">
+        <div className="mt-[60px] lg:mt-20 grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
             <SingleFaq
               question="What is Qurieus?"
               answer="Qurieus is a SaaS platform that lets you manage, search, and interact with your own knowledge base using AI-powered chat and analytics. You can upload documents, organize knowledge, and offer an AI chat widget to your website visitors."
@@ -35,9 +34,6 @@ const Faq = () => {
               question="How do subscriptions and plans work?"
               answer="Qurieus offers multiple subscription plans (Free, Basic, Standard, Pro, Enterprise) with different features and usage limits. You can view and manage your subscription from your dashboard."
             />
-          </div>
-
-          <div className="w-full px-4 lg:w-1/2">
             <SingleFaq
               question="Can I upgrade or change my subscription plan?"
               answer="Yes! You can upgrade, downgrade, or change your plan at any time from the 'Plans' section in your dashboard. Changes take effect immediately."
@@ -54,7 +50,6 @@ const Faq = () => {
               question="Who do I contact for support?"
               answer="For any questions or support, please use the 'Contact' page or reach out to your admin if you are part of an organization."
             />
-          </div>
         </div>
       </div>
 

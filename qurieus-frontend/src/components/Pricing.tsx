@@ -62,7 +62,7 @@ export default function Pricing({ plans, handleSubscription, isAuthenticated }: 
   return (
     <section
       id="about"
-      className="bg-gray-1 pb-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-[120px]"
+      className="bg-gray-1 pt-8 pb-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-16"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {error && (
@@ -70,7 +70,7 @@ export default function Pricing({ plans, handleSubscription, isAuthenticated }: 
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
-        <div className="isolate mx-auto mt-12 grid max-w-md grid-cols-1 gap-8 md:max-w-2xl md:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-4">
+        <div className="isolate mx-auto grid max-w-md grid-cols-1 gap-8 md:max-w-2xl md:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-4">
           {nonEnterprisePlans?.map((plan: SubscriptionPlan) => (
             <div
               key={plan.name}

@@ -3,7 +3,7 @@ const SingleFaq = (props: { question: string; answer: string }) => {
 
   return (
     <>
-    <div className="mb-12 flex lg:mb-[70px]">
+    <div className="flex lg:mb-0">
             <div
               className="bg-primary mr-4 flex h-[50px] w-full max-w-[50px] items-center justify-center rounded-xl text-white sm:mr-6 sm:h-[60px] sm:max-w-[60px]">
               <svg width="32" height="32" viewBox="0 0 34 34" className="fill-current">
