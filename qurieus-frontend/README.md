@@ -30,7 +30,7 @@ cp .env.example .env.local
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:8000
 ```
 
 ### 3. Development
@@ -40,7 +40,7 @@ NEXTAUTH_URL=http://localhost:3000
 yarn dev
 ```
 
-The application will be available at http://localhost:3000
+The application will be available at http://localhost:8000
 
 ### 4. Production Build
 

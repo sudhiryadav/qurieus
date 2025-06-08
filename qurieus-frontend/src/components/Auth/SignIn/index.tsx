@@ -12,9 +12,14 @@ import MagicLink from "@/components/Auth/MagicLink";
 interface SignInFormProps {
   onSuccess?: () => void;
   className?: string;
+  handleOpenAuthModal?: (mode: "signin" | "signup") => void;
 }
 
-export default function SignInForm({ onSuccess, className = "" }: SignInFormProps) {
+export default function SignInForm({
+  onSuccess,
+  className = "",
+  handleOpenAuthModal,
+}: SignInFormProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
@@ -47,7 +52,9 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
       });
       if (result?.error) {
         if (result.error === "Please verify your email before signing in") {
-          setError("Please verify your email before signing in. Check your inbox for the verification link.");
+          setError(
+            "Please verify your email before signing in. Check your inbox for the verification link.",
+          );
         } else {
           setError(result.error);
         }
@@ -69,22 +76,39 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
   }
 
   return (
-    <div className={`w-full max-w-[480px] rounded-lg bg-white dark:bg-dark-2 p-8 mx-auto ${className}`}>
+    <div
+      className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}
+    >
       <div className="mb-6">
         <Logo width={40} height={40} showBrandName />
       </div>
-      <h2 className="mb-2 text-center text-3xl font-bold text-dark dark:text-white">Sign in to your account</h2>
+      <h2 className="mb-2 text-center text-3xl font-bold text-dark dark:text-white">
+        Sign in to your account
+      </h2>
       <p className="mb-8 text-center text-base text-body-color dark:text-dark-6">
-        Or{' '}
-        <Link href="/signup" className="font-medium text-primary hover:text-primary-dark">
-          create a new account
-        </Link>
+        Or{" "}
+        {handleOpenAuthModal ? (
+          <button
+            type="button"
+            className="hover:text-primary-dark font-medium text-primary"
+            onClick={() => handleOpenAuthModal?.("signup")}
+          >
+            create a new account
+          </button>
+        ) : (
+          <Link
+            href="/signup"
+            className="hover:text-primary-dark font-medium text-primary"
+          >
+            create a new account
+          </Link>
+        )}
       </p>
       <SwitchOption isPassword={isPassword} setIsPassword={setIsPassword} />
       {isPassword ? (
         <form onSubmit={loginUser}>
           {error && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900 p-4 mb-4">
+            <div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900">
               <div className="flex flex-col gap-2">
                 <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
                   {error}
@@ -92,7 +116,7 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
                 {error.includes("verify your email") && loginData.email && (
                   <button
                     type="button"
-                    className="underline text-primary text-left w-fit"
+                    className="w-fit text-left text-primary underline"
                     disabled={loading}
                     onClick={async () => {
                       setLoading(true);
@@ -103,7 +127,9 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
                           body: JSON.stringify({ email: loginData.email }),
                         });
                         const data = await res.json();
-                        toast[data.error ? "error" : "success"](data.error || data.message);
+                        toast[data.error ? "error" : "success"](
+                          data.error || data.message,
+                        );
                       } catch (err) {
                         toast.error("Failed to resend verification email");
                       } finally {
@@ -123,7 +149,9 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
               placeholder="Email"
               required
               value={loginData.email}
-              onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+              onChange={(e) =>
+                setLoginData({ ...loginData, email: e.target.value })
+              }
               className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
             />
           </div>
@@ -133,7 +161,9 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
               placeholder="Password"
               required
               value={loginData.password}
-              onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+              onChange={(e) =>
+                setLoginData({ ...loginData, password: e.target.value })
+              }
               className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
             />
           </div>
@@ -152,4 +182,4 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
       )}
     </div>
   );
-} 
+}

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key")
     
     # Frontend URL for CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:8000")
     
     # CORS settings
     CORS_ORIGINS: List[str] = [os.getenv("FRONTEND_URL")]

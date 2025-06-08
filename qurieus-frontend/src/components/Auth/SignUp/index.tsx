@@ -11,27 +11,32 @@ import MagicLink from "@/components/Auth/MagicLink";
 interface SignUpFormProps {
   onSuccess?: () => void;
   className?: string;
+  handleOpenAuthModal?: (mode: "signin" | "signup") => void;
 }
 
-export default function SignUpForm({ onSuccess, className = "" }: SignUpFormProps) {
+export default function SignUpForm({
+  onSuccess,
+  className = "",
+  handleOpenAuthModal,
+}: SignUpFormProps) {
   const router = useRouter();
   const [isPassword, setIsPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState({
-    name: '',
-    email: '',
-    password: ''
+    name: "",
+    email: "",
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const email = user.email;
 
-      if (process.env.NODE_ENV !== 'development' && !isBusinessEmail(email)) {
-        toast.error('Please use a business email address');
+      if (process.env.NODE_ENV !== "development" && !isBusinessEmail(email)) {
+        toast.error("Please use a business email address");
         setLoading(false);
         return;
       }
@@ -50,7 +55,10 @@ export default function SignUpForm({ onSuccess, className = "" }: SignUpFormProp
         throw new Error(responseData.error || "Registration failed");
       }
 
-      toast.success(responseData.message || "Registration successful! Please check your email to verify your account.");
+      toast.success(
+        responseData.message ||
+          "Registration successful! Please check your email to verify your account.",
+      );
       onSuccess?.();
       router.push("/signin");
     } catch (err: any) {
@@ -61,16 +69,33 @@ export default function SignUpForm({ onSuccess, className = "" }: SignUpFormProp
   };
 
   return (
-    <div className={`w-full max-w-[480px] rounded-lg bg-white dark:bg-dark-2 p-8 mx-auto ${className}`}>
+    <div
+      className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}
+    >
       <div className="mb-6">
         <Logo width={40} height={40} showBrandName />
       </div>
-      <h2 className="mb-2 text-center text-3xl font-bold text-dark dark:text-white">Create your account</h2>
+      <h2 className="mb-2 text-center text-3xl font-bold text-dark dark:text-white">
+        Create your account
+      </h2>
       <p className="mb-8 text-center text-base text-body-color dark:text-dark-6">
-        Or{' '}
-        <Link href="/signin" className="font-medium text-primary hover:text-primary-dark">
-          sign in to your account
-        </Link>
+        Or{" "}
+        {handleOpenAuthModal ? (
+          <button
+            type="button"
+            className="hover:text-primary-dark font-medium text-primary"
+            onClick={() => handleOpenAuthModal?.("signin")}
+          >
+            sign in to your account
+          </button>
+        ) : (
+          <Link
+            href="/signin"
+            className="hover:text-primary-dark font-medium text-primary"
+          >
+            sign in to your account
+          </Link>
+        )}
       </p>
       <SwitchOption isPassword={isPassword} setIsPassword={setIsPassword} />
 
@@ -113,7 +138,7 @@ export default function SignUpForm({ onSuccess, className = "" }: SignUpFormProp
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               Sign Up {loading && <Loader />}
             </button>
@@ -140,18 +165,18 @@ export default function SignUpForm({ onSuccess, className = "" }: SignUpFormProp
 // Helper function to check if email is a business email
 function isBusinessEmail(email: string): boolean {
   const personalEmailDomains = [
-    'gmail.com',
-    'yahoo.com',
-    'hotmail.com',
-    'outlook.com',
-    'aol.com',
-    'icloud.com',
-    'mail.com',
-    'protonmail.com',
-    'zoho.com',
-    'yandex.com'
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
+    "aol.com",
+    "icloud.com",
+    "mail.com",
+    "protonmail.com",
+    "zoho.com",
+    "yandex.com",
   ];
-  
-  const domain = email.split('@')[1]?.toLowerCase();
+
+  const domain = email.split("@")[1]?.toLowerCase();
   return domain ? !personalEmailDomains.includes(domain) : false;
-} 
+}

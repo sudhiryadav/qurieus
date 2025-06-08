@@ -1,8 +1,61 @@
 {
 	"folders": [
     {
-      "path": "."
+      "name": "Frontend",
+      "path": "qurieus-frontend"
+    },
+    {
+      "name": "Backend",
+      "path": "qurieus-backend"
     }
   ],
-  "settings": {}
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/.DS_Store": true,
+      "**/node_modules": true
+    }
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Frontend",
+        "type": "node",
+        "request": "launch",
+        "runtimeExecutable": "yarn",
+        "runtimeArgs": ["dev"],
+        "cwd": "${workspaceFolder:Frontend}",
+        "console": "integratedTerminal",
+        "serverReadyAction": {
+          "pattern": "ready - started server on .+, url: (https?://.+)",
+          "uriFormat": "%s",
+          "action": "openExternally"
+        }
+      },
+      {
+        "name": "Backend",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "main:app",
+          "--reload",
+          "--port",
+          "8001"
+        ],
+        "cwd": "${workspaceFolder:Backend}",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "python": "${workspaceFolder:Backend}/.venv/bin/python"
+      }
+    ],
+    "compounds": [
+      {
+        "name": "Full Stack",
+        "configurations": ["Frontend", "Backend"],
+        "stopAll": true
+      }
+    ]
+  }
 }

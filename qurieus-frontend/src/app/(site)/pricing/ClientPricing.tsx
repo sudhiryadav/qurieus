@@ -20,7 +20,7 @@ export default function ClientPricing({ plans, handleSubscription, isAuthenticat
         isAuthenticated={isAuthenticated}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AuthModal isOpen={isAuthModalOpen} mode="signup" onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 } 
