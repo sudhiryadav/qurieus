@@ -1,12 +1,38 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import toast from "react-hot-toast";
 import DocumentList from "@/components/DocumentList";
 import UploadDialog from "@/components/UploadDialog";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const response = await fetch('/api/subscription/check');
+        const data = await response.json();
+        
+        if (!data.hasActiveSubscription) {
+          toast.error('Please subscribe to a plan to access the knowledge base');
+          router.push('/user/subscription');
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        toast.error('Error checking subscription status');
+      }
+    };
+
+    if (session?.user) {
+      checkSubscription();
+    }
+  }, [session, router]);
 
   return (
     <div className="mx-auto">

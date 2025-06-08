@@ -69,7 +69,7 @@ export default function SignInForm({ onSuccess, className = "" }: SignInFormProp
   }
 
   return (
-    <div className={`w-full max-w-[480px] rounded-lg bg-white dark:bg-dark-2 p-8 shadow-lg mx-auto ${className}`}>
+    <div className={`w-full max-w-[480px] rounded-lg bg-white dark:bg-dark-2 p-8 mx-auto ${className}`}>
       <div className="mb-6">
         <Logo width={40} height={40} showBrandName />
       </div>

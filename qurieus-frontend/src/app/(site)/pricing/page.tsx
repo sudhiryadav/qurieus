@@ -82,7 +82,7 @@ export default async function PricingPage() {
   };
 
   return (
-    <div className="container mx-auto py-12">
+    <>
       <Breadcrumb
         pageName="Pricing"
         // pageDescription="Choose the perfect plan for your needs"
@@ -93,6 +93,6 @@ export default async function PricingPage() {
         isAuthenticated={!!session?.user}
       />
       <Faq />
-    </div>
+    </>
   );
 }
