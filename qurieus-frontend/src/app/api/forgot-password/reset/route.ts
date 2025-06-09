@@ -1,7 +1,7 @@
 import { prisma } from "@/utils/prismaDB";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { sendEmail } from "@/lib/email";
+import { sendResetPasswordEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
 	const body = await request.json();
@@ -41,18 +41,7 @@ export async function POST(request: Request) {
 	const resetURL = `${process.env.SITE_URL}/reset-password/${resetToken}`;
 
 	try {
-		await sendEmail({
-			to: formatedEmail,
-			subject: "Reset your password",
-			html: ` 
-      <div>
-        <h1>You requested a password reset</h1>
-        <p>Click the link below to reset your password</p>
-        <a href="${resetURL}" target="_blank">Reset Password</a>
-      </div>
-      `,
-		});
-
+		await sendResetPasswordEmail(formatedEmail, resetURL);
 		return NextResponse.json("An email has been sent to your email", {
 			status: 200,
 		});

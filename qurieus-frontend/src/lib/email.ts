@@ -1,4 +1,7 @@
 import nodemailer from "nodemailer";
+import handlebars from "handlebars";
+import fs from "fs";
+import path from "path";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -10,12 +13,37 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-  const mailOptions = {
+const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || "https://qurieus.com"}/images/logo/logo.svg`;
+const year = new Date().getFullYear();
+
+// Register partials
+const partialsDir = path.resolve("./src/templates/emails/partials/");
+fs.readdirSync(partialsDir).forEach((file) => {
+  const matches = /^([^.]+).hbs$/.exec(file);
+  if (!matches) return;
+  const partialName = `partials/${matches[1]}`;
+  const partialPath = path.join(partialsDir, file);
+  const partialContent = fs.readFileSync(partialPath, "utf8");
+  handlebars.registerPartial(partialName, partialContent);
+});
+
+function renderTemplate(templateName: string, context: any) {
+  const templatePath = path.resolve(`./src/templates/emails/${templateName}.hbs`);
+  const templateSource = fs.readFileSync(templatePath, "utf8");
+  const template = handlebars.compile(templateSource);
+  return template({ ...context, logoUrl, year });
+}
+
+export async function sendEmail({ to, subject, template, context, html }: { to: string; subject: string; template?: string; context?: any; html?: string }) {
+  let htmlContent = html;
+  if (template) {
+    htmlContent = renderTemplate(template, context || {});
+  }
+  const mailOptions: any = {
     from: process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USERNAME,
     to,
     subject,
-    html,
+    html: htmlContent,
   };
   await transporter.sendMail(mailOptions);
 }
@@ -24,17 +52,26 @@ export async function sendVerificationEmail(email: string, code: string) {
   return sendEmail({
     to: email,
     subject: "Verify your email address",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Verify your email address</h2>
-        <p>Thank you for signing up! Please use the following code to verify your email address:</p>
-        <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 24px; letter-spacing: 5px; margin: 20px 0;">
-          <strong>${code}</strong>
-        </div>
-        <p>This code will expire in 24 hours.</p>
-        <p>If you didn't request this verification, please ignore this email.</p>
-      </div>
-    `,
+    template: "verification",
+    context: { code },
+  });
+}
+
+export async function sendContactEmail(data: { fullName: string; email: string; phone: string; message: string }) {
+  return sendEmail({
+    to: process.env.CONTACT_EMAIL || 'er.sudhir.yadav@gmail.com',
+    subject: `New Contact Form Submission from ${data.fullName}`,
+    template: "contact",
+    context: data,
+  });
+}
+
+export async function sendResetPasswordEmail(email: string, resetUrl: string) {
+  return sendEmail({
+    to: email,
+    subject: "Reset your password",
+    template: "reset-password",
+    context: { resetUrl },
   });
 }
 

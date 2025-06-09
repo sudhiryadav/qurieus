@@ -72,11 +72,11 @@ model User {
   role                  UserRole  @default(USER)
   
   // Profile fields
-  company               String
-  plan                  PlanType
-  subscription_type     SubscriptionType
-  subscription_start_date DateTime @default(now())
-  subscription_end_date DateTime
+  company               String?
+  plan                  PlanType?
+  subscription_type     SubscriptionType?
+  subscription_start_date DateTime? @default(now())
+  subscription_end_date DateTime?
   is_active             Boolean   @default(true)
   is_verified           Boolean   @default(false)
   verification_token    String?   @unique

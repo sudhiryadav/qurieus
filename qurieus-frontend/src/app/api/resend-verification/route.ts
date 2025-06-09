@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/utils/prismaDB";
 import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
@@ -34,8 +34,8 @@ export async function POST(req: Request) {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        verificationCode: hashedCode,
-        verificationCodeExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        verification_token: hashedCode,
+        verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       },
     });
 

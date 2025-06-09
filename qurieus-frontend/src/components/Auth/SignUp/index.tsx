@@ -1,12 +1,14 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import Logo from "@/components/Common/Logo";
 import SwitchOption from "@/components/Auth/SwitchOption";
 import Loader from "@/components/Common/Loader";
 import MagicLink from "@/components/Auth/MagicLink";
+import { OTPInput } from "@/components/OTPInput";
+import { CountdownTimer } from "@/components/CountdownTimer";
 
 interface SignUpFormProps {
   onSuccess?: () => void;
@@ -29,9 +31,9 @@ export default function SignUpForm({
   const [resendDisabled, setResendDisabled] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
   const [user, setUser] = useState({
-    name: "",
-    email: "",
-    password: "",
+    name: "Sudhir Yadav",
+    email: "er.sudhir.yadav@gmail.com",
+    password: "Sidrules@123",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -154,25 +156,21 @@ export default function SignUpForm({
           Verify your email
         </h2>
         <p className="mb-8 text-center text-base text-body-color dark:text-dark-6">
-          We've sent a 4-digit code to {user.email}
+          We&apos;ve sent a 4-digit code to {user.email}
         </p>
         <form onSubmit={handleVerification}>
-          <div className="mb-[22px]">
-            <input
-              type="text"
-              placeholder="Enter 4-digit code"
-              maxLength={4}
-              pattern="[0-9]{4}"
-              required
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            />
-          </div>
+          <OTPInput
+            length={4}
+            value={verificationCode}
+            onChange={setVerificationCode}
+            onComplete={() => {
+              if (verificationCode.length === 4) handleVerification(new Event("submit") as any);
+            }}
+          />
           <div className="mb-9">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || verificationCode.length !== 4}
               className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               Verify Email {loading && <Loader />}
@@ -186,7 +184,7 @@ export default function SignUpForm({
             disabled={resendDisabled}
             className="text-primary hover:text-primary-dark font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {resendDisabled ? `Resend code in ${resendTimer}s` : "Resend code"}
+            {resendDisabled ? <CountdownTimer seconds={resendTimer} onComplete={() => setResendDisabled(false)} /> : "Resend code"}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { compare } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/utils/prismaDB";
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +10,8 @@ export async function POST(req: Request) {
     const user = await prisma.user.findFirst({
       where: {
         email,
-        verificationCodeExpires: {
+        verification_token: { not: null },
+        verification_expires: {
           gt: new Date(),
         },
       },
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     // Verify code
-    const isValid = await compare(code, user.verificationCode!);
+    const isValid = await compare(code, user.verification_token!);
     if (!isValid) {
       return NextResponse.json(
         { error: "Invalid verification code" },
@@ -36,9 +37,9 @@ export async function POST(req: Request) {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        emailVerified: true,
-        verificationCode: null,
-        verificationCodeExpires: null,
+        is_verified: true,
+        verification_token: null,
+        verification_expires: null,
       },
     });
 
