@@ -9,32 +9,43 @@ import Breadcrumb from "@/components/Common/Breadcrumb";
 import Faq from "@/components/Faq";
 import AuthModal from "@/components/Auth/AuthModal";
 import ClientPricing from "./ClientPricing";
+import { SubscriptionPlan, PaddleConfig } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Pricing | Qurieus - AI-Powered Document Conversations",
   description: "Choose the perfect Qurieus plan for your organization's document conversation needs.",
 };
 
-type SubscriptionPlan = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  features: string[];
-  isActive: boolean;
-  maxDocs: number;
-  maxStorageMB: number;
-  maxQueriesPerDay: number;
-};
+export type SubscriptionPlanWithPaddle = Prisma.SubscriptionPlanGetPayload<{
+  include: { paddleConfig: true }
+}>;
+
+// type SubscriptionPlan = {
+//   id: string;
+//   name: string;
+//   description: string;
+//   price: number;
+//   currency: string;
+//   features: string[];
+//   isActive: boolean;
+//   maxDocs: number;
+//   maxStorageMB: number;
+//   maxQueriesPerDay: number;
+// };
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions);
-  const plans = await prisma.subscriptionPlan.findMany({
+  
+    const plans: SubscriptionPlanWithPaddle[] = await prisma.subscriptionPlan.findMany({
     where: { isActive: true },
     orderBy: { price: 'asc' },
+    include: {
+      paddleConfig: true
+    }
   });
 
+  console.log('plans' , plans);
   const handleSubscription = async (planId: string) => {
     'use server';
     

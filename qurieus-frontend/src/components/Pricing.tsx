@@ -7,37 +7,15 @@ import { useState, useRef } from "react";
 import toast from "react-hot-toast";
 import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
-
-type SubscriptionPlan = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  features: string[];
-  isActive: boolean;
-  maxDocs?: number | null;
-  maxStorageMB?: number | null;
-  maxQueriesPerDay?: number | null;
-  idealFor?: string;
-  keyLimits?: string;
-  paddleProductId?: string;
-  paddlePriceId?: string;
-};
+import { SubscriptionPlanWithPaddle } from "@/app/(site)/pricing/page";
 
 type PricingProps = {
-  plans?: SubscriptionPlan[];
-  handleSubscription?: (
-    planId: string,
-  ) => Promise<{ success: boolean; subscription?: any; error?: string }>;
+  plans?: SubscriptionPlanWithPaddle[];
   isAuthenticated?: boolean;
-  onOpenAuthModal?: (mode: "signin" | "signup") => void;
 };
 
 export default function Pricing({
   plans,
-  handleSubscription,
-  onOpenAuthModal,
 }: PricingProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -45,13 +23,14 @@ export default function Pricing({
   const { data: session } = useSession();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanWithPaddle | null>(null);
   const paddleRef = useRef<PaddleCheckoutRef>(null);
 
   const startSubscriptionProcess = () => {
-    // Open Paddle modal for selected plan
-    if (selectedPlan && paddleRef.current) {
-      paddleRef.current.openCheckout();
+    if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
+      paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId);
+    } else {
+      toast.error("Subscription configuration is incomplete. Please contact support.");
     }
   };
 
@@ -66,12 +45,10 @@ export default function Pricing({
         setAuthModalOpen(true);
         return;
       }
-      // If already logged in, open Paddle modal
-      if (plan && paddleRef.current) {
-        paddleRef.current.openCheckout();
+      if (plan?.paddleConfig?.priceId && paddleRef.current) {
+        paddleRef.current.openCheckout(plan.paddleConfig.priceId);
         return;
       }
-      // ... existing code for handleSubscription if needed ...
     } catch (error) {
       toast.error("An error occurred while processing your request");
     } finally {
@@ -101,8 +78,6 @@ export default function Pricing({
       {selectedPlan && (
         <PaddleCheckout
           ref={paddleRef}
-          productId={selectedPlan.paddleProductId}
-          priceId={selectedPlan.paddlePriceId}
           mode="overlay"
         />
       )}
@@ -113,7 +88,7 @@ export default function Pricing({
           </div>
         )}
         <div className="isolate mx-auto grid max-w-md grid-cols-1 gap-8 md:max-w-2xl md:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-4">
-          {nonEnterprisePlans?.map((plan: SubscriptionPlan) => (
+          {nonEnterprisePlans?.map((plan: SubscriptionPlanWithPaddle) => (
             <div
               key={plan.name}
               className={`flex flex-col justify-between rounded-3xl bg-white p-6 shadow-md ring-1 ring-gray-200 transition-transform duration-300 hover:scale-105 hover:transform hover:shadow-lg dark:bg-dark-3 dark:ring-dark-3 sm:p-8`}

@@ -2,9 +2,10 @@
 import React, { useState } from "react";
 import Pricing from "@/components/Pricing";
 import AuthModal from "@/components/Auth/AuthModal";
+import { SubscriptionPlanWithPaddle } from "./page";
 
 type ClientPricingProps = {
-  plans: any[];
+  plans: SubscriptionPlanWithPaddle[];
   handleSubscription: (planId: string) => Promise<{ success: boolean; subscription?: any; error?: string }>;
   isAuthenticated: boolean;
 };
