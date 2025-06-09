@@ -45,7 +45,7 @@ export async function POST(
       price = await paddle.prices.create({
         productId: paddleConfig.productId,
         unitPrice: {
-          amount: String(plan.price),
+          amount: String(plan.price * 100),
           currencyCode: plan.currency as any,
         },
         description: plan.description || plan.name,
@@ -59,7 +59,7 @@ export async function POST(
       // Update existing Paddle price
       price = await paddle.prices.update(priceId, {
         unitPrice: {
-          amount: String(plan.price),
+          amount: String(plan.price * 100),
           currencyCode: plan.currency as any,
         },
         description: plan.description || plan.name,
@@ -84,7 +84,7 @@ export async function POST(
             ? {
                 productId: paddleConfig.productId,
                 unitPrice: {
-                  amount: String(plan.price),
+                  amount: String(plan.price * 100),
                   currencyCode: plan.currency as any,
                 },
                 description: plan.description,
@@ -96,7 +96,7 @@ export async function POST(
             : {
                 priceId,
                 unitPrice: {
-                  amount: String(plan.price),
+                  amount: String(plan.price * 100),
                   currencyCode: plan.currency as any,
                 },
                 description: plan.description,
