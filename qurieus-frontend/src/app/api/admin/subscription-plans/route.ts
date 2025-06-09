@@ -3,6 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/utils/prismaDB";
 
+// Helper to sync a plan to Paddle (product + price)
+async function syncPlanToPaddle(planId: string) {
+  try {
+    // Call product sync endpoint
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL}/api/admin/subscription-plans/${planId}/paddle/product`, { method: "POST" });
+    // Call price sync endpoint
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL}/api/admin/subscription-plans/${planId}/paddle/price`, { method: "POST" });
+  } catch (err) {
+    console.error("Paddle sync failed for plan", planId, err);
+  }
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -33,23 +45,18 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
     // Check if user is super admin
     const user = await prisma.user.findUnique({
       where: { email: session.user?.email! },
     });
-
     if (!user || user.role !== "SUPER_ADMIN") {
       return new NextResponse("Forbidden", { status: 403 });
     }
-
     const body = await req.json();
     const { name, description, price, currency, features, isActive, idealFor, keyLimits, maxDocs, maxStorageMB, maxQueriesPerDay } = body;
-
     const plan = await prisma.subscriptionPlan.create({
       data: {
         name,
@@ -65,7 +72,8 @@ export async function POST(req: Request) {
         maxQueriesPerDay,
       },
     });
-
+    // Auto-sync to Paddle
+    await syncPlanToPaddle(plan.id);
     return NextResponse.json(plan);
   } catch (error) {
     console.error("Error creating subscription plan:", error);
@@ -105,6 +113,8 @@ export async function PATCH(req: Request) {
         maxQueriesPerDay,
       },
     });
+    // Auto-sync to Paddle
+    await syncPlanToPaddle(plan.id);
     return NextResponse.json(plan);
   } catch (error) {
     console.error("Error updating subscription plan:", error);

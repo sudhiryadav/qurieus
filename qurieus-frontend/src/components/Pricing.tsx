@@ -3,8 +3,10 @@
 import { Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import toast from "react-hot-toast";
+import AuthModal from "@/components/Auth/AuthModal";
+import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
 
 type SubscriptionPlan = {
   id: string;
@@ -19,6 +21,8 @@ type SubscriptionPlan = {
   maxQueriesPerDay?: number | null;
   idealFor?: string;
   keyLimits?: string;
+  paddleProductId?: string;
+  paddlePriceId?: string;
 };
 
 type PricingProps = {
@@ -39,24 +43,35 @@ export default function Pricing({
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { data: session } = useSession();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const paddleRef = useRef<PaddleCheckoutRef>(null);
+
+  const startSubscriptionProcess = () => {
+    // Open Paddle modal for selected plan
+    if (selectedPlan && paddleRef.current) {
+      paddleRef.current.openCheckout();
+    }
+  };
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId);
     setError(null);
-
+    const plan = plans?.find(p => p.id === planId) || null;
+    setSelectedPlan(plan);
     try {
       if (!session) {
-        onOpenAuthModal?.("signup");
+        setAuthMode("signup");
+        setAuthModalOpen(true);
         return;
       }
-
-      const result = await handleSubscription?.(planId);
-
-      if (result?.success && result?.subscription) {
-        window.location.href = result.subscription.short_url;
-      } else {
-        setError(result?.error || "Failed to create subscription");
+      // If already logged in, open Paddle modal
+      if (plan && paddleRef.current) {
+        paddleRef.current.openCheckout();
+        return;
       }
+      // ... existing code for handleSubscription if needed ...
     } catch (error) {
       toast.error("An error occurred while processing your request");
     } finally {
@@ -77,6 +92,20 @@ export default function Pricing({
       id="about"
       className="bg-gray-1 pb-8 pt-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-16"
     >
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        mode={authMode}
+        startSubscriptionProcess={startSubscriptionProcess}
+      />
+      {selectedPlan && (
+        <PaddleCheckout
+          ref={paddleRef}
+          productId={selectedPlan.paddleProductId}
+          priceId={selectedPlan.paddlePriceId}
+          mode="overlay"
+        />
+      )}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {error && (
           <div className="mx-auto mt-4 max-w-2xl text-center">

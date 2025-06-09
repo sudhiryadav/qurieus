@@ -13,12 +13,14 @@ interface SignInFormProps {
   onSuccess?: () => void;
   className?: string;
   handleOpenAuthModal?: (mode: "signin" | "signup") => void;
+  startSubscriptionProcess?: () => void;
 }
 
 export default function SignInForm({
   onSuccess,
   className = "",
   handleOpenAuthModal,
+  startSubscriptionProcess,
 }: SignInFormProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -58,11 +60,15 @@ export default function SignInForm({
         } else {
           setError(result.error);
         }
-      } else if (result?.url) {
+      } else if (result) {
         onSuccess?.();
-        setTimeout(() => {
-          router.push(result.url || callbackUrl);
-        }, 100);
+        if (startSubscriptionProcess) {
+          startSubscriptionProcess();
+        } else if (result.url) {
+          setTimeout(() => {
+            router.push(result.url || callbackUrl);
+          }, 100);
+        }
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during sign in");

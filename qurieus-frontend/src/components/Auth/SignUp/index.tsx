@@ -9,6 +9,7 @@ import Loader from "@/components/Common/Loader";
 import MagicLink from "@/components/Auth/MagicLink";
 import { OTPInput } from "@/components/OTPInput";
 import { CountdownTimer } from "@/components/CountdownTimer";
+import { signIn } from "next-auth/react";
 
 interface SignUpFormProps {
   onSuccess?: () => void;
@@ -96,10 +97,23 @@ export default function SignUpForm({
 
       toast.success("Email verified successfully!");
       onSuccess?.();
-      if (startSubscriptionProcess) {
-        startSubscriptionProcess();
+      // Auto-login after verification
+      const signInResult = await signIn("credentials", {
+        redirect: false,
+        email: user.email,
+        password: user.password,
+      });
+      if (signInResult && !signInResult.error) {
+        if (startSubscriptionProcess) {
+          startSubscriptionProcess();
+        } else {
+          router.push("/user/knowledge-base");
+        }
       } else {
-        router.push("/signin");
+        // fallback: only redirect to /signin if not on pricing page
+        if (window.location.pathname !== "/pricing") {
+          router.push("/signin");
+        }
       }
     } catch (err: any) {
       toast.error(err.message || "Verification failed. Please try again.");

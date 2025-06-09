@@ -22,6 +22,13 @@ interface Plan {
   maxQueriesPerDay: number | null;
 }
 
+interface PaddleConfig {
+  productId: string;
+  priceId: string;
+  trialDays: number;
+  billingCycle: string;
+}
+
 export default function AdminPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +48,9 @@ export default function AdminPlansPage() {
     maxStorageMB: undefined as number | undefined,
     maxQueriesPerDay: undefined as number | undefined,
   });
+  const [paddleConfig, setPaddleConfig] = useState<PaddleConfig | null>(null);
+  const [paddleSyncLoading, setPaddleSyncLoading] = useState(false);
+  const [paddleSyncError, setPaddleSyncError] = useState<string | null>(null);
 
   const fetchPlans = async () => {
     try {
@@ -53,6 +63,18 @@ export default function AdminPlansPage() {
       toast.error("Failed to fetch plans");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPaddleConfig = async (planId: string) => {
+    try {
+      setPaddleConfig(null);
+      const res = await fetch(`/api/admin/subscription-plans/${planId}/paddle`);
+      if (!res.ok) throw new Error("Failed to fetch Paddle config");
+      const data = await res.json();
+      setPaddleConfig(data);
+    } catch (err) {
+      setPaddleConfig(null);
     }
   };
 
@@ -71,6 +93,7 @@ export default function AdminPlansPage() {
       maxStorageMB: plan.maxStorageMB === null ? undefined : plan.maxStorageMB,
       maxQueriesPerDay: plan.maxQueriesPerDay === null ? undefined : plan.maxQueriesPerDay,
     });
+    fetchPaddleConfig(plan.id);
   };
 
   const handleEditSubmit = async () => {
@@ -93,6 +116,23 @@ export default function AdminPlansPage() {
     } catch (error) {
       console.error("Error updating plan:", error);
       toast.error("Failed to update plan");
+    }
+  };
+
+  const handlePaddleSync = async () => {
+    if (!editingPlan) return;
+    setPaddleSyncLoading(true);
+    setPaddleSyncError(null);
+    try {
+      await fetch(`/api/admin/subscription-plans/${editingPlan.id}/paddle/product`, { method: "POST" });
+      await fetch(`/api/admin/subscription-plans/${editingPlan.id}/paddle/price`, { method: "POST" });
+      await fetchPaddleConfig(editingPlan.id);
+      toast.success("Paddle sync successful");
+    } catch (err: any) {
+      setPaddleSyncError("Paddle sync failed");
+      toast.error("Paddle sync failed");
+    } finally {
+      setPaddleSyncLoading(false);
     }
   };
 
@@ -292,6 +332,27 @@ export default function AdminPlansPage() {
             <label className="block text-sm font-medium text-gray-300 mb-1">Max Queries/Day</label>
             <input type="number" value={editForm.maxQueriesPerDay ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxQueriesPerDay: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
+          {editingPlan && (
+            <div className="mt-6 p-4 rounded bg-gray-800 border border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-semibold text-white">Paddle Sync</span>
+                <button
+                  className="px-3 py-1 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                  onClick={handlePaddleSync}
+                  disabled={paddleSyncLoading}
+                >
+                  {paddleSyncLoading ? "Syncing..." : "Sync to Paddle"}
+                </button>
+              </div>
+              {paddleSyncError && <div className="text-red-400 text-sm mb-2">{paddleSyncError}</div>}
+              <div className="text-sm text-gray-300">
+                <div><b>Product ID:</b> {paddleConfig?.productId || <span className="text-gray-500">Not synced</span>}</div>
+                <div><b>Price ID:</b> {paddleConfig?.priceId || <span className="text-gray-500">Not synced</span>}</div>
+                <div><b>Trial Days:</b> {paddleConfig?.trialDays ?? <span className="text-gray-500">-</span>}</div>
+                <div><b>Billing Cycle:</b> {paddleConfig?.billingCycle ?? <span className="text-gray-500">-</span>}</div>
+              </div>
+            </div>
+          )}
         </div>
       </ModalDialog>
       {/* Add Plan Modal */}
