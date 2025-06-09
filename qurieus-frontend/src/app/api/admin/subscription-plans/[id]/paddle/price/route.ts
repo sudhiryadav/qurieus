@@ -5,10 +5,16 @@ import { prisma } from "@/utils/prismaDB";
 import { Environment, Paddle } from "@paddle/paddle-node-sdk";
 
 const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
-  environment: process.env.NODE_ENV === "production" ? Environment.production : Environment.sandbox,
+  environment:
+    process.env.NODE_ENV === "production"
+      ? Environment.production
+      : Environment.sandbox,
 });
 
-export async function POST(req: NextRequest, context: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: { id: string } },
+) {
   const { params } = context;
   const awaitedParams = await params;
   const session = await getServerSession(authOptions);
@@ -38,8 +44,11 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
       // Create new Paddle price
       price = await paddle.prices.create({
         productId: paddleConfig.productId,
-        unitPrice: { amount: String(plan.price), currencyCode: plan.currency as any },
-        description: plan.description,
+        unitPrice: {
+          amount: String(plan.price),
+          currencyCode: plan.currency as any,
+        },
+        description: plan.description || plan.name,
         billingCycle: {
           interval: "month",
           frequency: 1,
@@ -49,8 +58,11 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     } else {
       // Update existing Paddle price
       price = await paddle.prices.update(priceId, {
-        unitPrice: { amount: String(plan.price), currencyCode: plan.currency as any },
-        description: plan.description,
+        unitPrice: {
+          amount: String(plan.price),
+          currencyCode: plan.currency as any,
+        },
+        description: plan.description || plan.name,
         billingCycle: {
           interval: "month",
           frequency: 1,
@@ -71,7 +83,10 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
           request: !priceId
             ? {
                 productId: paddleConfig.productId,
-                unitPrice: { amount: String(plan.price), currencyCode: plan.currency as any },
+                unitPrice: {
+                  amount: String(plan.price),
+                  currencyCode: plan.currency as any,
+                },
                 description: plan.description,
                 billingCycle: {
                   interval: "month",
@@ -80,7 +95,10 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
               }
             : {
                 priceId,
-                unitPrice: { amount: String(plan.price), currencyCode: plan.currency as any },
+                unitPrice: {
+                  amount: String(plan.price),
+                  currencyCode: plan.currency as any,
+                },
                 description: plan.description,
                 billingCycle: {
                   interval: "month",
@@ -90,7 +108,10 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
         },
       },
     });
-    return NextResponse.json({ error: `Paddle price sync failed: ${err?.message || err}` }, { status: 500 });
+    return NextResponse.json(
+      { error: `Paddle price sync failed: ${err?.message || err}` },
+      { status: 500 },
+    );
   }
 
   await prisma.paddleConfig.update({
