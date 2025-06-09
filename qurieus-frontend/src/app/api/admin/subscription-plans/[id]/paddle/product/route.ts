@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/utils/prismaDB";
-import { Paddle } from "@paddle/paddle-node-sdk";
+import { Environment, LogLevel, Paddle } from "@paddle/paddle-node-sdk";
 
-const paddle = new Paddle(process.env.PADDLE_API_KEY!);
+const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
+  environment: process.env.NODE_ENV === "production" ? Environment.production : Environment.sandbox,
+  logLevel: LogLevel.verbose,
+});
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function POST(req: NextRequest, context: { params: { id: string } }) {
+  const { params } = context;
+  const awaitedParams = await params;
   const session = await getServerSession(authOptions);
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,30 +22,65 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const plan = await prisma.subscriptionPlan.findUnique({
-    where: { id: params.id },
+    where: { id: awaitedParams.id },
   });
   if (!plan)
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
 
-  // Create or update Paddle product
-  const product = await paddle.products.create({
-    name: plan.name,
-    description: plan.description,
-    taxCategory: "standard",
-    type: null,
+  let paddleConfig = await prisma.paddleConfig.findUnique({
+    where: { subscriptionPlanId: plan.id },
   });
+
+  let productId = paddleConfig?.productId;
+  let product;
+  try {
+    if (!productId) {
+      // Create new Paddle product
+      product = await paddle.products.create({
+        name: plan.name,
+        description: plan.description,
+        taxCategory: "standard",
+      });
+      productId = product.id;
+    } else {
+      // Update existing Paddle product
+      product = await paddle.products.update(productId, {
+        name: plan.name,
+        description: plan.description,
+        taxCategory: "standard",
+      });
+    }
+  } catch (err: any) {
+    // Log error to DB, including which Paddle API was called
+    await prisma.log.create({
+      data: {
+        userId: user.id,
+        level: "error",
+        message: `Paddle product sync failed for plan ${plan.id}`,
+        meta: {
+          error: err?.message || err,
+          detail: err,
+          paddleApi: !productId ? "products.create" : "products.update",
+          request: !productId
+            ? { name: plan.name, description: plan.description, taxCategory: "standard", type: null }
+            : { productId, name: plan.name, description: plan.description, taxCategory: "standard", type: null },
+        },
+      },
+    });
+    return NextResponse.json({ error: `Paddle product sync failed: ${err?.message || err}` }, { status: 500 });
+  }
 
   await prisma.paddleConfig.upsert({
     where: { subscriptionPlanId: plan.id },
-    update: { productId: product.id },
+    update: { productId },
     create: {
       subscriptionPlanId: plan.id,
-      productId: product.id,
+      productId,
       priceId: "",
       trialDays: 7,
       billingCycle: "monthly",
     },
   });
 
-  return NextResponse.json({ productId: product.id });
+  return NextResponse.json({ productId });
 }

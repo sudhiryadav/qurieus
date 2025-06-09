@@ -5,8 +5,10 @@ import { prisma } from "@/utils/prismaDB";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } },
+  context: { params: { id: string } },
 ) {
+  const { params } = context;
+  const awaitedParams = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -24,7 +26,7 @@ export async function GET(
     }
 
     const plan = await prisma.subscriptionPlan.findUnique({
-      where: { id: params.id },
+      where: { id: awaitedParams.id },
       include: {
         paddleConfig: true,
       },
