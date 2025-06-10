@@ -24,7 +24,7 @@ export default function UserLayout({
         const response = await fetch("/api/subscription/check");
         const data = await response.json();
 
-        if (!data.hasActiveSubscription) {
+        if (!data) {
           toast.error(
             "Please subscribe to a plan to access admin panel",
           );

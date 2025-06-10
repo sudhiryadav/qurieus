@@ -21,6 +21,7 @@ export default function Pricing() {
     useState<SubscriptionPlanWithPaddle | null>(null);
   const paddleRef = useRef<PaddleCheckoutRef>(null);
   const [plans, setPlans] = useState<SubscriptionPlanWithPaddle[]>([]);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     //Get the plans
@@ -31,6 +32,18 @@ export default function Pricing() {
     };
     fetchPlans();
   }, []);
+
+  useEffect(() => {
+    // Get current subscription
+    const fetchCurrentSubscription = async () => {
+      if (session) {
+        const response = await fetch("/api/subscription/check");
+        const data = await response.json();
+        setCurrentPlanId(data.currentPlanId);
+      }
+    };
+    fetchCurrentSubscription();
+  }, [session]);
 
   const startSubscriptionProcess = () => {
     if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
@@ -101,6 +114,18 @@ export default function Pricing() {
   const enterprisePlan = plans?.find(
     (plan) => plan.name.toLowerCase() === "enterprise",
   );
+
+  const getButtonText = (plan: SubscriptionPlanWithPaddle) => {
+    if (!session) return "Sign in to subscribe";
+    if (loading === plan.id) return "Processing...";
+    if (plan.id === currentPlanId) return "Subscribed";
+    if (currentPlanId) return "Upgrade";
+    return "Get started today";
+  };
+
+  const isButtonDisabled = (plan: SubscriptionPlanWithPaddle) => {
+    return loading === plan.id || plan.id === currentPlanId;
+  };
 
   return (
     <section
@@ -237,16 +262,12 @@ export default function Pricing() {
               </div>
               <button
                 onClick={() => handleSubscribe(plan)}
-                disabled={loading === plan.id}
+                disabled={isButtonDisabled(plan)}
                 className={`mt-8 block w-full rounded-md bg-indigo-50 px-3 py-2 text-center text-sm font-semibold leading-6 text-indigo-600 hover:bg-indigo-100
                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-700
                   dark:text-white dark:hover:bg-indigo-600`}
               >
-                {loading === plan.id
-                  ? "Processing..."
-                  : session
-                    ? "Get started today"
-                    : "Sign in to subscribe"}
+                {getButtonText(plan)}
               </button>
             </div>
           ))}

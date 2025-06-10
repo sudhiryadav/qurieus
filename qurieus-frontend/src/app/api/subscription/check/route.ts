@@ -24,29 +24,9 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const subscription = user.subscription;
-  if (!subscription) {
-    return NextResponse.json({ error: "No subscription found" }, { status: 404 });
-  }
-
-  // Cast subscription to 'any' to bypass TypeScript's strict type checking
-  const subscriptionAny = subscription as any;
-
   return NextResponse.json({
-    subscription: {
-      id: subscriptionAny.id,
-      planId: subscriptionAny.planId,
-      planName: subscriptionAny.plan.name,
-      status: subscriptionAny.status,
-      paddleSubscriptionId: subscriptionAny.paddleSubscriptionId,
-      paddleCustomerId: subscriptionAny.paddleCustomerId,
-      currentPeriodStart: subscriptionAny.currentPeriodStart,
-      currentPeriodEnd: subscriptionAny.currentPeriodEnd,
-      cancelledAt: subscriptionAny.cancelledAt,
-      paddlePaymentId: subscriptionAny.paddlePaymentId,
-      paddlePaymentAmount: subscriptionAny.paddlePaymentAmount,
-      paddlePaymentDate: subscriptionAny.paddlePaymentDate,
-      paddlePaymentError: subscriptionAny.paddlePaymentError,
-    },
+    hasSubscription: !!user.subscription,
+    subscription: user.subscription,
+    currentPlanId: user.subscription?.planId,
   });
 } 

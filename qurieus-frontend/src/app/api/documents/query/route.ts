@@ -1,14 +1,10 @@
-import { authOptions } from "@/utils/auth";
 import { prisma } from '@/utils/prismaDB';
-import { getServerSession } from "next-auth";
 import { headers } from "next/headers";
 import { NextResponse } from 'next/server';
 import { UAParser } from "ua-parser-js";
 
 export async function POST(request: Request) {
   try {
-    const routeStart = performance.now();
-    const session = await getServerSession(authOptions);
     const body = await request.json();
     const { query, documentOwnerId, visitorId } = body;
 
@@ -51,7 +47,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const dbStart = performance.now();
     // Create or update chat conversation
     const conversation = await prisma.chatConversation.upsert({
       where: {
