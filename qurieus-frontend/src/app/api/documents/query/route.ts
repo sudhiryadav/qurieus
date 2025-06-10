@@ -2,6 +2,7 @@ import { prisma } from '@/utils/prismaDB';
 import { headers } from "next/headers";
 import { NextResponse } from 'next/server';
 import { UAParser } from "ua-parser-js";
+import { cacheGet, cacheSet, generateQueryCacheKey } from '@/utils/redis';
 
 export async function POST(request: Request) {
   try {
@@ -32,6 +33,20 @@ export async function POST(request: Request) {
         { error: "Query and userId are required" },
         { status: 400 }
       );
+    }
+
+    // Check Redis cache first
+    const cacheKey = generateQueryCacheKey(query, documentOwnerId);
+    const cachedResponse = await cacheGet(cacheKey);
+    
+    if (cachedResponse) {
+      // Return cached response as a stream
+      return new Response(cachedResponse, {
+        headers: {
+          'Content-Type': 'application/x-ndjson',
+          'Transfer-Encoding': 'chunked',
+        },
+      });
     }
 
     // Verify user exists before creating chat conversation
@@ -118,6 +133,18 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Create a TransformStream to collect the response for caching
+    const chunks: string[] = [];
+    const transformStream = new TransformStream({
+      transform(chunk, controller) {
+        const text = new TextDecoder().decode(chunk);
+        chunks.push(text);
+        controller.enqueue(chunk);
+      },
+    });
+
+    // Pipe the response through our transform stream
     const filteredStream = new ReadableStream({
       async start(controller) {
         const reader = ndjsonStream.getReader();
@@ -150,6 +177,10 @@ export async function POST(request: Request) {
         controller.close();
       }
     });
+
+    // Cache the response
+    const responseText = chunks.join('');
+    await cacheSet(cacheKey, responseText);
 
     return new Response(filteredStream, {
       headers: {

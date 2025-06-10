@@ -57,11 +57,8 @@ class Settings(BaseSettings):
         return self.MAX_FILE_SIZE_MB * 1024 * 1024
     
     # Ollama settings
-    OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral")  # Default to mistral if not specified
-    REDIS_HOST: str = os.getenv("REDIS_HOST")
-    REDIS_PORT: int = int(os.getenv("REDIS_PORT"))
-    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")
+    OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral:latest").strip()  # Default to mistral:latest
     
     class Config:
         case_sensitive = True

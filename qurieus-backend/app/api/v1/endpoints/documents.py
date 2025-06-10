@@ -36,26 +36,6 @@ from app.core.config import settings
 from app.database import get_db
 from models import Document as DBDocument, DocumentChunk, Embedding
 
-# Initialize Redis client for caching (optional)
-try:
-    import redis
-    redis_client = redis.Redis(
-        host=settings.REDIS_HOST if hasattr(settings, 'REDIS_HOST') else 'localhost',
-        port=settings.REDIS_PORT if hasattr(settings, 'REDIS_PORT') else 6379,
-        password=settings.REDIS_PASSWORD if hasattr(settings, 'REDIS_PASSWORD') else None,
-        decode_responses=True,
-        socket_timeout=5,  # 5 second timeout
-        socket_connect_timeout=5
-    )
-    # Test connection
-    redis_client.ping()
-    REDIS_AVAILABLE = True
-    print("Redis connection successful")
-except Exception as e:
-    print(f"Redis not available: {str(e)}")
-    REDIS_AVAILABLE = False
-    redis_client = None
-
 # Initialize the embedding model with a smaller model
 try:
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
@@ -63,25 +43,11 @@ except Exception as e:
     print(f"Warning: Could not initialize SentenceTransformer: {str(e)}")
     embedding_model = None
 
-# Cache for embeddings
+# Cache for embeddings using lru_cache
 @lru_cache(maxsize=1000)
 def get_cached_embedding(text: str) -> List[float]:
     """Get cached embedding or compute new one."""
-    if not REDIS_AVAILABLE:
-        return embedding_model.encode(text).tolist()
-    
-    try:
-        cache_key = f"embedding:{hashlib.md5(text.encode()).hexdigest()}"
-        cached = redis_client.get(cache_key)
-        if cached:
-            return json.loads(cached)
-        
-        embedding = embedding_model.encode(text).tolist()
-        redis_client.setex(cache_key, 3600, json.dumps(embedding))  # Cache for 1 hour
-        return embedding
-    except Exception as e:
-        print(f"Redis error, falling back to direct embedding: {str(e)}")
-        return embedding_model.encode(text).tolist()
+    return embedding_model.encode(text).tolist()
 
 def optimize_chunk_size(text: str, target_size: int = 500) -> List[str]:
     """Optimize chunk size based on content."""
@@ -388,8 +354,7 @@ async def upload_files(
                 log_to_frontend("info", f"Processed {chunks.get('chunks')} chunks from {file.filename}")
             except Exception as e:
                 error_msg = f"Error processing file {file.filename}"
-                log_to_frontend("error", f"{error_msg}: {str(e)}")
-                log_to_frontend("error", traceback.format_exc())
+                log_to_frontend("error", error_msg, user=current_user, error=e)
                 raise HTTPException(
                     status_code=500, 
                     detail="Error processing document"
@@ -407,8 +372,7 @@ async def upload_files(
     except HTTPException:
         raise
     except Exception as e:
-        log_to_frontend("error", f"Unexpected error in upload_files: {str(e)}")
-        log_to_frontend("error", traceback.format_exc())
+        log_to_frontend("error", "Unexpected error in upload_files", user=current_user, error=e)
         raise HTTPException(
             status_code=500,
             detail="An unexpected error occurred while processing your upload"
@@ -419,23 +383,8 @@ async def query_documents(
     request: QueryRequest,
     db: Session = Depends(get_db)
 ):
-    """Query documents using semantic search and Ollama with caching."""
+    """Query documents using semantic search and Ollama."""
     try:
-        # Generate cache key for the query
-        cache_key = f"query:{hashlib.md5(request.query.encode()).hexdigest()}"
-        
-        # Try to get from cache if Redis is available
-        if REDIS_AVAILABLE:
-            try:
-                cached_result = redis_client.get(cache_key)
-                if cached_result:
-                    return StreamingResponse(
-                        iter([cached_result]),
-                        media_type="application/x-ndjson"
-                    )
-            except Exception as e:
-                log_to_frontend("error", f"Redis cache error: {str(e)}")
-
         # Always fetch the most recent document for the user
         query = text("""
             SELECT d.content, d.metadata, d."originalName"
@@ -452,31 +401,38 @@ async def query_documents(
             if metadata:
                 try:
                     structured_data = json.loads(metadata)
+                    # Clean and encode the text properly
+                    clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
+                    clean_structured_data = json.dumps(structured_data, ensure_ascii=False)
                     prompt = f"""You are an intelligent assistant. Answer the following question using all available data, including any structured tables or text.
 
 Structured Data (if any):
-{json.dumps(structured_data, indent=2)}
+{clean_structured_data}
 
 Text Content:
-{content}
+{clean_content}
 
 Question: {request.query}
 
 Answer:"""
                 except json.JSONDecodeError:
+                    # Clean and encode the text properly
+                    clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
                     prompt = f"""You are an intelligent assistant. Answer the following question using the provided context.
 
 Context:
-{content}
+{clean_content}
 
 Question: {request.query}
 
 Answer:"""
             else:
+                # Clean and encode the text properly
+                clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
                 prompt = f"""You are an intelligent assistant. Answer the following question using the provided context.
 
 Context:
-{content}
+{clean_content}
 
 Question: {request.query}
 
@@ -486,7 +442,7 @@ Answer:"""
             return await semantic_search_query(request, db)
 
         # Continue with Ollama API call...
-        return await generate_ollama_response(prompt, [], cache_key)
+        return await generate_ollama_response(prompt, [])
     except HTTPException:
         raise
     except Exception as e:
@@ -500,7 +456,6 @@ Answer:"""
 async def semantic_search_query(request: QueryRequest, db: Session):
     """Handle semantic search queries."""
     try:
-        cache_key = f"query:{hashlib.md5(request.query.encode()).hexdigest()}"
         if not embedding_model:
             log_to_frontend("error", "Embedding model not available")
             raise HTTPException(
@@ -550,7 +505,8 @@ async def semantic_search_query(request: QueryRequest, db: Session):
                 "sources": []
             }
 
-        context = "\n".join([chunk[0][:1000] for chunk in similar_chunks])
+        # Clean and encode the text properly
+        context = "\n".join([chunk[0].encode('utf-8', errors='ignore').decode('utf-8')[:1000] for chunk in similar_chunks])
         sources = [{"document": chunk[2], "similarity": chunk[3]} for chunk in similar_chunks]
 
         prompt = f"""Answer the following question based on the provided context. If the answer isn't in the context, say so.
@@ -563,7 +519,7 @@ Context:
 Answer:"""
 
         # Continue with Ollama API call...
-        return await generate_ollama_response(prompt, sources, cache_key)
+        return await generate_ollama_response(prompt, sources)
     except Exception as e:
         log_to_frontend("error", f"Error in semantic search: {str(e)}")
         log_to_frontend("error", traceback.format_exc())
@@ -572,17 +528,57 @@ Answer:"""
             detail="Error processing your query"
         )
 
-async def generate_ollama_response(prompt: str, sources: list, cache_key: str) -> StreamingResponse:
+async def generate_ollama_response(prompt: str, sources: list) -> StreamingResponse:
     """Generate response from Ollama API with streaming."""
     try:
         print(f"[DEBUG] Ollama prompt: {repr(prompt)[:500]}")
         if not prompt.strip():
             print("[DEBUG] Prompt is empty!")
+            raise HTTPException(
+                status_code=400,
+                detail="Empty prompt provided"
+            )
 
+        # Validate Ollama API URL
+        if not settings.OLLAMA_API_URL:
+            raise HTTPException(
+                status_code=500,
+                detail="Ollama API URL not configured"
+            )
+
+        # Validate model name
+        model_name = settings.OLLAMA_MODEL.strip()
+        if not model_name:
+            raise HTTPException(
+                status_code=500,
+                detail="Ollama model not configured"
+            )
+
+        # First check if model exists
+        try:
+            model_check = requests.get(f"{settings.OLLAMA_API_URL}/api/tags")
+            if model_check.ok:
+                available_models = model_check.json().get("models", [])
+                model_exists = any(model["name"] == model_name for model in available_models)
+                if not model_exists:
+                    error_msg = f"Model '{model_name}' not found. Available models: {[m['name'] for m in available_models]}"
+                    log_to_frontend("error", error_msg, meta={"available_models": [m['name'] for m in available_models]})
+                    raise HTTPException(
+                        status_code=400,
+                        detail=error_msg
+                    )
+        except requests.RequestException as e:
+            log_to_frontend("error", "Failed to check available Ollama models", error=e)
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to check available Ollama models"
+            )
+
+        # Make the actual API call
         response = requests.post(
             f"{settings.OLLAMA_API_URL}/api/generate",
             json={
-                "model": settings.OLLAMA_MODEL,
+                "model": model_name,
                 "prompt": prompt,
                 "stream": True
             },
@@ -591,27 +587,30 @@ async def generate_ollama_response(prompt: str, sources: list, cache_key: str) -
 
         print(f"[DEBUG] Ollama API status: {response.status_code}")
         if not response.ok:
-            print("[DEBUG] Ollama API error:", response.text)
+            error_text = response.text
+            print(f"[DEBUG] Ollama API error: {error_text}")
+            try:
+                error_json = response.json()
+                error_message = error_json.get("error", "Unknown error from Ollama API")
+            except:
+                error_message = error_text
+            log_to_frontend("error", "Error from Ollama API", meta={"error_message": error_message})
             raise HTTPException(
                 status_code=500,
-                detail="Error from Ollama API"
+                detail=f"Error from Ollama API: {error_message}"
             )
 
-        # Read all lines into a list (so we can cache and stream)
+        # Read all lines into a list
         lines = [line for line in response.iter_lines() if line]
         print(f"[DEBUG] Ollama response lines: {len(lines)}")
         if lines:
             print(f"[DEBUG] First response line: {lines[0][:200]}")
         else:
-            print("[DEBUG] Ollama response is empty!")
-
-        # Cache the response if Redis is available
-        if REDIS_AVAILABLE:
-            try:
-                full_response = "\n".join(line.decode() for line in lines)
-                redis_client.setex(cache_key, 3600, full_response)  # Cache for 1 hour
-            except Exception as e:
-                print(f"Redis caching error: {str(e)}")
+            log_to_frontend("error", "Empty response from Ollama API")
+            raise HTTPException(
+                status_code=500,
+                detail="Empty response from Ollama API"
+            )
 
         # Stream from memory
         async def line_stream():
@@ -620,8 +619,10 @@ async def generate_ollama_response(prompt: str, sources: list, cache_key: str) -
 
         return StreamingResponse(line_stream(), media_type="application/x-ndjson")
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"[DEBUG] Exception in generate_ollama_response: {str(e)}")
+        log_to_frontend("error", "Error generating response", error=e)
         raise HTTPException(
             status_code=500,
             detail=f"Error generating response: {str(e)}"
