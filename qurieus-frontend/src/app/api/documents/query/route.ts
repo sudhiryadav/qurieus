@@ -37,9 +37,14 @@ export async function POST(request: Request) {
 
     // Check Redis cache first
     const cacheKey = generateQueryCacheKey(query, documentOwnerId);
+    console.log(`[Cache] Checking cache for key: ${cacheKey}`);
+    console.log(`[Cache] Query: "${query}"`);
+    console.log(`[Cache] DocumentOwnerId: ${documentOwnerId}`);
     const cachedResponse = await cacheGet(cacheKey);
     
     if (cachedResponse) {
+      console.log(`[Cache] Cache hit for query: ${query}`);
+      console.log(`[Cache] Cached response length: ${cachedResponse.length} bytes`);
       // Return cached response as a stream
       return new Response(cachedResponse, {
         headers: {
@@ -48,6 +53,7 @@ export async function POST(request: Request) {
         },
       });
     }
+    console.log(`[Cache] Cache miss for query: ${query}`);
 
     // Verify user exists before creating chat conversation
     const user = await prisma.user.findUnique({
@@ -134,62 +140,78 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create a TransformStream to collect the response for caching
+    // First, collect all the data from the stream
     const chunks: string[] = [];
-    const transformStream = new TransformStream({
-      transform(chunk, controller) {
-        const text = new TextDecoder().decode(chunk);
-        chunks.push(text);
-        controller.enqueue(chunk);
-      },
-    });
+    const reader = ndjsonStream.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-    // Pipe the response through our transform stream
-    const filteredStream = new ReadableStream({
-      async start(controller) {
-        const reader = ndjsonStream.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const data = JSON.parse(line);
-              delete data.model;
-              controller.enqueue(JSON.stringify(data) + '\n');
-            } catch (e) {
-              // Ignore parse errors
-            }
-          }
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const data = JSON.parse(line);
+          delete data.model;
+          const processedLine = JSON.stringify(data) + '\n';
+          chunks.push(processedLine);
+        } catch (e) {
+          console.error('[Stream] Error parsing line:', e);
         }
-        if (buffer.trim()) {
-          try {
-            const data = JSON.parse(buffer);
-            delete data.model;
-            controller.enqueue(JSON.stringify(data) + '\n');
-          } catch {}
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      try {
+        const data = JSON.parse(buffer);
+        delete data.model;
+        const processedLine = JSON.stringify(data) + '\n';
+        chunks.push(processedLine);
+      } catch (e) {
+        console.error('[Stream] Error parsing final buffer:', e);
+      }
+    }
+
+    // Cache the response if we have data
+    const responseText = chunks.join('');
+    console.log(`[Cache] Caching response for key: ${cacheKey}`);
+    console.log(`[Cache] Response length: ${responseText.length} bytes`);
+    console.log(`[Cache] Number of chunks: ${chunks.length}`);
+    if (chunks.length > 0) {
+      console.log(`[Cache] First chunk preview: ${chunks[0].substring(0, 100)}...`);
+    }
+
+    if (responseText.length > 0) {
+      await cacheSet(cacheKey, responseText, 3600); // Cache for 1 hour
+    } else {
+      console.error('[Cache] Not caching empty response');
+    }
+
+    // Create a new stream from the collected chunks
+    const responseStream = new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(new TextEncoder().encode(chunk));
         }
         controller.close();
       }
     });
 
-    // Cache the response
-    const responseText = chunks.join('');
-    await cacheSet(cacheKey, responseText);
-
-    return new Response(filteredStream, {
+    return new Response(responseStream, {
       headers: {
         'Content-Type': 'application/x-ndjson',
         'Transfer-Encoding': 'chunked',
       },
     });
   } catch (error) {
-    console.error("Error in /api/documents/query route:", error);
+    console.error("[Error] Error in /api/documents/query route:", error);
     return NextResponse.json(
       { error: "Failed to process query" },
       { status: 500 }
