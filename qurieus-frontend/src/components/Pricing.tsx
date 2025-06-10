@@ -3,20 +3,14 @@
 import { Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
 import { SubscriptionPlanWithPaddle } from "@/app/(site)/pricing/page";
 import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
 
-type PricingProps = {
-  plans?: SubscriptionPlanWithPaddle[];
-  isAuthenticated?: boolean;
-  isLoginSuccess?: boolean;
-};
-
-export default function Pricing({ plans }: PricingProps) {
+export default function Pricing() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +20,17 @@ export default function Pricing({ plans }: PricingProps) {
   const [selectedPlan, setSelectedPlan] =
     useState<SubscriptionPlanWithPaddle | null>(null);
   const paddleRef = useRef<PaddleCheckoutRef>(null);
+  const [plans, setPlans] = useState<SubscriptionPlanWithPaddle[]>([]);
+
+  useEffect(() => {
+    //Get the plans
+    const fetchPlans = async () => {
+      const response = await fetch("/api/subscription/plans");
+      const data = await response.json();
+      setPlans(data);
+    };
+    fetchPlans();
+  }, []);
 
   const startSubscriptionProcess = () => {
     if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
@@ -38,7 +43,6 @@ export default function Pricing({ plans }: PricingProps) {
   };
 
   const handlePaddleComplete = async (data: CheckoutEventsData | undefined): Promise<void> => {
-    debugger;
     console.log("Paddle complete", data);
     // Call the subscription creation API
     const response = await fetch("/api/subscription/create", {
@@ -69,10 +73,9 @@ export default function Pricing({ plans }: PricingProps) {
     console.log("Paddle failed", data);
   };
 
-  const handleSubscribe = async (planId: string) => {
-    setLoading(planId);
+  const handleSubscribe = async (plan: SubscriptionPlanWithPaddle) => {
+    setLoading(plan.id);
     setError(null);
-    const plan = plans?.find((p) => p.id === planId) || null;
     setSelectedPlan(plan);
     try {
       if (!session) {
@@ -80,7 +83,7 @@ export default function Pricing({ plans }: PricingProps) {
         setAuthModalOpen(true);
         return;
       }
-      if (plan?.paddleConfig?.priceId && paddleRef.current) {
+      if (plan.paddleConfig?.priceId && paddleRef.current) {
         paddleRef.current.openCheckout(plan.paddleConfig.priceId);
         return;
       }
@@ -233,7 +236,7 @@ export default function Pricing({ plans }: PricingProps) {
                 </ul>
               </div>
               <button
-                onClick={() => handleSubscribe(plan.id)}
+                onClick={() => handleSubscribe(plan)}
                 disabled={loading === plan.id}
                 className={`mt-8 block w-full rounded-md bg-indigo-50 px-3 py-2 text-center text-sm font-semibold leading-6 text-indigo-600 hover:bg-indigo-100
                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-700

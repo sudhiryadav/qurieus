@@ -10,80 +10,19 @@ import { getServerSession } from "next-auth";
 
 export const metadata: Metadata = {
   title: "Pricing | Qurieus - AI-Powered Document Conversations",
-  description: "Choose the perfect Qurieus plan for your organization's document conversation needs.",
+  description:
+    "Choose the perfect Qurieus plan for your organization's document conversation needs.",
 };
 
 export type SubscriptionPlanWithPaddle = Prisma.SubscriptionPlanGetPayload<{
-  include: { paddleConfig: true }
+  include: { paddleConfig: true };
 }>;
 
 export default async function PricingPage() {
-  const session = await getServerSession(authOptions);
-  
-    const plans: SubscriptionPlanWithPaddle[] = await prisma.subscriptionPlan.findMany({
-    where: { isActive: true },
-    orderBy: { price: 'asc' },
-    include: {
-      paddleConfig: true
-    }
-  });
-
-  console.log('plans' , plans);
-  const handleSubscription = async (planId: string) => {
-    'use server';
-    
-    const currentSession = await getServerSession(authOptions);
-    if (!currentSession?.user) {
-      return { success: false, error: "Please login to subscribe" };
-    }
-
-    try {
-      // Create or get customer in Razorpay
-      const customer = await createCustomer({
-        name: currentSession.user.name || "",
-        email: currentSession.user.email || "",
-        contact: "", // Remove phone since it's not in the session type
-      });
-
-      // Create subscription
-      const subscription = await createSubscription({
-        planId,
-        customerId: customer.id,
-        totalCount: 12, // 12 months subscription
-        notes: {
-          userId: currentSession.user.id,
-        },
-      });
-
-      // Save subscription details to database
-      await prisma.subscription.create({
-        data: {
-          userId: currentSession.user.id,
-          razorpaySubscriptionId: subscription.id,
-          razorpayCustomerId: customer.id,
-          planId,
-          status: subscription.status,
-          currentPeriodStart: new Date(subscription.current_start || Date.now()),
-          currentPeriodEnd: new Date(subscription.current_end || Date.now() + 30 * 24 * 60 * 60 * 1000), // Default to 30 days if not provided
-        },
-      });
-
-      return { success: true, subscription };
-    } catch (error) {
-      console.error("Error creating subscription:", error);
-      throw error;
-    }
-  };
-
   return (
     <>
-      <Breadcrumb
-        pageName="Pricing"
-        // pageDescription="Choose the perfect plan for your needs"
-      />
-      <Pricing 
-        plans={plans} 
-      />
+      <Breadcrumb pageName="Pricing" />
+      <Pricing />
       <Faq />
     </>
   );

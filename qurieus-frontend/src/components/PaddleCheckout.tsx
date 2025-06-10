@@ -5,8 +5,9 @@ import React, {
   forwardRef,
   useState,
 } from "react";
-import { initializePaddle, getPaddleInstance, Paddle, PaddleEventData, CheckoutEventNames, CheckoutEventsData, CheckoutEventError } from "@paddle/paddle-js";
+import { initializePaddle, Paddle, PaddleEventData, CheckoutEventNames, CheckoutEventsData, CheckoutEventError, CheckoutSettings } from "@paddle/paddle-js";
 import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 
 /**
  * PaddleCheckout - Reusable Paddle checkout component (Overlay or Inline)
@@ -37,6 +38,7 @@ export const PaddleCheckout = forwardRef<
   PaddleCheckoutRef,
   PaddleCheckoutProps
 >(({ mode = "overlay", onComplete, onClose, onError, onFailed, className = "" }, ref) => {
+  const { theme } = useTheme();
   const inlineContainerRef = useRef<HTMLDivElement>(null);
   const [paddle, setPaddle] = useState<Paddle | null>(null);
 
@@ -82,12 +84,12 @@ export const PaddleCheckout = forwardRef<
 
   function openCheckout(priceId: string) {
     if (!paddle) return;
-    const settings: any = {
-      theme: "light",
+    const settings: CheckoutSettings = {
+      theme: theme === "dark" ? "dark" : "light",
       displayMode: mode,
     };
     if (mode === "inline" && inlineContainerRef.current) {
-      settings.frameTarget = inlineContainerRef.current;
+      settings.frameTarget = inlineContainerRef.current.id;
       settings.frameInitialHeight = 416;
       settings.frameStyle =
         "width:100%; min-width:312px; background:transparent; border:none;";

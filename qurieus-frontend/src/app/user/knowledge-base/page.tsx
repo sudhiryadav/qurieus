@@ -15,6 +15,10 @@ export default function KnowledgeBase() {
 
   useEffect(() => {
     const checkSubscription = async () => {
+      if (!session?.user || !router) {
+        return;
+      }
+      
       try {
         const response = await fetch('/api/subscription/check');
         const data = await response.json();
