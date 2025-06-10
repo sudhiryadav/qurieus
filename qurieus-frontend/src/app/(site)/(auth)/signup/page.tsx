@@ -1,5 +1,4 @@
 import SignUp from "@/components/Auth/SignUp";
-import Logo from "@/components/Common/Logo";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

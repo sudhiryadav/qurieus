@@ -15,14 +15,12 @@ interface SignUpFormProps {
   onSuccess?: () => void;
   className?: string;
   handleOpenAuthModal?: (mode: "signin" | "signup") => void;
-  startSubscriptionProcess?: () => void;
 }
 
-export default function SignUpForm({
+export default function SignUp({
   onSuccess,
   className = "",
   handleOpenAuthModal,
-  startSubscriptionProcess,
 }: SignUpFormProps) {
   const router = useRouter();
   const [isPassword, setIsPassword] = useState(false);
@@ -96,7 +94,6 @@ export default function SignUpForm({
       }
 
       toast.success("Email verified successfully!");
-      onSuccess?.();
       // Auto-login after verification
       const signInResult = await signIn("credentials", {
         redirect: false,
@@ -104,15 +101,10 @@ export default function SignUpForm({
         password: user.password,
       });
       if (signInResult && !signInResult.error) {
-        if (startSubscriptionProcess) {
-          startSubscriptionProcess();
+        if (onSuccess) {
+          onSuccess();
         } else {
           router.push("/user/knowledge-base");
-        }
-      } else {
-        // fallback: only redirect to /signin if not on pricing page
-        if (window.location.pathname !== "/pricing") {
-          router.push("/signin");
         }
       }
     } catch (err: any) {
@@ -142,7 +134,7 @@ export default function SignUpForm({
       }
 
       toast.success("Verification code resent!");
-      
+
       // Start countdown timer
       const timer = setInterval(() => {
         setResendTimer((prev) => {
@@ -162,7 +154,9 @@ export default function SignUpForm({
 
   if (showVerification) {
     return (
-      <div className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}>
+      <div
+        className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}
+      >
         <div className="mb-6">
           <Logo width={40} height={40} showBrandName />
         </div>
@@ -178,7 +172,8 @@ export default function SignUpForm({
             value={verificationCode}
             onChange={setVerificationCode}
             onComplete={() => {
-              if (verificationCode.length === 4) handleVerification(new Event("submit") as any);
+              if (verificationCode.length === 4)
+                handleVerification(new Event("submit") as any);
             }}
           />
           <div className="mb-9">
@@ -196,9 +191,16 @@ export default function SignUpForm({
             type="button"
             onClick={handleResendCode}
             disabled={resendDisabled}
-            className="text-primary hover:text-primary-dark font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="hover:text-primary-dark font-medium text-primary disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {resendDisabled ? <CountdownTimer seconds={resendTimer} onComplete={() => setResendDisabled(false)} /> : "Resend code"}
+            {resendDisabled ? (
+              <CountdownTimer
+                seconds={resendTimer}
+                onComplete={() => setResendDisabled(false)}
+              />
+            ) : (
+              "Resend code"
+            )}
           </button>
         </div>
       </div>
@@ -206,7 +208,9 @@ export default function SignUpForm({
   }
 
   return (
-    <div className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}>
+    <div
+      className={`mx-auto w-full max-w-[480px] rounded-lg bg-white p-8 dark:bg-dark-2 ${className}`}
+    >
       <div className="mb-6">
         <Logo width={40} height={40} showBrandName />
       </div>

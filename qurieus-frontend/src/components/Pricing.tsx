@@ -8,36 +8,71 @@ import toast from "react-hot-toast";
 import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
 import { SubscriptionPlanWithPaddle } from "@/app/(site)/pricing/page";
+import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
 
 type PricingProps = {
   plans?: SubscriptionPlanWithPaddle[];
   isAuthenticated?: boolean;
+  isLoginSuccess?: boolean;
 };
 
-export default function Pricing({
-  plans,
-}: PricingProps) {
+export default function Pricing({ plans }: PricingProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { data: session } = useSession();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanWithPaddle | null>(null);
+  const [selectedPlan, setSelectedPlan] =
+    useState<SubscriptionPlanWithPaddle | null>(null);
   const paddleRef = useRef<PaddleCheckoutRef>(null);
 
   const startSubscriptionProcess = () => {
     if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
       paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId);
     } else {
-      toast.error("Subscription configuration is incomplete. Please contact support.");
+      toast.error(
+        "Subscription configuration is incomplete. Please contact support.",
+      );
     }
+  };
+
+  const handlePaddleComplete = async (data: CheckoutEventsData | undefined): Promise<void> => {
+    debugger;
+    console.log("Paddle complete", data);
+    // Call the subscription creation API
+    const response = await fetch("/api/subscription/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        paddleSubscriptionId: data?.id,
+        paddleCustomerId: data?.customer.id,
+        planId: selectedPlan?.id,
+        status: "active",
+        currentPeriodStart: new Date().toISOString(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+      }),
+    });
+    if (!response.ok) {
+      toast.error("Failed to create subscription");
+    }else{
+      toast.success("Subscription created successfully");
+    }
+  };
+  const handlePaddleClose = (data: CheckoutEventsData | undefined) => {
+    console.log("Paddle close", data);
+  };
+  const handlePaddleError = (data: CheckoutEventError | undefined) => {
+    console.log("Paddle error", data);
+  };
+  const handlePaddleFailed = (data: CheckoutEventsData | undefined) => {
+    console.log("Paddle failed", data);
   };
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId);
     setError(null);
-    const plan = plans?.find(p => p.id === planId) || null;
+    const plan = plans?.find((p) => p.id === planId) || null;
     setSelectedPlan(plan);
     try {
       if (!session) {
@@ -73,12 +108,16 @@ export default function Pricing({
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         mode={authMode}
-        startSubscriptionProcess={startSubscriptionProcess}
+        onSuccess={startSubscriptionProcess}
       />
       {selectedPlan && (
         <PaddleCheckout
           ref={paddleRef}
           mode="overlay"
+          onComplete={handlePaddleComplete}
+          onClose={handlePaddleClose}
+          onError={handlePaddleError}
+          onFailed={handlePaddleFailed}
         />
       )}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -111,7 +150,7 @@ export default function Pricing({
                 </div>
                 <p className="mt-6 flex items-baseline gap-x-1">
                   <span className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-                    <span className="text-sm font-semibold leading-6 text-gray-600 dark:text-gray-300 pr-1">
+                    <span className="pr-1 text-sm font-semibold leading-6 text-gray-600 dark:text-gray-300">
                       {plan.currency}
                     </span>
                     {plan.price}

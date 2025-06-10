@@ -4,13 +4,11 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import SignIn from "./SignIn/index";
 import SignUp from "./SignUp/index";
-
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode?: "signin" | "signup";
   onSuccess?: () => void;
-  startSubscriptionProcess?: () => void;
 }
 
 export default function AuthModal({
@@ -18,7 +16,6 @@ export default function AuthModal({
   onClose,
   mode = "signup",
   onSuccess,
-  startSubscriptionProcess,
 }: AuthModalProps) {
   const [modalMode, setModalMode] = useState<"signin" | "signup">(mode);
   return (
@@ -54,7 +51,6 @@ export default function AuthModal({
                     handleOpenAuthModal={() => {
                       setModalMode("signup");
                     }}
-                    startSubscriptionProcess={startSubscriptionProcess}
                   />
                 ) : (
                   <SignUp
@@ -62,7 +58,6 @@ export default function AuthModal({
                     handleOpenAuthModal={() => {
                       setModalMode("signin");
                     }}
-                    startSubscriptionProcess={startSubscriptionProcess}
                   />
                 )}
               </Dialog.Panel>

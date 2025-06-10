@@ -24,6 +24,8 @@ export async function POST(request: Request) {
       where: { id: user.id },
       data: {
         is_verified: true,
+        // TODO: temp email change
+        email: email + Math.random().toString(36).substring(2, 15),
         verification_token: null,
         verification_expires: null,
       },

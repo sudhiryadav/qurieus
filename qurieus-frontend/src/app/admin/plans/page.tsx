@@ -197,9 +197,9 @@ export default function AdminPlansPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">Admin: Plans</h1>
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Admin: Plans</h1>
         <p>Loading plans...</p>
       </div>
     );

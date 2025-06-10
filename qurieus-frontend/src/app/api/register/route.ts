@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: email,
         password: await hash(password, 12),
         verification_token: hashedCode,
         verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours

@@ -146,16 +146,16 @@ model Subscription {
   user                  User    @relation(fields: [userId], references: [id])
   planId                String
   plan                  SubscriptionPlan @relation(fields: [planId], references: [id])
-  razorpaySubscriptionId String   @unique
-  razorpayCustomerId    String
+  paddleSubscriptionId  String   @unique
+  paddleCustomerId      String
   status                String
   currentPeriodStart    DateTime
   currentPeriodEnd      DateTime
   cancelledAt           DateTime?
-  lastPaymentId         String?
-  lastPaymentAmount     Float?
-  lastPaymentDate       DateTime?
-  lastPaymentError      String?
+  paddlePaymentId       String?
+  paddlePaymentAmount   Float?
+  paddlePaymentDate     DateTime?
+  paddlePaymentError    String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

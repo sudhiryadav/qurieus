@@ -1,16 +1,12 @@
-import React from "react";
-import Pricing from "@/components/Pricing";
-import { Metadata } from "next";
-import { prisma } from "@/utils/prismaDB";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { createSubscription, createCustomer } from "@/utils/razorpay";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import Faq from "@/components/Faq";
-import AuthModal from "@/components/Auth/AuthModal";
-import ClientPricing from "./ClientPricing";
-import { SubscriptionPlan, PaddleConfig } from "@prisma/client";
+import Pricing from "@/components/Pricing";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/utils/prismaDB";
+import { createCustomer, createSubscription } from "@/utils/razorpay";
 import { Prisma } from "@prisma/client";
+import { Metadata } from "next";
+import { getServerSession } from "next-auth";
 
 export const metadata: Metadata = {
   title: "Pricing | Qurieus - AI-Powered Document Conversations",
@@ -20,19 +16,6 @@ export const metadata: Metadata = {
 export type SubscriptionPlanWithPaddle = Prisma.SubscriptionPlanGetPayload<{
   include: { paddleConfig: true }
 }>;
-
-// type SubscriptionPlan = {
-//   id: string;
-//   name: string;
-//   description: string;
-//   price: number;
-//   currency: string;
-//   features: string[];
-//   isActive: boolean;
-//   maxDocs: number;
-//   maxStorageMB: number;
-//   maxQueriesPerDay: number;
-// };
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions);
@@ -98,10 +81,8 @@ export default async function PricingPage() {
         pageName="Pricing"
         // pageDescription="Choose the perfect plan for your needs"
       />
-      <ClientPricing 
+      <Pricing 
         plans={plans} 
-        handleSubscription={handleSubscription} 
-        isAuthenticated={!!session?.user}
       />
       <Faq />
     </>
