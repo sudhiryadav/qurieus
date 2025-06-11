@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
-import axios from "@/lib/axios";
+import { prisma } from "@/utils/prismaDB";
 
 // Helper to check SUPER_ADMIN
 async function requireSuperAdmin(req: NextRequest) {
@@ -12,169 +12,37 @@ async function requireSuperAdmin(req: NextRequest) {
   return null;
 }
 
-export async function GET(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const search = searchParams.get("search") || "";
-
-    const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/admin/users`,
-      {
-        params: {
-          page,
-          limit,
-          search,
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to fetch users" },
-      { status: error.response?.status || 500 }
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { email, name, role } = body;
-
-    if (!email || !name || !role) {
-      return NextResponse.json(
-        { error: "Email, name and role are required" },
-        { status: 400 }
-      );
-    }
-
-    const { data } = await axios.post(
-      `${process.env.BACKEND_URL}/api/v1/admin/users`,
-      {
-        email,
-        name,
-        role,
+export async function GET(req: NextRequest) {
+  const guard = await requireSuperAdmin(req);
+  if (guard) return guard;
+  const users = await prisma.user.findMany({
+    include: {
+      subscription: {
+        include: { plan: true },
       },
-      {
-        params: {
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error creating user:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to create user" },
-      { status: error.response?.status || 500 }
-    );
-  }
+    },
+    orderBy: { created_at: "desc" },
+  });
+  return NextResponse.json(users);
 }
 
-export async function PUT(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { userId, role, isActive } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const { data } = await axios.put(
-      `${process.env.BACKEND_URL}/api/v1/admin/users/${userId}`,
-      {
-        role,
-        isActive,
-      },
-      {
-        params: {
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error updating user:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to update user" },
-      { status: error.response?.status || 500 }
-    );
-  }
+export async function PATCH(req: NextRequest) {
+  const guard = await requireSuperAdmin(req);
+  if (guard) return guard;
+  const data = await req.json();
+  const { id, ...update } = data;
+  if (!id) return NextResponse.json({ error: "Missing user id" }, { status: 400 });
+  const user = await prisma.user.update({
+    where: { id },
+    data: update,
+  });
+  return NextResponse.json(user);
 }
 
-export async function DELETE(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const { data } = await axios.delete(
-      `${process.env.BACKEND_URL}/api/v1/admin/users/${userId}`,
-      {
-        params: {
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error deleting user:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to delete user" },
-      { status: error.response?.status || 500 }
-    );
-  }
+export async function POST(req: NextRequest) {
+  const guard = await requireSuperAdmin(req);
+  if (guard) return guard;
+  const data = await req.json();
+  const user = await prisma.user.create({ data });
+  return NextResponse.json(user);
 } 

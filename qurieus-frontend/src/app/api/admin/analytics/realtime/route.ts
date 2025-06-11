@@ -44,9 +44,69 @@ export async function GET(request: Request) {
       },
     });
 
+    // Get query statistics for the last 5 minutes
+    const queryStats = await prisma.queryAnalytics.aggregate({
+      where: {
+        userId: session.user.id,
+        createdAt: { gte: fiveMinutesAgo },
+      },
+      _count: true,
+      _avg: {
+        responseTime: true,
+      },
+      _sum: {
+        responseTime: true,
+      },
+    });
+
+    // Get active documents (documents that had queries in the last 5 minutes)
+    const activeDocuments = await prisma.queryAnalytics.groupBy({
+      by: ['documentId'],
+      where: {
+        userId: session.user.id,
+        createdAt: { gte: fiveMinutesAgo },
+      },
+      _count: true,
+      orderBy: {
+        _count: {
+          documentId: 'desc',
+        },
+      },
+      take: 5,
+    });
+
+    // Get document details for active documents
+    const documentDetails = await prisma.document.findMany({
+      where: {
+        id: {
+          in: activeDocuments.map(doc => doc.documentId),
+        },
+      },
+      select: {
+        id: true,
+        fileName: true,
+      },
+    });
+
+    // Format active documents with their names
+    const formattedActiveDocuments = activeDocuments.map(doc => {
+      const details = documentDetails.find(d => d.id === doc.documentId);
+      return {
+        documentId: doc.documentId,
+        fileName: details?.fileName || 'Unknown Document',
+        queryCount: doc._count,
+      };
+    });
+
     return NextResponse.json({
       activeVisitors,
       recentQueries,
+      queryStats: {
+        totalQueries: queryStats._count,
+        averageResponseTime: queryStats._avg.responseTime || 0,
+        totalResponseTime: queryStats._sum.responseTime || 0,
+      },
+      activeDocuments: formattedActiveDocuments,
     });
   } catch (error) {
     console.error('Error fetching real-time analytics:', error);

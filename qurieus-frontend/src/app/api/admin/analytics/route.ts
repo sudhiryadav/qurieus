@@ -1,36 +1,113 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
-import { invalidateAnalyticsCache } from '@/utils/cache';
-import axiosInstance from "@/lib/axios";
+import { prisma } from '@/utils/prismaDB';
+import { subDays, startOfDay, endOfDay } from 'date-fns';
 
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
+    const timeRange = searchParams.get("timeRange") || "7d";
+    const days = parseInt(timeRange.replace('d', ''));
 
-    const { data } = await axiosInstance.get(
-      `${process.env.BACKEND_URL}/api/admin/analytics`,
-      {
-        params: {
-          startDate,
-          endDate,
-          userId: session.user.id,
-        },
+    const startDate = startOfDay(subDays(new Date(), days));
+    const endDate = endOfDay(new Date());
+
+    // Get total queries
+    const totalQueries = await prisma.queryAnalytics.count({
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: startDate,
+          lte: endDate
+        }
       }
-    );
+    });
 
-    return NextResponse.json(data);
+    // Get successful queries
+    const successfulQueries = await prisma.queryAnalytics.count({
+      where: {
+        userId: session.user.id,
+        success: true,
+        createdAt: {
+          gte: startDate,
+          lte: endDate
+        }
+      }
+    });
+
+    // Get average response time
+    const avgResponseTime = await prisma.queryAnalytics.aggregate({
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      _avg: {
+        responseTime: true
+      }
+    });
+
+    // Get queries by document
+    const queriesByDocument = await prisma.queryAnalytics.groupBy({
+      by: ['documentId'],
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      _count: true,
+      orderBy: {
+        documentId: 'desc'
+      },
+      take: 5
+    });
+
+    // Get document details for the top documents
+    const documentDetails = await prisma.document.findMany({
+      where: {
+        id: {
+          in: queriesByDocument.map(q => q.documentId)
+        }
+      },
+      select: {
+        id: true,
+        fileName: true
+      }
+    });
+
+    // Format the response
+    const formattedQueriesByDocument = queriesByDocument.map(q => {
+      const doc = documentDetails.find(d => d.id === q.documentId);
+      return {
+        documentId: q.documentId,
+        fileName: doc?.fileName || 'Unknown Document',
+        queryCount: q._count
+      };
+    });
+
+    return NextResponse.json({
+      timeRange,
+      userId: session.user.id,
+      totalQueries,
+      successfulQueries,
+      successRate: totalQueries > 0 ? (successfulQueries / totalQueries) * 100 : 0,
+      averageResponseTime: avgResponseTime._avg.responseTime || 0,
+      topDocuments: formattedQueriesByDocument
+    });
   } catch (error: any) {
     console.error("Error fetching analytics:", error);
     return NextResponse.json(
@@ -38,7 +115,7 @@ export async function GET(request: Request) {
       { status: error.response?.status || 500 }
     );
   }
-}
+} 
 
 export async function POST(req: NextRequest) {
   try {
