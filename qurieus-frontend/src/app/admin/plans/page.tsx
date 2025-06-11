@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import ModalDialog from "@/components/ui/ModalDialog";
 import { toast } from "react-hot-toast";
 import { Plus, Search } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import axios from "@/lib/axios";
 
 interface Plan {
   id: string;
@@ -20,6 +23,8 @@ interface Plan {
   maxDocs: number | null;
   maxStorageMB: number | null;
   maxQueriesPerDay: number | null;
+  paddleProductId?: string;
+  paddlePriceId?: string;
 }
 
 interface PaddleConfig {
@@ -30,6 +35,8 @@ interface PaddleConfig {
 }
 
 export default function AdminPlansPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
@@ -52,29 +59,37 @@ export default function AdminPlansPage() {
   const [paddleSyncLoading, setPaddleSyncLoading] = useState(false);
   const [paddleSyncError, setPaddleSyncError] = useState<string | null>(null);
 
-  const fetchPlans = async () => {
-    try {
-      const response = await fetch("/api/admin/subscription-plans");
-      if (!response.ok) throw new Error("Failed to fetch plans");
-      const data = await response.json();
-      setPlans(data);
-    } catch (error) {
-      console.error("Error fetching plans:", error);
-      toast.error("Failed to fetch plans");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/signin");
+      return;
     }
-  };
+
+    const fetchPlans = async () => {
+      try {
+        const { data } = await axios.get("/api/admin/subscription-plans");
+        setPlans(data);
+      } catch (error) {
+        console.error("Error fetching plans:", error);
+        toast.error("Failed to load plans");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (session?.user) {
+      fetchPlans();
+    }
+  }, [status, router, session]);
 
   const fetchPaddleConfig = async (planId: string) => {
     try {
       setPaddleConfig(null);
-      const res = await fetch(`/api/admin/subscription-plans/${planId}/paddle`);
-      if (!res.ok) throw new Error("Failed to fetch Paddle config");
-      const data = await res.json();
+      const { data } = await axios.get(`/api/admin/subscription-plans/${planId}/paddle`);
       setPaddleConfig(data);
-    } catch (err) {
-      setPaddleConfig(null);
+    } catch (error) {
+      console.error("Error fetching Paddle config:", error);
+      toast.error("Failed to fetch Paddle config");
     }
   };
 
@@ -99,17 +114,14 @@ export default function AdminPlansPage() {
   const handleEditSubmit = async () => {
     if (!editingPlan) return;
     try {
-      const response = await fetch(`/api/admin/subscription-plans`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingPlan.id,
+      const response = await axios.put(
+        `/api/admin/subscription-plans/${editingPlan.id}`,
+        {
           ...editForm,
           features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to update plan");
-      const updatedPlan = await response.json();
+        }
+      );
+      const updatedPlan = await response.data;
       setPlans(plans.map(plan => plan.id === editingPlan.id ? updatedPlan : plan));
       setEditingPlan(null);
       toast.success("Plan updated successfully");
@@ -124,8 +136,8 @@ export default function AdminPlansPage() {
     setPaddleSyncLoading(true);
     setPaddleSyncError(null);
     try {
-      await fetch(`/api/admin/subscription-plans/${editingPlan.id}/paddle/product`, { method: "POST" });
-      await fetch(`/api/admin/subscription-plans/${editingPlan.id}/paddle/price`, { method: "POST" });
+      await axios.post(`/api/admin/subscription-plans/${editingPlan.id}/paddle/product`);
+      await axios.post(`/api/admin/subscription-plans/${editingPlan.id}/paddle/price`);
       await fetchPaddleConfig(editingPlan.id);
       toast.success("Paddle sync successful");
     } catch (err: any) {
@@ -138,16 +150,11 @@ export default function AdminPlansPage() {
 
   const handleAddPlan = async () => {
     try {
-      const response = await fetch("/api/admin/subscription-plans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...editForm,
-          features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
-        }),
+      const response = await axios.post("/api/admin/subscription-plans", {
+        ...editForm,
+        features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
       });
-      if (!response.ok) throw new Error("Failed to create plan");
-      const newPlan = await response.json();
+      const newPlan = await response.data;
       setPlans([newPlan, ...plans]);
       setIsAddModalOpen(false);
       setEditForm({
@@ -173,12 +180,7 @@ export default function AdminPlansPage() {
   const handleDeletePlan = async (planId: string) => {
     if (!window.confirm("Are you sure you want to delete this plan?")) return;
     try {
-      const response = await fetch(`/api/admin/subscription-plans`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: planId }),
-      });
-      if (!response.ok) throw new Error("Failed to delete plan");
+      await axios.delete(`/api/admin/subscription-plans/${planId}`);
       setPlans(plans.filter(plan => plan.id !== planId));
       toast.success("Plan deleted successfully");
     } catch (error) {
@@ -192,21 +194,16 @@ export default function AdminPlansPage() {
     plan.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  useEffect(() => {
-    fetchPlans();
-  }, []);
-
-  if (loading) {
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Admin: Plans</h1>
-        <p>Loading plans...</p>
+  if (status === "loading" || loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center pt-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Plans</h1>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">

@@ -1,5 +1,6 @@
 "use client";
 
+import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,14 +19,15 @@ export default function UserLayout({
   useEffect(() => {
     if (status === "unauthenticated") {
       toast.error("Please sign in to access this page");
-      router.push("/signin");
+      router.push("/auth/signin");
       return;
     }
 
     const checkSubscription = async () => {
       try {
-        const response = await fetch("/api/subscription/check");
-        const data = await response.json();
+        
+        const response = await axiosInstance.get("/api/subscription/check");
+        const data = response.data;
 
         if (!data) {
           toast.error("Please subscribe to a plan to access this page");

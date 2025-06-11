@@ -1,141 +1,87 @@
-import { getDeviceInfo } from '@/utils/deviceInfo';
-import { getLocationInfo } from '@/utils/locationInfo';
-
-interface QueryStats {
-  documentId: string;
-  _count: {
-    _all: number;
-    success: number;
-  };
-  _avg: {
-    responseTime: number | null;
-  };
-}
-
-interface VisitorStats {
-  userId: string;
-  _count: {
-    visitorId: number;
-  };
-  _avg: {
-    duration: number | null;
-    queries: number | null;
-  };
-}
-
+import axiosInstance from "@/lib/axios";
 export class AnalyticsService {
   // Track query
   static async trackQuery({
+    userId,
     documentId,
     query,
-    response: responseText,
+    response,
     responseTime,
-    userId,
     visitorId,
-    success,
+    success
   }: {
+    userId: string;
     documentId: string;
     query: string;
     response: string;
     responseTime: number;
-    userId: string;
     visitorId: string;
     success: boolean;
   }) {
     try {
-      const response = await fetch('/api/admin/analytics/track', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          documentId,
-          query,
-          response: responseText,
-          responseTime,
-          userId,
-          visitorId,
-          success,
-        }),
+      const apiResponse = await axiosInstance.post('/api/admin/analytics/track', {
+        userId,
+        documentId,
+        query,
+        response,
+        responseTime,
+        visitorId,
+        success
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to track query');
-      }
+      return apiResponse.data;
     } catch (error) {
       console.error('Error tracking query:', error);
+      throw error;
     }
   }
 
   // Track visitor session
-  static async trackVisitorSession({
+  static async trackSession({
     userId,
     visitorId,
     userAgent,
-    ipAddress,
-    startTime,
-    endTime,
-    duration,
-    queries,
+    ipAddress
   }: {
     userId: string;
     visitorId: string;
     userAgent: string;
     ipAddress: string;
-    startTime: Date;
-    endTime: Date;
-    duration: number;
-    queries: number;
   }) {
     try {
-      const response = await fetch('/api/admin/analytics/session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          visitorId,
-          userAgent,
-          ipAddress,
-          startTime,
-          endTime,
-          duration,
-          queries,
-        }),
+      const apiResponse = await axiosInstance.post('/api/admin/analytics/session', {
+        userId,
+        visitorId,
+        userAgent,
+        ipAddress
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to track visitor session');
-      }
+      return apiResponse.data;
     } catch (error) {
-      console.error('Error tracking visitor session:', error);
+      console.error('Error tracking session:', error);
+      throw error;
     }
   }
 
   // Update visitor session
-  static async updateVisitorSession(sessionId: string, updates: {
-    endTime?: Date;
-    duration?: number;
-    pageViews?: number;
-    queries?: number;
-  }) {
+  static async updateVisitorSession(
+    sessionId: string,
+    updates: {
+      endTime?: Date;
+      duration?: number;
+      pageViews?: number;
+      queries?: number;
+    },
+  ) {
     try {
-      const response = await fetch(`/api/admin/analytics/session/${sessionId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
+      const response = await axiosInstance.patch(
+        `/api/admin/analytics/session/${sessionId}`,
+        updates,
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to update visitor session');
-      }
-
-      return await response.json();
+      return response.data;
     } catch (error) {
-      console.error('Error updating visitor session:', error);
+      console.error("Error updating visitor session:", error);
       throw error;
     }
   }
@@ -143,30 +89,26 @@ export class AnalyticsService {
   // Get active sessions
   static async getActiveSessions(userId: string) {
     try {
-      const response = await fetch(`/api/admin/analytics/sessions/active?userId=${userId}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to get active sessions');
-      }
+      const response = await axiosInstance.get(
+        `/api/admin/analytics/sessions/active?userId=${userId}`,
+      );
 
-      return await response.json();
+      return response.data;
     } catch (error) {
-      console.error('Error getting active sessions:', error);
+      console.error("Error getting active sessions:", error);
       throw error;
     }
   }
 
   static async getAnalytics(userId: string, timeRange: string) {
     try {
-      const response = await fetch(`/api/admin/analytics?userId=${userId}&timeRange=${timeRange}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to get analytics');
-      }
+      const response = await axiosInstance.get(
+        `/api/admin/analytics?userId=${userId}&timeRange=${timeRange}`,
+      );
 
-      return await response.json();
+      return response.data;
     } catch (error) {
-      console.error('Error getting analytics:', error);
+      console.error("Error getting analytics:", error);
       return {
         totalQueries: 0,
         avgResponseTime: 0,
@@ -179,15 +121,11 @@ export class AnalyticsService {
 
   static async getUserAnalytics(userId: string) {
     try {
-      const response = await fetch(`/api/admin/analytics?userId=${userId}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to get user analytics');
-      }
+      const response = await axiosInstance.get(`/api/admin/analytics?userId=${userId}`);
 
-      return await response.json();
+      return response.data;
     } catch (error) {
-      console.error('Error getting user analytics:', error);
+      console.error("Error getting user analytics:", error);
       return {
         totalQueries: 0,
         avgResponseTime: 0,
@@ -196,4 +134,4 @@ export class AnalyticsService {
       };
     }
   }
-} 
+}

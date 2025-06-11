@@ -1,17 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import ChatWidget from "@/components/ChatWidget";
+import { Check, Copy } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Copy, Check, MessageSquare } from "lucide-react";
-import ChatWidget from "@/components/ChatWidget";
+import { useEffect, useState } from "react";
 
 export default function EmbedCode() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [previewConfig, setPreviewConfig] = useState({
     theme: 'light',
     position: 'bottom-right',
@@ -19,14 +17,12 @@ export default function EmbedCode() {
   });
   const [showEmbedWidget, setShowEmbedWidget] = useState(false);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/signin");
     }
   }, [status, router]);
 
-  // Show loading state while checking auth
   if (status === "loading") {
     return (
       <div className="flex h-screen w-full items-center justify-center pt-16">
@@ -55,7 +51,6 @@ export default function EmbedCode() {
     }
   };
 
-  // Always show live preview
   return (
     <div className="container mx-auto px-4">
       <div className="mb-8">
@@ -75,7 +70,6 @@ export default function EmbedCode() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        {/* Configuration Panel */}
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
           <h2 className="mb-4 text-xl font-semibold">Widget Configuration</h2>
           
@@ -117,7 +111,6 @@ export default function EmbedCode() {
           </div>
         </div>
 
-        {/* Embed Code Panel */}
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold">Embed Code</h2>
@@ -156,7 +149,6 @@ export default function EmbedCode() {
         </div>
       </div>
 
-      {/* Live Preview */}
       <div className="mt-8 rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
         <h2 className="mb-4 text-xl font-semibold">Live Preview</h2>
         <div className="relative h-[400px] rounded-lg border border-dashed border-gray-300 dark:border-dark-3 overflow-hidden">
@@ -179,14 +171,12 @@ export default function EmbedCode() {
         </div>
       </div>
 
-      {/* Floating Embed Widget (for demo) */}
       {showEmbedWidget && apiKey && (
         <ChatWidget
           apiKey={apiKey}
           initialMessage={previewConfig.initialMessage}
           position={previewConfig.position as 'bottom-right' | 'bottom-left'}
           theme={previewConfig.theme as 'light' | 'dark'}
-          // Do not pass inline, so it floats
         />
       )}
     </div>

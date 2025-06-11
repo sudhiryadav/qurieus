@@ -8,6 +8,7 @@ import Logo from "@/components/Common/Logo";
 import SwitchOption from "@/components/Auth/SwitchOption";
 import Loader from "@/components/Common/Loader";
 import MagicLink from "@/components/Auth/MagicLink";
+import axios from "@/lib/axios";
 
 interface SignInFormProps {
   onSuccess?: () => void;
@@ -123,17 +124,12 @@ export default function SignIn({
                     onClick={async () => {
                       setLoading(true);
                       try {
-                        const res = await fetch("/api/resend-verification", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ email: loginData.email }),
+                        const res = await axios.post("/api/resend-verification", {
+                          email: loginData.email
                         });
-                        const data = await res.json();
-                        toast[data.error ? "error" : "success"](
-                          data.error || data.message,
-                        );
-                      } catch (err) {
-                        toast.error("Failed to resend verification email");
+                        toast.success(res.data.message);
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.error || "Failed to resend verification email");
                       } finally {
                         setLoading(false);
                       }

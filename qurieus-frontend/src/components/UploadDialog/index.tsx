@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { X, FileText } from "lucide-react";
 import ModalDialog from "../ui/ModalDialog";
+import axiosInstance from "@/lib/axios";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -50,10 +51,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isSuperAdmin = session?.user?.role?.toLowerCase() === "super_admin";
-  
-  // Add debug logging
-  console.log('Session:', session);
-  console.log('Is Super Admin:', isSuperAdmin);
+
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -164,27 +162,12 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       formData.append("category", category);
       formData.append("userId", session?.user?.id || "");
 
-      console.log('Uploading files with data:', {
-        fileCount: validFiles.length,
-        description,
-        category,
-        userId: session?.user?.id
+      const { data } = await axiosInstance.post("/api/admin/documents", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      console.log('Upload response status:', response.status);
-      const data = await response.json();
-      console.log('Upload response data:', data);
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to upload files");
-      }
-
-      // Check if we have a successful response
       if (data.message === "Files uploaded successfully" && data.files) {
         toast.success("All files uploaded successfully");
         onUploadSuccess();
@@ -195,7 +178,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       }
     } catch (error: any) {
       console.error("Upload error details:", error);
-      toast.error(error.message || "Failed to upload files");
+      toast.error(error.response?.data?.error || error.message || "Failed to upload files");
     } finally {
       setLoading(false);
     }

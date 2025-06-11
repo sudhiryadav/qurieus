@@ -1,18 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import axios from "@/lib/axios";
 
-// Helper to check SUPER_ADMIN
-async function requireSuperAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
-  return null;
-}
-
-// GET: List all subscriptions with user and plan info
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -30,7 +20,7 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || "";
 
     const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions`,
+      `${process.env.BACKEND_URL}/api/v1/admin/permissions`,
       {
         params: {
           page,
@@ -43,15 +33,14 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error fetching subscriptions:", error);
+    console.error("Error fetching permissions:", error);
     return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to fetch subscriptions" },
+      { error: error.response?.data?.error || "Failed to fetch permissions" },
       { status: error.response?.status || 500 }
     );
   }
 }
 
-// POST: Create a new subscription
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -64,20 +53,22 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { userId, planId } = body;
+    const { name, description, resource, action } = body;
 
-    if (!userId || !planId) {
+    if (!name || !resource || !action) {
       return NextResponse.json(
-        { error: "User ID and plan ID are required" },
+        { error: "Name, resource and action are required" },
         { status: 400 }
       );
     }
 
     const { data } = await axios.post(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions`,
+      `${process.env.BACKEND_URL}/api/v1/admin/permissions`,
       {
-        userId,
-        planId,
+        name,
+        description,
+        resource,
+        action,
       },
       {
         params: {
@@ -88,15 +79,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error creating subscription:", error);
+    console.error("Error creating permission:", error);
     return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to create subscription" },
+      { error: error.response?.data?.error || "Failed to create permission" },
       { status: error.response?.status || 500 }
     );
   }
 }
 
-// PUT: Update a subscription
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -109,20 +99,23 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { subscriptionId, planId, status } = body;
+    const { permissionId, name, description, resource, action, isActive } = body;
 
-    if (!subscriptionId) {
+    if (!permissionId) {
       return NextResponse.json(
-        { error: "Subscription ID is required" },
+        { error: "Permission ID is required" },
         { status: 400 }
       );
     }
 
     const { data } = await axios.put(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions/${subscriptionId}`,
+      `${process.env.BACKEND_URL}/api/v1/admin/permissions/${permissionId}`,
       {
-        planId,
-        status,
+        name,
+        description,
+        resource,
+        action,
+        isActive,
       },
       {
         params: {
@@ -133,15 +126,14 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error updating subscription:", error);
+    console.error("Error updating permission:", error);
     return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to update subscription" },
+      { error: error.response?.data?.error || "Failed to update permission" },
       { status: error.response?.status || 500 }
     );
   }
 }
 
-// DELETE: Remove a subscription
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -154,17 +146,17 @@ export async function DELETE(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const subscriptionId = searchParams.get("subscriptionId");
+    const permissionId = searchParams.get("permissionId");
 
-    if (!subscriptionId) {
+    if (!permissionId) {
       return NextResponse.json(
-        { error: "Subscription ID is required" },
+        { error: "Permission ID is required" },
         { status: 400 }
       );
     }
 
     const { data } = await axios.delete(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions/${subscriptionId}`,
+      `${process.env.BACKEND_URL}/api/v1/admin/permissions/${permissionId}`,
       {
         params: {
           userId: session.user.id,
@@ -174,9 +166,9 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error deleting subscription:", error);
+    console.error("Error deleting permission:", error);
     return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to delete subscription" },
+      { error: error.response?.data?.error || "Failed to delete permission" },
       { status: error.response?.status || 500 }
     );
   }

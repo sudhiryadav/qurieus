@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import ModalDialog from "@/components/ui/ModalDialog";
 import { toast } from "react-hot-toast";
 import { Plus, Search } from "lucide-react";
+import axios from "@/lib/axios";
 
 interface Subscription {
   id: string;
@@ -36,9 +37,7 @@ export default function AdminSubscriptionsPage() {
 
   const fetchSubscriptions = async () => {
     try {
-      const response = await fetch("/api/admin/subscriptions");
-      if (!response.ok) throw new Error("Failed to fetch subscriptions");
-      const data = await response.json();
+      const { data } = await axios.get("/api/admin/subscriptions");
       setSubscriptions(data);
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
@@ -60,19 +59,13 @@ export default function AdminSubscriptionsPage() {
   const handleEditSubmit = async () => {
     if (!editingSubscription) return;
     try {
-      const response = await fetch(`/api/admin/subscriptions`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingSubscription.id,
-          ...editForm,
-          currentPeriodStart: new Date(editForm.currentPeriodStart),
-          currentPeriodEnd: new Date(editForm.currentPeriodEnd),
-        }),
+      const { data } = await axios.patch(`/api/admin/subscriptions`, {
+        id: editingSubscription.id,
+        ...editForm,
+        currentPeriodStart: new Date(editForm.currentPeriodStart),
+        currentPeriodEnd: new Date(editForm.currentPeriodEnd),
       });
-      if (!response.ok) throw new Error("Failed to update subscription");
-      const updated = await response.json();
-      setSubscriptions(subscriptions.map(s => s.id === editingSubscription.id ? { ...s, ...updated } : s));
+      setSubscriptions(subscriptions.map(s => s.id === editingSubscription.id ? { ...s, ...data } : s));
       setEditingSubscription(null);
       toast.success("Subscription updated successfully");
     } catch (error) {
@@ -84,12 +77,9 @@ export default function AdminSubscriptionsPage() {
   const handleDeleteSubscription = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this subscription?")) return;
     try {
-      const response = await fetch(`/api/admin/subscriptions`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+      await axios.delete(`/api/admin/subscriptions`, {
+        data: { id }
       });
-      if (!response.ok) throw new Error("Failed to delete subscription");
       setSubscriptions(subscriptions.filter(s => s.id !== id));
       toast.success("Subscription deleted successfully");
     } catch (error) {

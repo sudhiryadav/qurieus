@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
+import axiosInstance from "@/lib/axios";
 
 // Helper to sync a plan to Paddle (product + price)
 async function syncPlanToPaddle(planId: string) {
   try {
     // Call product sync endpoint
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL}/api/admin/subscription-plans/${planId}/paddle/product`, { method: "POST" });
+    await axiosInstance.get(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/subscription-plans/${planId}/paddle/product`);
     // Call price sync endpoint
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL}/api/admin/subscription-plans/${planId}/paddle/price`, { method: "POST" });
+    await axiosInstance.get(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/subscription-plans/${planId}/paddle/price`);
   } catch (err) {
     console.error("Paddle sync failed for plan", planId, err);
   }

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 import PasswordForm from "@/components/Auth/PasswordForm";
+import axios from "@/lib/axios";
 
 export default function SetPasswordPage() {
   const { data: session, status } = useSession();
@@ -22,30 +23,25 @@ export default function SetPasswordPage() {
   }, [session, status, router]);
 
   const handleSetPassword = async (password: string) => {
-    const res = await fetch("/api/set-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    const data = await res.json();
-    if (data.error) {
-      throw new Error(data.error);
+    try {
+      const { data } = await axios.post("/api/set-password", { password });
+      toast.success("Password set successfully!");
+      // Refresh session by signing in with new credentials
+      await signIn("credentials", {
+        redirect: false,
+        email: session?.user?.email,
+        password,
+      });
+      setTimeout(() => {
+        if (data.wasFirstPassword) {
+          router.replace("/user/knowledge-base");
+        } else {
+          router.replace("/user/dashboard");
+        }
+      }, 1000);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || "Failed to set password");
     }
-    
-    toast.success("Password set successfully!");
-    // Refresh session by signing in with new credentials
-    await signIn("credentials", {
-      redirect: false,
-      email: session?.user?.email,
-      password,
-    });
-    setTimeout(() => {
-      if (data.wasFirstPassword) {
-        router.replace("/user/knowledge-base");
-      } else {
-        router.replace("/user/dashboard");
-      }
-    }, 1000);
   };
 
   return (

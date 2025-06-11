@@ -9,6 +9,7 @@ import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
 import { SubscriptionPlanWithPaddle } from "@/app/(site)/pricing/page";
 import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
+import axios from "@/lib/axios";
 
 export default function Pricing() {
   const router = useRouter();
@@ -26,8 +27,7 @@ export default function Pricing() {
   useEffect(() => {
     //Get the plans
     const fetchPlans = async () => {
-      const response = await fetch("/api/subscription/plans");
-      const data = await response.json();
+      const { data } = await axios.get("/api/subscription/plans");
       setPlans(data);
     };
     fetchPlans();
@@ -37,8 +37,7 @@ export default function Pricing() {
     // Get current subscription
     const fetchCurrentSubscription = async () => {
       if (session) {
-        const response = await fetch("/api/subscription/check");
-        const data = await response.json();
+        const { data } = await axios.get("/api/subscription/check");
         setCurrentPlanId(data.currentPlanId);
       }
     };
@@ -58,22 +57,18 @@ export default function Pricing() {
   const handlePaddleComplete = async (data: CheckoutEventsData | undefined): Promise<void> => {
     console.log("Paddle complete", data);
     // Call the subscription creation API
-    const response = await fetch("/api/subscription/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await axios.post("/api/subscription/create", {
         paddleSubscriptionId: data?.id,
         paddleCustomerId: data?.customer.id,
         planId: selectedPlan?.id,
         status: "active",
         currentPeriodStart: new Date().toISOString(),
         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-      }),
-    });
-    if (!response.ok) {
-      toast.error("Failed to create subscription");
-    }else{
+      });
       toast.success("Subscription created successfully");
+    } catch (error) {
+      toast.error("Failed to create subscription");
     }
   };
   const handlePaddleClose = (data: CheckoutEventsData | undefined) => {

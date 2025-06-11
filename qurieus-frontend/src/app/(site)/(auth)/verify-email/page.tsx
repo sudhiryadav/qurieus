@@ -3,6 +3,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import axios from "@/lib/axios";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -16,10 +17,9 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!token || hasFetched.current) return;
     hasFetched.current = true;
-    fetch(`/api/verify-email?token=${token}`)
-      .then(async (res) => {
-        const data = await res.json();
-        if (res.ok && data.message === "Email verified successfully") {
+    axios.get(`/api/verify-email?token=${token}`)
+      .then(async ({ data }) => {
+        if (data.message === "Email verified successfully") {
           setStatus("success");
           toast.success("Your email has been verified!");
           setEmail(data.email);
@@ -35,7 +35,7 @@ export default function VerifyEmailPage() {
               router.push("/signin");
             }
           });
-        } else if (res.ok && data.message === "Email already verified") {
+        } else if (data.message === "Email already verified") {
           setStatus("already");
           setMessage("Your email is already verified.");
           setEmail(data.email);

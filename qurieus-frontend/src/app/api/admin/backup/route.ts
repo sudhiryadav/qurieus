@@ -1,16 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import axios from "@/lib/axios";
-
-// Helper to check SUPER_ADMIN
-async function requireSuperAdmin(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
-  return null;
-}
 
 export async function GET(request: Request) {
   try {
@@ -27,14 +18,18 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
 
     const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/admin/users`,
+      `${process.env.BACKEND_URL}/api/v1/admin/backup`,
       {
         params: {
           page,
           limit,
           search,
+          startDate,
+          endDate,
           userId: session.user.id,
         },
       }
@@ -42,9 +37,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error fetching users:", error);
+    console.error("Error fetching backups:", error);
     return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to fetch users" },
+      { error: error.response?.data?.error || "Failed to fetch backups" },
       { status: error.response?.status || 500 }
     );
   }
@@ -62,21 +57,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { email, name, role } = body;
+    const { name, description } = body;
 
-    if (!email || !name || !role) {
+    if (!name) {
       return NextResponse.json(
-        { error: "Email, name and role are required" },
+        { error: "Name is required" },
         { status: 400 }
       );
     }
 
     const { data } = await axios.post(
-      `${process.env.BACKEND_URL}/api/v1/admin/users`,
+      `${process.env.BACKEND_URL}/api/v1/admin/backup`,
       {
-        email,
         name,
-        role,
+        description,
       },
       {
         params: {
@@ -87,53 +81,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error creating user:", error);
+    console.error("Error creating backup:", error);
     return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to create user" },
-      { status: error.response?.status || 500 }
-    );
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { userId, role, isActive } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const { data } = await axios.put(
-      `${process.env.BACKEND_URL}/api/v1/admin/users/${userId}`,
-      {
-        role,
-        isActive,
-      },
-      {
-        params: {
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error updating user:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to update user" },
+      { error: error.response?.data?.error || "Failed to create backup" },
       { status: error.response?.status || 500 }
     );
   }
@@ -151,17 +101,17 @@ export async function DELETE(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const backupId = searchParams.get("backupId");
 
-    if (!userId) {
+    if (!backupId) {
       return NextResponse.json(
-        { error: "User ID is required" },
+        { error: "Backup ID is required" },
         { status: 400 }
       );
     }
 
     const { data } = await axios.delete(
-      `${process.env.BACKEND_URL}/api/v1/admin/users/${userId}`,
+      `${process.env.BACKEND_URL}/api/v1/admin/backup/${backupId}`,
       {
         params: {
           userId: session.user.id,
@@ -171,9 +121,9 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error deleting user:", error);
+    console.error("Error deleting backup:", error);
     return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to delete user" },
+      { error: error.response?.data?.error || "Failed to delete backup" },
       { status: error.response?.status || 500 }
     );
   }

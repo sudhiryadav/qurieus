@@ -7,12 +7,12 @@ import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import "../styles/index.css";
 import "../styles/prism-vsc-dark-plus.css";
-import ToasterContext from "./api/contex/ToasetContex";
 import { useEffect, useState } from "react";
 import PreLoader from "@/components/Common/PreLoader";
 import Sidebar from "@/components/Sidebar";
 import { usePathname } from "next/navigation";
 import SessionRedirector from "@/components/SessionRedirector";
+import ToasterContext from "@/components/contex/ToasetContex";
 
 export default function RootLayout({
   children,

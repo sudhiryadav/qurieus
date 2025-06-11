@@ -2,7 +2,7 @@
 import React from "react";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
+import axios from '@/lib/axios';
 import Loader from "@/components/Common/Loader";
 import Link from "next/link";
 import Image from "next/image";

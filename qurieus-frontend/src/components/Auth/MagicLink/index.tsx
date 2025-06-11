@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { validateEmail } from "@/utils/validateEmail";
 import Loader from "@/components/Common/Loader";
 import { useRouter, useSearchParams } from "next/navigation";
+import axios from "@/lib/axios";
 
 const MagicLink = () => {
   const [email, setEmail] = useState("");
@@ -27,11 +28,7 @@ const MagicLink = () => {
     try {
       setLoader(true);
       // Pre-create user for magic link sign-up
-      await fetch("/api/register-magic-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      await axios.post("/api/register-magic-link", { email });
       const result = await signIn("email", {
         email,
         redirect: false,

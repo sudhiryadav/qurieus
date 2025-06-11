@@ -1,7 +1,7 @@
 "use client";
 import Loader from "@/components/Common/Loader";
 import Logo from "@/components/Common/Logo";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";

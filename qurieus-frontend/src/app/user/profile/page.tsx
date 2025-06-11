@@ -1,238 +1,231 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import PasswordForm from "@/components/Auth/PasswordForm";
+import axios from "@/lib/axios";
 
-export default function Profile() {
-  const { data: session, update } = useSession();
-  const [loading, setLoading] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    company: "",
-    jobTitle: "",
-    bio: "",
-    currentPassword: "",
-  });
+interface Profile {
+  name: string;
+  email: string;
+  company: string;
+}
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+export default function ProfilePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
-  // Load user data from API when session is available
   useEffect(() => {
-    const fetchUserProfile = async () => {
-    if (session?.user) {
-        try {
-          const response = await fetch("/api/user/profile");
-          if (!response.ok) {
-            throw new Error("Failed to fetch profile");
-          }
-          const data = await response.json();
-      setFormData({
-            name: data.user.name || "",
-            email: data.user.email || "",
-            company: data.user.company || "",
-            jobTitle: data.user.jobTitle || "",
-            bio: data.user.bio || "",
-            currentPassword: "",
-      });
-        } catch (error) {
-          console.error("Error fetching profile:", error);
-          toast.error("Failed to load profile data");
-        }
+    if (status === "unauthenticated") {
+      router.push("/signin");
+      return;
+    }
+
+    const fetchProfile = async () => {
+      try {
+        const { data } = await axios.get("/api/user/profile");
+        setProfile(data);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        toast.error("Failed to load profile");
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchUserProfile();
-  }, [session]);
+    if (session?.user) {
+      fetchProfile();
+    }
+  }, [status, router, session]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
+    if (!profile) return;
 
+    setIsSaving(true);
     try {
-      // Call API to update profile
-      const response = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
-
-      // Update session data
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          ...formData,
-        },
-      });
-
+      const { data } = await axios.put("/api/user/profile", profile);
+      setProfile(data);
       toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile. Please try again.");
+      toast.error("Failed to update profile");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const handlePasswordChange = async (newPassword: string) => {
-    const response = await fetch("/api/user/change-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        currentPassword: formData.currentPassword,
+  const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const currentPassword = formData.get("currentPassword") as string;
+    const newPassword = formData.get("newPassword") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await axios.put("/api/user/change-password", {
+        currentPassword,
         newPassword,
-      }),
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || "Failed to change password");
+      });
+      toast.success("Password changed successfully");
+      e.currentTarget.reset();
+    } catch (error) {
+      console.error("Error changing password:", error);
+      toast.error("Failed to change password");
+    } finally {
+      setIsSaving(false);
     }
-
-    toast.success("Password changed successfully");
   };
+
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center pt-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-dark dark:text-white">Profile Settings</h1>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="mb-8 text-2xl font-bold">Profile Settings</h1>
 
-      <div className="space-y-6">
-        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label htmlFor="name" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white sm:text-sm"
-                />
-              </div>
-              <div>
-                <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  disabled
-                  className="mt-1 block w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-100 px-3 py-2 shadow-sm dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400 sm:text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
-              </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label htmlFor="company" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Company
-                </label>
-                <input
-                  type="text"
-                  id="company"
-                  name="company"
-                  value={formData.company}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white sm:text-sm"
-                />
-              </div>
-              <div>
-                <label htmlFor="jobTitle" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Job Title
-                </label>
-                <input
-                  type="text"
-                  id="jobTitle"
-                  name="jobTitle"
-                  value={formData.jobTitle}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white sm:text-sm"
-                />
-              </div>
-            </div>
-
+      <div className="grid gap-8 md:grid-cols-2">
+        {/* Profile Information */}
+        <div className="rounded-lg border p-6">
+          <h2 className="mb-4 text-xl font-semibold">Profile Information</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="bio" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Bio
+              <label htmlFor="name" className="block text-sm font-medium">
+                Name
               </label>
-              <textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
-                onChange={handleChange}
-                rows={4}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white sm:text-sm"
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={profile.name}
+                onChange={(e) =>
+                  setProfile({ ...profile, name: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={loading}
-                className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 dark:focus:ring-offset-dark-2"
-              >
-                {loading ? (
-                  <>
-                    <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </button>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium">
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={profile.email}
+                disabled
+                className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+              />
             </div>
+
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium">
+                Company
+              </label>
+              <input
+                type="text"
+                id="company"
+                name="company"
+                value={profile.company}
+                onChange={(e) =>
+                  setProfile({ ...profile, company: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </button>
           </form>
         </div>
 
-        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-6 text-xl font-semibold text-dark dark:text-white">Change Password</h2>
-          <PasswordForm
-            onSubmit={handlePasswordChange}
-            requireCurrentPassword={true}
-          />
+        {/* Change Password */}
+        <div className="rounded-lg border p-6">
+          <h2 className="mb-4 text-xl font-semibold">Change Password</h2>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div>
+              <label
+                htmlFor="currentPassword"
+                className="block text-sm font-medium"
+              >
+                Current Password
+              </label>
+              <input
+                type="password"
+                id="currentPassword"
+                name="currentPassword"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="newPassword"
+                className="block text-sm font-medium"
+              >
+                New Password
+              </label>
+              <input
+                type="password"
+                id="newPassword"
+                name="newPassword"
+                required
+                minLength={8}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium"
+              >
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                required
+                minLength={8}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+            >
+              {isSaving ? "Changing Password..." : "Change Password"}
+            </button>
+          </form>
         </div>
       </div>
     </div>

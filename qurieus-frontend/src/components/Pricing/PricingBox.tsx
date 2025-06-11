@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from '@/lib/axios';
 import React from "react";
 import OfferList from "./OfferList";
 import { Price } from "@/types/price";

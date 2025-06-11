@@ -10,6 +10,7 @@ import MagicLink from "@/components/Auth/MagicLink";
 import { OTPInput } from "@/components/OTPInput";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { signIn } from "next-auth/react";
+import axios from "@/lib/axios";
 
 interface SignUpFormProps {
   onSuccess?: () => void;
@@ -48,24 +49,11 @@ export default function SignUp({
         return;
       }
 
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || "Registration failed");
-      }
-
+      const response = await axios.post("/api/register", user);
       toast.success("Verification code sent to your email!");
       setShowVerification(true);
     } catch (err: any) {
-      toast.error(err.message || "Registration failed. Please try again.");
+      toast.error(err.response?.data?.error || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -76,22 +64,10 @@ export default function SignUp({
     setLoading(true);
 
     try {
-      const response = await fetch("/api/verify-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: user.email,
-          code: verificationCode,
-        }),
+      const response = await axios.post("/api/verify-email", {
+        email: user.email,
+        code: verificationCode,
       });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || "Verification failed");
-      }
 
       toast.success("Email verified successfully!");
       // Auto-login after verification
@@ -108,7 +84,7 @@ export default function SignUp({
         }
       }
     } catch (err: any) {
-      toast.error(err.message || "Verification failed. Please try again.");
+      toast.error(err.response?.data?.error || "Verification failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -119,19 +95,9 @@ export default function SignUp({
     setResendTimer(60);
 
     try {
-      const response = await fetch("/api/resend-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: user.email }),
+      const response = await axios.post("/api/resend-verification", {
+        email: user.email
       });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || "Failed to resend code");
-      }
 
       toast.success("Verification code resent!");
 
@@ -147,7 +113,7 @@ export default function SignUp({
         });
       }, 1000);
     } catch (err: any) {
-      toast.error(err.message || "Failed to resend code");
+      toast.error(err.response?.data?.error || "Failed to resend code");
       setResendDisabled(false);
     }
   };

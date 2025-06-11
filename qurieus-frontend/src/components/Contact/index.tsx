@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
+import axios from "@/lib/axios";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -27,19 +28,7 @@ const Contact = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to send message");
-      }
-
-      const data = await response.json();
+      const { data } = await axios.post("/api/contact", formData);
       toast.success("Message sent successfully!");
       setFormData({
         fullName: "",

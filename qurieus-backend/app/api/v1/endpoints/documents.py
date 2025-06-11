@@ -127,16 +127,19 @@ def process_file(
             for page in doc:
                 text_content += page.get_text()
         elif file_extension.lower() in ['.docx', '.doc']:
-            doc = docx.Document(file_content)
+            # Create a BytesIO object from the file content
+            doc_stream = io.BytesIO(file_content)
+            doc = docx.Document(doc_stream)
             for para in doc.paragraphs:
                 text_content += para.text + "\n"
         elif file_extension.lower() in ['.xlsx', '.xls', '.csv']:
-            # Handle Excel and CSV files
+            # Create a BytesIO object from the file content
+            file_stream = io.BytesIO(file_content)
             try:
                 if file_extension.lower() == '.csv':
-                    df = pd.read_csv(io.BytesIO(file_content))
+                    df = pd.read_csv(file_stream)
                 else:
-                    df = pd.read_excel(io.BytesIO(file_content))
+                    df = pd.read_excel(file_stream)
                 # Convert DataFrame to text for embedding
                 text_content = df.to_string()
                 # Perform financial analysis
