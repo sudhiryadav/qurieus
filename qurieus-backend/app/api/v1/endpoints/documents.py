@@ -148,13 +148,16 @@ def process_file(
             raise ValueError(f"Unsupported file type: {file_extension}")
         
         # Create document record with all required fields
+        now = datetime.datetime.utcnow()
         document = DBDocument(
+            title=original_filename.replace(file_extension, ""),  # Set title from filename without extension
+            fileName=original_filename.replace(file_extension, ""),  # Remove file extension for fileName
             originalName=original_filename,
-            fileName=original_filename,
             fileType=file_extension.lower().lstrip('.'),
             fileSize=len(file_content),
             userId=userId,
-            uploadedAt=datetime.datetime.utcnow(),
+            uploadedAt=now,
+            updatedAt=now,  # Set updatedAt to current time
             content=text_content,
             description="",
             category="",
@@ -474,40 +477,45 @@ async def semantic_search_query(request: QueryRequest, db: Session):
         
         log_to_frontend("info", "Executing similarity search...")
         
-        embedding_values = ','.join(map(str, query_embedding))
+        # Get all embeddings for the user
+        embeddings = db.query(Embedding).filter(Embedding.userId == request.document_owner_id).all()
         
-        query = text(f"""
-            WITH query_embedding AS (
-                SELECT ARRAY[{embedding_values}]::vector AS embedding
-            )
-            SELECT 
-                dc.content,
-                dc."documentId",
-                d."originalName",
-                1 - (e.vector::vector <=> query_embedding.embedding) as similarity
-            FROM "DocumentChunk" dc
-            JOIN "Embedding" e ON e."chunkId" = dc.id
-            JOIN "Document" d ON d.id = dc."documentId"
-            CROSS JOIN query_embedding
-            WHERE e."userId" = :userId
-            ORDER BY similarity DESC
-            LIMIT 3
-        """)
+        # Calculate cosine similarity for each embedding
+        similarities = []
+        for emb in embeddings:
+            # Calculate cosine similarity
+            dot_product = sum(a * b for a, b in zip(query_embedding, emb.vector))
+            norm_a = sum(a * a for a in query_embedding) ** 0.5
+            norm_b = sum(b * b for b in emb.vector) ** 0.5
+            similarity = dot_product / (norm_a * norm_b) if norm_a * norm_b != 0 else 0
+            similarities.append((emb, similarity))
         
-        similar_chunks = db.execute(
-            query,
-            {"userId": request.document_owner_id}
-        ).fetchall()
-
-        if not similar_chunks:
+        # Sort by similarity and get top 3
+        similarities.sort(key=lambda x: x[1], reverse=True)
+        top_chunks = similarities[:3]
+        
+        if not top_chunks:
             return {
                 "answer": "No relevant documents found.",
                 "sources": []
             }
 
+        # Get the chunks and their content
+        chunks = []
+        sources = []
+        for emb, similarity in top_chunks:
+            chunk = db.query(DocumentChunk).filter(DocumentChunk.id == emb.chunkId).first()
+            if chunk:
+                doc = db.query(DBDocument).filter(DBDocument.id == chunk.documentId).first()
+                if doc:
+                    chunks.append(chunk.content)
+                    sources.append({
+                        "document": doc.originalName,
+                        "similarity": float(similarity)
+                    })
+
         # Clean and encode the text properly
-        context = "\n".join([chunk[0].encode('utf-8', errors='ignore').decode('utf-8')[:1000] for chunk in similar_chunks])
-        sources = [{"document": chunk[2], "similarity": chunk[3]} for chunk in similar_chunks]
+        context = "\n".join([chunk.encode('utf-8', errors='ignore').decode('utf-8')[:1000] for chunk in chunks])
 
         prompt = f"""Answer the following question based on the provided context. If the answer isn't in the context, say so.
 

@@ -1,0 +1,27 @@
+import { execSync } from 'child_process';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+async function resetDatabase() {
+  try {
+    console.log('Resetting database...');
+    
+    // Drop all tables
+    execSync('yarn prisma db push --force-reset', { stdio: 'inherit' });
+    
+    // Create fresh migration
+    console.log('Creating fresh migration...');
+    execSync('yarn prisma migrate dev --name init', { stdio: 'inherit' });
+    
+    console.log('Database reset and migration complete!');
+  } catch (error) {
+    console.error('Error resetting database:', error);
+    process.exit(1);
+  }
+}
+
+resetDatabase(); 

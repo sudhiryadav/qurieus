@@ -1,7 +1,7 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import Faq from "@/components/Faq";
 import Pricing from "@/components/Pricing";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import { createCustomer, createSubscription } from "@/utils/razorpay";
 import { Prisma } from "@prisma/client";

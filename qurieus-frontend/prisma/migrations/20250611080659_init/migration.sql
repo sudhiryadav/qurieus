@@ -1,3 +1,6 @@
+-- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "vector";
+
 -- CreateEnum
 CREATE TYPE "SubscriptionType" AS ENUM ('TRIAL', 'MONTHLY', 'YEARLY');
 
@@ -112,16 +115,16 @@ CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "planId" TEXT NOT NULL,
-    "razorpaySubscriptionId" TEXT NOT NULL,
-    "razorpayCustomerId" TEXT NOT NULL,
+    "paddleSubscriptionId" TEXT NOT NULL,
+    "paddleCustomerId" TEXT NOT NULL,
     "status" TEXT NOT NULL,
     "currentPeriodStart" TIMESTAMP(3) NOT NULL,
     "currentPeriodEnd" TIMESTAMP(3) NOT NULL,
     "cancelledAt" TIMESTAMP(3),
-    "lastPaymentId" TEXT,
-    "lastPaymentAmount" DOUBLE PRECISION,
-    "lastPaymentDate" TIMESTAMP(3),
-    "lastPaymentError" TEXT,
+    "paddlePaymentId" TEXT,
+    "paddlePaymentAmount" DOUBLE PRECISION,
+    "paddlePaymentDate" TIMESTAMP(3),
+    "paddlePaymentError" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -184,16 +187,19 @@ CREATE TABLE "ChatMessage" (
 -- CreateTable
 CREATE TABLE "Document" (
     "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" TEXT NOT NULL,
     "fileName" TEXT NOT NULL,
     "originalName" TEXT NOT NULL,
     "fileType" TEXT NOT NULL,
     "fileSize" INTEGER NOT NULL,
     "category" TEXT,
     "description" TEXT,
-    "content" TEXT NOT NULL,
     "keywords" TEXT,
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "userId" TEXT NOT NULL,
     "metadata" TEXT,
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
@@ -212,9 +218,9 @@ CREATE TABLE "DocumentChunk" (
 -- CreateTable
 CREATE TABLE "Embedding" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "chunkId" TEXT NOT NULL,
     "vector" DOUBLE PRECISION[],
+    "chunkId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Embedding_pkey" PRIMARY KEY ("id")
@@ -230,6 +236,40 @@ CREATE TABLE "Log" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Log_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "QueryAnalytics" (
+    "id" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "query" TEXT NOT NULL,
+    "response" TEXT NOT NULL,
+    "responseTime" INTEGER NOT NULL,
+    "userId" TEXT NOT NULL,
+    "visitorId" TEXT NOT NULL,
+    "success" BOOLEAN NOT NULL DEFAULT true,
+    "error" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "QueryAnalytics_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "VisitorSession" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "visitorId" TEXT NOT NULL,
+    "userAgent" TEXT NOT NULL,
+    "ipAddress" TEXT NOT NULL,
+    "startTime" TIMESTAMP(3) NOT NULL,
+    "endTime" TIMESTAMP(3) NOT NULL,
+    "duration" INTEGER NOT NULL,
+    "queries" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "VisitorSession_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -263,7 +303,7 @@ CREATE UNIQUE INDEX "PaddleConfig_subscriptionPlanId_key" ON "PaddleConfig"("sub
 CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subscription_razorpaySubscriptionId_key" ON "Subscription"("razorpaySubscriptionId");
+CREATE UNIQUE INDEX "Subscription_paddleSubscriptionId_key" ON "Subscription"("paddleSubscriptionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ChatConversation_visitorId_userId_key" ON "ChatConversation"("visitorId", "userId");
@@ -285,6 +325,27 @@ CREATE UNIQUE INDEX "Embedding_chunkId_key" ON "Embedding"("chunkId");
 
 -- CreateIndex
 CREATE INDEX "Embedding_userId_idx" ON "Embedding"("userId");
+
+-- CreateIndex
+CREATE INDEX "QueryAnalytics_documentId_idx" ON "QueryAnalytics"("documentId");
+
+-- CreateIndex
+CREATE INDEX "QueryAnalytics_userId_idx" ON "QueryAnalytics"("userId");
+
+-- CreateIndex
+CREATE INDEX "QueryAnalytics_visitorId_idx" ON "QueryAnalytics"("visitorId");
+
+-- CreateIndex
+CREATE INDEX "QueryAnalytics_createdAt_idx" ON "QueryAnalytics"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "VisitorSession_userId_idx" ON "VisitorSession"("userId");
+
+-- CreateIndex
+CREATE INDEX "VisitorSession_visitorId_idx" ON "VisitorSession"("visitorId");
+
+-- CreateIndex
+CREATE INDEX "VisitorSession_startTime_idx" ON "VisitorSession"("startTime");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -311,16 +372,25 @@ ALTER TABLE "ChatConversation" ADD CONSTRAINT "ChatConversation_userId_fkey" FOR
 ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "ChatConversation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DocumentChunk" ADD CONSTRAINT "DocumentChunk_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Embedding" ADD CONSTRAINT "Embedding_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Embedding" ADD CONSTRAINT "Embedding_chunkId_fkey" FOREIGN KEY ("chunkId") REFERENCES "DocumentChunk"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Embedding" ADD CONSTRAINT "Embedding_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Log" ADD CONSTRAINT "Log_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "QueryAnalytics" ADD CONSTRAINT "QueryAnalytics_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "QueryAnalytics" ADD CONSTRAINT "QueryAnalytics_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "VisitorSession" ADD CONSTRAINT "VisitorSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

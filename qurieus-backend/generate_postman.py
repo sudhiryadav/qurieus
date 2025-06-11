@@ -153,6 +153,6 @@ if __name__ == "__main__":
         description="Document AI Chatbot API", 
         version="1.0.0"
     )
-    test_app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
+    test_app.include_router(documents.router, prefix="/api/v1/admin/documents", tags=["Documents"])
     
     generate_postman_collection(test_app) 

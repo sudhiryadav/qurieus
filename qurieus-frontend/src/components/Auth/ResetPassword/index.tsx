@@ -1,12 +1,10 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import Loader from "@/components/Common/Loader";
+import Logo from "@/components/Common/Logo";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import Loader from "@/components/Common/Loader";
-import Link from "next/link";
-import Image from "next/image";
-import Logo from "@/components/Common/Logo";
 
 const ResetPassword = ({ token }: { token: string }) => {
   const [data, setData] = useState({

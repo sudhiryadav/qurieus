@@ -26,14 +26,14 @@ const BACKEND_URL = process.env.BACKEND_URL;
 export async function POST(req: NextRequest) {
   try {
     // Check if user is authenticated
-  const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions);
     
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in.' },
         { status: 401 }
       );
-  }
+    }
 
     // Get the raw JWT token from the session
     const token = await getToken({ 
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         { error: 'No files provided' },
         { status: 400 }
       );
-  }
+    }
 
     // Validate files
     for (const file of files) {
@@ -91,10 +91,11 @@ export async function POST(req: NextRequest) {
     backendFormData.append('category', category || '');
     
     // Make API call to FastAPI backend with the correct endpoint
-    const backendResponse = await fetch(`${BACKEND_URL}/api/v1/documents/upload`, {
-    method: 'POST',
+    console.log('Making request to backend:', `${BACKEND_URL}/api/v1/admin/documents/upload`);
+    const backendResponse = await fetch(`${BACKEND_URL}/api/v1/admin/documents/upload`, {
+      method: 'POST',
       body: backendFormData,
-    headers: {
+      headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
@@ -106,14 +107,27 @@ export async function POST(req: NextRequest) {
       try {
         // Try to parse as JSON
         const errorData = JSON.parse(errorText);
-        errorDetail = errorData.detail || backendResponse.statusText;
+        errorDetail = errorData.detail || errorData.message || backendResponse.statusText;
       } catch (e) {
         // If not JSON, use the raw text
         errorDetail = errorText || backendResponse.statusText;
       }
       
-      console.error('Upload error:', errorDetail);
-      throw new Error(`Backend API error: ${errorDetail}`);
+      console.error('Upload error details:', {
+        status: backendResponse.status,
+        statusText: backendResponse.statusText,
+        errorDetail,
+        headers: Object.fromEntries(backendResponse.headers.entries())
+      });
+      
+      return NextResponse.json(
+        { 
+          error: 'Error processing document',
+          details: errorDetail,
+          status: backendResponse.status
+        },
+        { status: backendResponse.status }
+      );
     }
     
     const data = await backendResponse.json();
@@ -132,9 +146,17 @@ export async function POST(req: NextRequest) {
       backendResponse: data
     });
   } catch (error: any) {
-    console.error('Error uploading files:', error);
+    console.error('Error uploading files:', {
+      error: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
+    
     return NextResponse.json(
-      { error: `Failed to upload files`},
+      { 
+        error: 'Failed to upload files',
+        details: error.message
+      },
       { status: 500 }
     );
   }

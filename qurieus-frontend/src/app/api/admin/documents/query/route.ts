@@ -3,8 +3,10 @@ import { headers } from "next/headers";
 import { NextResponse } from 'next/server';
 import { UAParser } from "ua-parser-js";
 import { cacheGet, cacheSet, generateQueryCacheKey } from '@/utils/redis';
+import { AnalyticsService } from '@/services/analytics';
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { query, documentOwnerId, visitorId } = body;
@@ -45,7 +47,19 @@ export async function POST(request: Request) {
     if (cachedResponse) {
       console.log(`[Cache] Cache hit for query: ${query}`);
       console.log(`[Cache] Cached response length: ${cachedResponse.length} bytes`);
-      // Return cached response as a stream
+      
+      // Track analytics for cached response
+      const responseTime = Date.now() - startTime;
+      await AnalyticsService.trackQuery({
+        documentId: documentOwnerId,
+        query,
+        response: cachedResponse,
+        responseTime,
+        userId: documentOwnerId,
+        visitorId: effectiveVisitorId,
+        success: true
+      });
+
       return new Response(cachedResponse, {
         headers: {
           'Content-Type': 'application/x-ndjson',
@@ -114,7 +128,7 @@ export async function POST(request: Request) {
     }
 
     // Query the FastAPI backend
-    const fastApiResponse = await fetch(`${process.env.BACKEND_URL}/api/v1/documents/query`, {
+    const fastApiResponse = await fetch(`${process.env.BACKEND_URL}/api/v1/admin/documents/query`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -128,12 +142,34 @@ export async function POST(request: Request) {
 
     if (!fastApiResponse.ok) {
       const errorText = await fastApiResponse.text();
+      const responseTime = Date.now() - startTime;
+      await AnalyticsService.trackQuery({
+        documentId: documentOwnerId,
+        query,
+        response: errorText,
+        responseTime,
+        userId: documentOwnerId,
+        visitorId: effectiveVisitorId,
+        success: false,
+        error: errorText
+      });
       throw new Error(`Failed to get response from FastAPI: ${fastApiResponse.status} ${fastApiResponse.statusText}`);
     }
 
     // Stream NDJSON, removing only the 'model' field from each chunk
     const ndjsonStream = fastApiResponse.body;
     if (!ndjsonStream) {
+      const responseTime = Date.now() - startTime;
+      await AnalyticsService.trackQuery({
+        documentId: documentOwnerId,
+        query,
+        response: "No response body from FastAPI",
+        responseTime,
+        userId: documentOwnerId,
+        visitorId: effectiveVisitorId,
+        success: false,
+        error: "No response body from FastAPI"
+      });
       return NextResponse.json(
         { error: "No response body from FastAPI" },
         { status: 500 }
@@ -194,6 +230,18 @@ export async function POST(request: Request) {
       console.error('[Cache] Not caching empty response');
     }
 
+    // Track analytics for successful response
+    const responseTime = Date.now() - startTime;
+    await AnalyticsService.trackQuery({
+      documentId: documentOwnerId,
+      query,
+      response: responseText,
+      responseTime,
+      userId: documentOwnerId,
+      visitorId: effectiveVisitorId,
+      success: true
+    });
+
     // Create a new stream from the collected chunks
     const responseStream = new ReadableStream({
       start(controller) {
@@ -211,7 +259,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[Error] Error in /api/documents/query route:", error);
+    console.error("[Error] Error in /api/admin/documents/query route:", error);
     return NextResponse.json(
       { error: "Failed to process query" },
       { status: 500 }

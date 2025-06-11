@@ -20,21 +20,11 @@ const getVisitorId = () => {
   return id;
 };
 
-const fetchChatHistory = async (visitorId: string, userId: string, limit = 10) => {
-  try {
-    const res = await fetch(`/api/chat/history?visitorId=${visitorId}&userId=${userId}&limit=${limit}`);
-    if (!res.ok) return [];
-    return await res.json();
-  } catch {
-    return [];
-  }
-};
-
 // Add shimmer CSS
 const shimmerStyle = `
   .shimmer {
     display: inline-block;
-    background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
+    background: linear-gradient(90deg, #8B5CF6 25%, #A78BFA 50%, #8B5CF6 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     color: transparent;
@@ -66,12 +56,35 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [sources, setSources] = useState<any[] | null>(null);
   const [showSourcesUI, setShowSourcesUI] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
+  const [messageHistory, setMessageHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   useEffect(() => {
     if (!inline) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, inline]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (messageHistory.length > 0) {
+        const newIndex = historyIndex < messageHistory.length - 1 ? historyIndex + 1 : historyIndex;
+        setHistoryIndex(newIndex);
+        setInputMessage(messageHistory[messageHistory.length - 1 - newIndex]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setInputMessage(messageHistory[messageHistory.length - 1 - newIndex]);
+      } else if (historyIndex === 0) {
+        setHistoryIndex(-1);
+        setInputMessage('');
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +93,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     const userMessage = inputMessage;
     setInputMessage('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setMessageHistory(prev => [...prev, userMessage]);
+    setHistoryIndex(-1);
     setIsLoading(true);
     setSources(null);
     setShowSourcesUI(false);
@@ -90,7 +105,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       let gotFirstChunk = false;
       let fullResponse = '';
 
-      const response = await fetch('/api/documents/query', {
+      const response = await fetch('/api/admin/documents/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -269,6 +284,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="Type your message..."
                   className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
                 />
@@ -362,6 +378,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                           type="text"
                           value={inputMessage}
                           onChange={(e) => setInputMessage(e.target.value)}
+                          onKeyDown={handleKeyDown}
                           placeholder="Type your message..."
                           className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
                         />

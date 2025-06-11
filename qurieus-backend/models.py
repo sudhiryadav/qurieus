@@ -172,6 +172,7 @@ class Document(Base):
     __tablename__ = "Document"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
     fileName = Column(String, nullable=False)
     originalName = Column(String, nullable=False)
     fileType = Column(String, nullable=False)
@@ -181,9 +182,9 @@ class Document(Base):
     content = Column(Text, nullable=False)
     keywords = Column(String)  # Comma-separated list of keywords
     uploadedAt = Column(DateTime, default=datetime.utcnow)
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     userId = Column(String, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
     doc_metadata = Column("metadata", Text, nullable=True)
-    
     user = relationship("Users", back_populates="documents")
     chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
 

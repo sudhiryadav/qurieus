@@ -5,11 +5,13 @@ datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // Only needed when using a cloud provider that doesn't support the creation of new databases, like Heroku. Learn more: https://pris.ly/d/migrate-shadow
+  extensions        = [vector]
 }
 
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 // Enums
@@ -97,6 +99,8 @@ model User {
   embeddings            Embedding[]
   chatConversations     ChatConversation[]
   logs                  Log[]
+  queries               QueryAnalytics[]
+  visitorSessions       VisitorSession[]
 
   @@map("Users")
 }
@@ -209,19 +213,23 @@ model ChatMessage {
 }
 
 model Document {
-  id           String   @id @default(cuid())
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  queries     QueryAnalytics[]
   fileName     String
   originalName String
   fileType     String
   fileSize     Int
   category     String?
   description  String?  @db.Text
-  content      String   @db.Text
   keywords     String?  // Comma-separated list of keywords extracted from the document
   uploadedAt   DateTime @default(now())
-  userId       String
   metadata     String?
-  user         User         @relation(fields: [userId], references: [id])
   chunks       DocumentChunk[]
   
   @@index([userId])
@@ -243,13 +251,13 @@ model DocumentChunk {
 
 model Embedding {
   id        String   @id @default(cuid())
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vector    Float[]  // Using array of floats instead of vector type
   chunkId   String   @unique
+  userId    String
   chunk     DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
-  vector    Float[]
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
+
   @@index([userId])
 }
 
@@ -261,4 +269,44 @@ model Log {
   message   String
   meta      Json?
   createdAt DateTime @default(now())
+}
+
+model QueryAnalytics {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id])
+  query       String
+  response    String
+  responseTime Int
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  visitorId   String
+  success     Boolean  @default(true)
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([visitorId])
+  @@index([createdAt])
+}
+
+model VisitorSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  visitorId   String
+  userAgent   String
+  ipAddress   String
+  startTime   DateTime
+  endTime     DateTime
+  duration    Int      // in seconds
+  queries     Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([visitorId])
+  @@index([startTime])
 }

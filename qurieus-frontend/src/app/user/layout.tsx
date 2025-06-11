@@ -17,25 +17,27 @@ export default function UserLayout({
   // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
+      toast.error("Please sign in to access this page");
       router.push("/signin");
+      return;
     }
+
     const checkSubscription = async () => {
       try {
         const response = await fetch("/api/subscription/check");
         const data = await response.json();
 
         if (!data) {
-          toast.error(
-            "Please subscribe to a plan to access admin panel",
-          );
+          toast.error("Please subscribe to a plan to access this page");
           router.push("/pricing");
+          return;
         }
-        else{
-          setIsSubscriptionChecked(true);
-        }
+        
+        setIsSubscriptionChecked(true);
       } catch (error) {
         console.error("Error checking subscription:", error);
-        toast.error("Error checking subscription status");
+        toast.error("Error checking subscription status. Please try again later.");
+        router.push("/pricing");
       }
     };
 
@@ -53,11 +55,12 @@ export default function UserLayout({
     );
   }
 
-  if (!isSubscriptionChecked) {
+  // Don't render anything if not authenticated or subscription not checked
+  if (!session?.user || !isSubscriptionChecked) {
     return null;
   }
 
-  // If authenticated, show the layout
+  // If authenticated and subscription checked, show the layout
   return (
     <div className="flex min-h-screen flex-col">
       {/* Main content */}

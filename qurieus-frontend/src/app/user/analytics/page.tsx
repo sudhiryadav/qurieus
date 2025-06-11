@@ -51,12 +51,7 @@ export default function Analytics() {
       
       setLoading(true);
       try {
-        const response = await fetch(`/api/analytics?timeRange=${timeRange}`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include', // Important for sending cookies
-        });
+        const response = await fetch(`/api/admin/analytics?timeRange=${timeRange}`);
         
         if (!response.ok) {
           if (response.status === 401) {
@@ -110,7 +105,7 @@ export default function Analytics() {
       width: 3,
     },
     xaxis: {
-      categories: analytics?.messagesByDate.map(item => item.date) || [],
+      categories: analytics?.messagesByDate?.map(item => item.date) || [],
       type: "datetime" as const,
     },
     yaxis: {
@@ -145,7 +140,7 @@ export default function Analytics() {
   const timeSeriesSeries = [
     {
       name: "Messages",
-      data: analytics?.messagesByDate.map(item => item.count) || [],
+      data: analytics?.messagesByDate?.map(item => item.count) || [],
     },
   ];
 
@@ -169,7 +164,7 @@ export default function Analytics() {
     },
     colors: ["#10b981"],
     xaxis: {
-      categories: analytics?.topKeywords.map(item => item.keyword) || [],
+      categories: analytics?.topKeywords?.map(item => item.keyword) || [],
     },
     tooltip: {
       theme: "dark" as const,
@@ -183,7 +178,7 @@ export default function Analytics() {
   const keywordsChartSeries = [
     {
       name: "Occurrences",
-      data: analytics?.topKeywords.map(item => item.count) || [],
+      data: analytics?.topKeywords?.map(item => item.count) || [],
     },
   ];
 
@@ -195,7 +190,7 @@ export default function Analytics() {
         show: false,
       },
     },
-    labels: analytics?.deviceStats.map(item => item.device) || [],
+    labels: analytics?.deviceStats?.map(item => item.device) || [],
     colors: ["#3b82f6", "#10b981", "#f59e0b"],
     legend: {
       position: "bottom" as const,
@@ -209,7 +204,7 @@ export default function Analytics() {
     },
   };
 
-  const deviceChartSeries = analytics?.deviceStats.map(item => item.count) || [];
+  const deviceChartSeries = analytics?.deviceStats?.map(item => item.count) || [];
 
   // Chart options for browser stats
   const browserChartOptions = {
@@ -219,7 +214,7 @@ export default function Analytics() {
         show: false,
       },
     },
-    labels: analytics?.browserStats.map(item => item.browser) || [],
+    labels: analytics?.browserStats?.map(item => item.browser) || [],
     colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
     legend: {
       position: "bottom" as const,
@@ -233,7 +228,7 @@ export default function Analytics() {
     },
   };
 
-  const browserChartSeries = analytics?.browserStats.map(item => item.count) || [];
+  const browserChartSeries = analytics?.browserStats?.map(item => item.count) || [];
 
   // Chart options for OS stats
   const osChartOptions = {
@@ -243,7 +238,7 @@ export default function Analytics() {
         show: false,
       },
     },
-    labels: analytics?.osStats.map(item => item.os) || [],
+    labels: analytics?.osStats?.map(item => item.os) || [],
     colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
     legend: {
       position: "bottom" as const,
@@ -257,7 +252,7 @@ export default function Analytics() {
     },
   };
 
-  const osChartSeries = analytics?.osStats.map(item => item.count) || [];
+  const osChartSeries = analytics?.osStats?.map(item => item.count) || [];
 
   return (
     <div>
@@ -310,19 +305,19 @@ export default function Analytics() {
           <div className="mb-8 grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Total Conversations</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.totalConversations}</p>
+              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.totalConversations || 0}</p>
             </div>
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Total Messages</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.totalMessages}</p>
+              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.totalMessages || 0}</p>
             </div>
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Unique Visitors</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.uniqueVisitors}</p>
+              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.uniqueVisitors || 0}</p>
             </div>
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Messages/Day</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.averageMessagesPerDay}</p>
+              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.averageMessagesPerDay || 0}</p>
             </div>
           </div>
 
@@ -330,25 +325,25 @@ export default function Analytics() {
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Response Time</h2>
               <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.avgResponseTime.toFixed(2)}s
+                {analytics?.avgResponseTime?.toFixed(2) || 0}s
               </p>
             </div>
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Messages/Conversation</h2>
               <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.avgMessagesPerConversation.toFixed(1)}
+                {analytics?.avgMessagesPerConversation?.toFixed(1) || 0}
               </p>
             </div>
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Min Response Time</h2>
               <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.responseTime.min.toFixed(2)}s
+                {analytics?.responseTime?.min?.toFixed(2) || 0}s
               </p>
             </div>
             <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
               <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Max Response Time</h2>
               <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.responseTime.max.toFixed(2)}s
+                {analytics?.responseTime?.max?.toFixed(2) || 0}s
               </p>
             </div>
           </div>

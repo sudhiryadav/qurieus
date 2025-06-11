@@ -29,7 +29,7 @@ export default function DocumentList() {
 
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('/api/documents');
+      const response = await fetch('/api/admin/documents');
       if (!response.ok) throw new Error("Failed to fetch documents");
       const data = await response.json();
       setDocuments(data.documents);
@@ -57,7 +57,7 @@ export default function DocumentList() {
     if (!documentToDelete) return;
 
     try {
-      const response = await fetch(`/api/documents/${documentToDelete}`, {
+      const response = await fetch(`/api/admin/documents/${documentToDelete}`, {
         method: "DELETE",
       });
 
@@ -76,7 +76,7 @@ export default function DocumentList() {
 
   const handleDeleteAll = async () => {
     try {
-      const response = await fetch('/api/documents/delete-all', {
+      const response = await fetch('/api/admin/documents/delete-all', {
         method: "DELETE",
       });
 
@@ -94,7 +94,7 @@ export default function DocumentList() {
 
   const handleDeleteSelected = async () => {
     try {
-      const response = await fetch('/api/documents/delete-selected', {
+      const response = await fetch('/api/admin/documents/delete-selected', {
         method: "DELETE",
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ export default function DocumentList() {
 
   const handleDownload = async (documentId: string, fileName: string) => {
     try {
-      const response = await fetch(`/api/documents/${documentId}/download`);
+      const response = await fetch(`/api/admin/documents/${documentId}/download`);
       if (!response.ok) throw new Error('Download failed');
       
       const blob = await response.blob();
