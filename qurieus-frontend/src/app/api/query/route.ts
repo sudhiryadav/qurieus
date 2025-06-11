@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import axios from "@/lib/axios";
+import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
 
 export async function POST(request: Request) {
   try {
@@ -22,6 +23,21 @@ export async function POST(request: Request) {
         { error: "Message is required" },
         { status: 400 }
       );
+    }
+
+    // Check cache first
+    const cacheKey = generateQueryCacheKey(message, session.user.id);
+    const cachedResponse = await cacheGet(cacheKey);
+    
+    if (cachedResponse) {
+      // Return cached response as a stream
+      return new Response(cachedResponse, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
     }
 
     // Get chat history
@@ -55,13 +71,15 @@ export async function POST(request: Request) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    // Create a transform stream to modify the response
+    // Create a transform stream to modify the response and cache it
+    let responseBuffer = '';
     const transformStream = new TransformStream({
       transform(chunk, controller) {
         try {
           const text = new TextDecoder().decode(chunk);
-          const lines = text.split('\n').filter(line => line.trim());
+          responseBuffer += text; // Accumulate the response for caching
           
+          const lines = text.split('\n').filter(line => line.trim());
           for (const line of lines) {
             const data = JSON.parse(line);
             // Only send response and done fields
@@ -75,6 +93,12 @@ export async function POST(request: Request) {
         } catch (e) {
           console.error('Error transforming stream:', e);
           controller.enqueue(chunk); // Pass through original chunk if transformation fails
+        }
+      },
+      flush(controller) {
+        // Cache the complete response when the stream ends
+        if (responseBuffer) {
+          cacheSet(cacheKey, responseBuffer, 3600); // Cache for 1 hour
         }
       }
     });
