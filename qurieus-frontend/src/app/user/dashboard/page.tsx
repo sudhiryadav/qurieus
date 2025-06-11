@@ -48,7 +48,7 @@ export default function Dashboard() {
 
   const chartSeries = [
     {
-      name: "Document Views",
+      name: "Queries Hits",
       data: [30, 40, 35, 50, 49, 60, 70],
     },
   ];
