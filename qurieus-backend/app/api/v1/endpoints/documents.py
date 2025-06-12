@@ -498,10 +498,14 @@ async def semantic_search_query(request: QueryRequest, db: Session):
         top_chunks = similarities[:3]
         
         if not top_chunks:
-            return {
-                "answer": "No relevant documents found.",
-                "sources": []
-            }
+            # Create a streaming response with the same structure
+            async def no_docs_stream():
+                yield json.dumps({
+                    "response": "No relevant documents found.",
+                    "done": True
+                }).encode() + b"\n"
+
+            return StreamingResponse(no_docs_stream(), media_type="application/x-ndjson")
 
         # Get the chunks and their content
         chunks = []

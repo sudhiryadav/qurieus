@@ -59,9 +59,9 @@ export async function GET(request: Request) {
       }
     });
 
-    // Get queries by document
-    const queriesByDocument = await prisma.queryAnalytics.groupBy({
-      by: ['documentId'],
+    // Get queries by date for trend analysis
+    const queriesByDate = await prisma.queryAnalytics.groupBy({
+      by: ['createdAt'],
       where: {
         userId: session.user.id,
         createdAt: {
@@ -71,34 +71,35 @@ export async function GET(request: Request) {
       },
       _count: true,
       orderBy: {
-        documentId: 'desc'
+        createdAt: 'asc'
+      }
+    });
+
+    // Get visitor statistics
+    const visitorStats = await prisma.visitorSession.groupBy({
+      by: ['visitorId'],
+      where: {
+        userId: session.user.id,
+        startTime: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      _count: {
+        queries: true
+      },
+      _avg: {
+        duration: true
+      },
+      orderBy: {
+        _count: {
+          queries: 'desc'
+        }
       },
       take: 5
     });
 
-    // Get document details for the top documents
-    const documentDetails = await prisma.document.findMany({
-      where: {
-        id: {
-          in: queriesByDocument.map(q => q.documentId)
-        }
-      },
-      select: {
-        id: true,
-        fileName: true
-      }
-    });
-
     // Format the response
-    const formattedQueriesByDocument = queriesByDocument.map(q => {
-      const doc = documentDetails.find(d => d.id === q.documentId);
-      return {
-        documentId: q.documentId,
-        fileName: doc?.fileName || 'Unknown Document',
-        queryCount: q._count
-      };
-    });
-
     return NextResponse.json({
       timeRange,
       userId: session.user.id,
@@ -106,7 +107,15 @@ export async function GET(request: Request) {
       successfulQueries,
       successRate: totalQueries > 0 ? (successfulQueries / totalQueries) * 100 : 0,
       averageResponseTime: avgResponseTime._avg.responseTime || 0,
-      topDocuments: formattedQueriesByDocument
+      queriesByDate: queriesByDate.map(q => ({
+        date: q.createdAt,
+        count: q._count
+      })),
+      topVisitors: visitorStats.map(v => ({
+        visitorId: v.visitorId,
+        queryCount: v._count.queries,
+        averageDuration: v._avg.duration
+      }))
     });
   } catch (error: any) {
     console.error("Error fetching analytics:", error);
@@ -115,7 +124,7 @@ export async function GET(request: Request) {
       { status: error.response?.status || 500 }
     );
   }
-} 
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -127,9 +136,6 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
     const { type, data } = await req.json();
-
-    // Invalidate cache when new data is added
-    await invalidateAnalyticsCache(userId);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

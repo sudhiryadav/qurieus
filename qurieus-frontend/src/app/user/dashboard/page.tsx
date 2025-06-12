@@ -6,28 +6,63 @@ import dynamic from "next/dynamic";
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
+interface DashboardData {
+  totalQueries: number;
+  successfulQueries: number;
+  successRate: number;
+  averageResponseTime: number;
+  weeklyActivity: Array<{
+    date: string;
+    count: number;
+  }>;
+  trendingQueries: Array<{
+    name: string;
+    count: number;
+  }>;
+  recentActivity: Array<{
+    date: string;
+    type: string;
+    details: string;
+  }>;
+}
+
 export default function Dashboard() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Wait until component is mounted to render charts
   useEffect(() => {
     setMounted(true);
+    fetchDashboardData();
   }, []);
 
-  // Sample chart options
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch('/api/admin/analytics/dashboard');
+      if (!response.ok) throw new Error('Failed to fetch dashboard data');
+      const data = await response.json();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Chart options
   const chartOptions = {
     chart: {
       id: "basic-bar",
       toolbar: {
         show: false,
       },
-      foreColor: "#64748b", // Base text color
+      foreColor: "#64748b",
     },
     xaxis: {
-      categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      categories: dashboardData?.weeklyActivity.map(day => day.date) || [],
     },
-    colors: ["#3758F9"], // Primary color
+    colors: ["#3758F9"],
     plotOptions: {
       bar: {
         borderRadius: 4,
@@ -38,7 +73,7 @@ export default function Dashboard() {
       enabled: false,
     },
     grid: {
-      borderColor: "#f1f5f9", // Light gray
+      borderColor: "#f1f5f9",
       strokeDashArray: 4,
     },
     tooltip: {
@@ -48,8 +83,8 @@ export default function Dashboard() {
 
   const chartSeries = [
     {
-      name: "Queries Hits",
-      data: [30, 40, 35, 50, 49, 60, 70],
+      name: "Queries",
+      data: dashboardData?.weeklyActivity.map(day => day.count) || [],
     },
   ];
 
@@ -67,9 +102,9 @@ export default function Dashboard() {
       width: 2,
     },
     xaxis: {
-      categories: ["Week 1", "Week 2", "Week 3", "Week 4"],
+      categories: dashboardData?.trendingQueries.map(q => q.name) || [],
     },
-    colors: ["#10b981", "#3758F9", "#f59e0b"], // Green, Blue, Amber
+    colors: ["#10b981"],
     markers: {
       size: 4,
     },
@@ -84,18 +119,18 @@ export default function Dashboard() {
 
   const lineChartSeries = [
     {
-      name: "AI ChatBot",
-      data: [31, 40, 28, 51],
-    },
-    {
-      name: "Knowledge Base",
-      data: [11, 32, 45, 32],
-    },
-    {
-      name: "Document Search",
-      data: [15, 11, 32, 18],
+      name: "Query Count",
+      data: dashboardData?.trendingQueries.map(q => q.count) || [],
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg">Loading dashboard data...</div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -103,18 +138,22 @@ export default function Dashboard() {
         Welcome, {session?.user?.name}!
       </h1>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-3">
+      <div className="mb-8 grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Total Documents</h2>
-          <p className="text-3xl font-bold text-dark dark:text-white">24</p>
+          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Total Queries</h2>
+          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.totalQueries || 0}</p>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Chat Conversations</h2>
-          <p className="text-3xl font-bold text-dark dark:text-white">134</p>
+          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Successful Queries</h2>
+          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.successfulQueries || 0}</p>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Knowledge Base Views</h2>
-          <p className="text-3xl font-bold text-dark dark:text-white">2.4k</p>
+          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Success Rate</h2>
+          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.successRate.toFixed(1)}%</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg Response Time</h2>
+          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.averageResponseTime.toFixed(0)}ms</p>
         </div>
       </div>
 
@@ -150,26 +189,26 @@ export default function Dashboard() {
             <thead>
               <tr className="border-b dark:border-dark-3">
                 <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Date</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Activity</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Details</th>
+                <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Status</th>
+                <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Query</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b dark:border-dark-3">
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">Today 10:32 AM</td>
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">Document Upload</td>
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">Product Manual v2.0</td>
-              </tr>
-              <tr className="border-b dark:border-dark-3">
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">Yesterday 4:15 PM</td>
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">Chat Conversation</td>
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">10 messages exchanged</td>
-              </tr>
-              <tr className="border-b dark:border-dark-3">
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">Yesterday 11:20 AM</td>
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">Knowledge Base Update</td>
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">FAQ section updated</td>
-              </tr>
+              {dashboardData?.recentActivity.map((activity, index) => (
+                <tr key={index} className="border-b dark:border-dark-3">
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">{activity.date}</td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      activity.type === 'Successful Query' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
+                      {activity.type}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">{activity.details}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

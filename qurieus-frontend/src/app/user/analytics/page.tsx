@@ -2,419 +2,210 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { ApexOptions } from "apexcharts";
 
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-interface ChatAnalytics {
-  totalConversations: number;
-  totalMessages: number;
-  averageMessagesPerDay: number;
-  topKeywords: { keyword: string; count: number }[];
-  messagesByDate: { date: string; count: number }[];
-  uniqueVisitors: number;
-  responseTime: { average: number; min: number; max: number };
-  deviceStats: { device: string; count: number }[];
-  browserStats: { browser: string; count: number }[];
-  osStats: { os: string; count: number }[];
-  avgMessagesPerConversation: number;
-  avgResponseTime: number;
+interface AnalyticsData {
+  totalQueries: number;
+  successfulQueries: number;
+  successRate: number;
+  averageResponseTime: number;
+  queriesByDate: { date: string; count: number }[];
+  topVisitors: {
+    visitorId: string;
+    queryCount: number;
+    averageDuration: number;
+  }[];
 }
 
-export default function Analytics() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+export default function AnalyticsPage() {
+  const [timeRange, setTimeRange] = useState("7d");
+  const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [analytics, setAnalytics] = useState<ChatAnalytics | null>(null);
-  const [timeRange, setTimeRange] = useState("7d"); // 7d, 30d, 90d
-  const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Wait until component is mounted to render charts
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Handle authentication state
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/signin");
-    }
-  }, [status, router]);
-
-  // Fetch analytics data based on time range
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      if (status !== "authenticated") return;
-      
-      setLoading(true);
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/analytics?timeRange=${timeRange}`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include', // Important for sending cookies
-        });
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            toast.error("Please sign in to view analytics");
-            router.push("/signin");
-            return;
-          }
-          throw new Error("Failed to fetch analytics data");
-        }
-        
-        const data = await response.json();
-        setAnalytics(data);
-      } catch (error) {
-        console.error("Error fetching analytics:", error);
-        toast.error("Failed to fetch analytics data");
+        setLoading(true);
+        const response = await fetch(`/api/admin/analytics?timeRange=${timeRange}`);
+        if (!response.ok) throw new Error("Failed to fetch analytics data");
+        const analyticsData = await response.json();
+        setData(analyticsData);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         setLoading(false);
       }
     };
-    
-    if (status === "authenticated") {
-      fetchAnalytics();
-    }
-  }, [timeRange, status, router]);
 
-  // Show loading state while checking authentication
-  if (status === "loading") {
+    fetchData();
+  }, [timeRange]);
+
+  const chartOptions: ApexOptions = {
+    chart: {
+      type: 'line',
+      toolbar: { show: false },
+      zoom: { enabled: false }
+    },
+    stroke: { curve: 'smooth', width: 2 },
+    xaxis: {
+      categories: data?.queriesByDate.map(d => new Date(d.date).toLocaleDateString()) || [],
+      labels: { style: { colors: '#94a3b8' } }
+    },
+    yaxis: {
+      labels: { style: { colors: '#94a3b8' } }
+    },
+    grid: {
+      borderColor: '#1e293b',
+      strokeDashArray: 4
+    },
+    tooltip: {
+      theme: 'dark'
+    }
+  };
+
+  const chartSeries = [{
+    name: "Queries",
+    data: data?.queriesByDate.map(d => d.count) || []
+  }];
+
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Analytics</h1>
+          <Skeleton className="h-10 w-[180px]" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-[100px]" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-[60px]" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {[...Array(2)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-4 w-[150px]" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-[300px] w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Don't render anything if not authenticated
-  if (status !== "authenticated") {
-    return null;
-  }
-
-  // Chart options for messages by date
-  const timeSeriesOptions = {
-    chart: {
-      id: "messages-by-date",
-      toolbar: {
-        show: false,
-      },
-      foreColor: "#64748b",
-    },
-    stroke: {
-      curve: "smooth" as const,
-      width: 3,
-    },
-    xaxis: {
-      categories: analytics?.messagesByDate.map(item => item.date) || [],
-      type: "datetime" as const,
-    },
-    yaxis: {
-      title: {
-        text: "Message Count",
-      },
-    },
-    colors: ["#3758F9"],
-    fill: {
-      type: "gradient",
-      gradient: {
-        shade: "dark",
-        gradientToColors: ["#3758F9"],
-        shadeIntensity: 1,
-        type: "horizontal",
-        opacityFrom: 1,
-        opacityTo: 0.8,
-      },
-    },
-    tooltip: {
-      theme: "dark",
-      x: {
-        format: "yyyy-MM-dd",
-      },
-    },
-    grid: {
-      borderColor: "#f1f5f9",
-      strokeDashArray: 4,
-    },
-  };
-
-  const timeSeriesSeries = [
-    {
-      name: "Messages",
-      data: analytics?.messagesByDate.map(item => item.count) || [],
-    },
-  ];
-
-  // Chart options for top keywords
-  const keywordsChartOptions = {
-    chart: {
-      id: "top-keywords",
-      toolbar: {
-        show: false,
-      },
-      foreColor: "#64748b",
-    },
-    plotOptions: {
-      bar: {
-        horizontal: true as const,
-        borderRadius: 4,
-        dataLabels: {
-          position: "top" as const,
-        },
-      },
-    },
-    colors: ["#10b981"],
-    xaxis: {
-      categories: analytics?.topKeywords.map(item => item.keyword) || [],
-    },
-    tooltip: {
-      theme: "dark" as const,
-    },
-    grid: {
-      borderColor: "#f1f5f9",
-      strokeDashArray: 4,
-    },
-  };
-
-  const keywordsChartSeries = [
-    {
-      name: "Occurrences",
-      data: analytics?.topKeywords.map(item => item.count) || [],
-    },
-  ];
-
-  // Chart options for device stats
-  const deviceChartOptions = {
-    chart: {
-      type: "donut" as const,
-      toolbar: {
-        show: false,
-      },
-    },
-    labels: analytics?.deviceStats.map(item => item.device) || [],
-    colors: ["#3b82f6", "#10b981", "#f59e0b"],
-    legend: {
-      position: "bottom" as const,
-    },
-    plotOptions: {
-      pie: {
-        donut: {
-          size: "70%",
-        },
-      },
-    },
-  };
-
-  const deviceChartSeries = analytics?.deviceStats.map(item => item.count) || [];
-
-  // Chart options for browser stats
-  const browserChartOptions = {
-    chart: {
-      type: "donut" as const,
-      toolbar: {
-        show: false,
-      },
-    },
-    labels: analytics?.browserStats.map(item => item.browser) || [],
-    colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
-    legend: {
-      position: "bottom" as const,
-    },
-    plotOptions: {
-      pie: {
-        donut: {
-          size: "70%",
-        },
-      },
-    },
-  };
-
-  const browserChartSeries = analytics?.browserStats.map(item => item.count) || [];
-
-  // Chart options for OS stats
-  const osChartOptions = {
-    chart: {
-      type: "donut" as const,
-      toolbar: {
-        show: false,
-      },
-    },
-    labels: analytics?.osStats.map(item => item.os) || [],
-    colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
-    legend: {
-      position: "bottom" as const,
-    },
-    plotOptions: {
-      pie: {
-        donut: {
-          size: "70%",
-        },
-      },
-    },
-  };
-
-  const osChartSeries = analytics?.osStats.map(item => item.count) || [];
-
-  return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-dark dark:text-white">Chat Analytics</h1>
-        
-        <div className="inline-flex rounded-md shadow-sm">
-          <button
-            type="button"
-            onClick={() => setTimeRange("7d")}
-            className={`rounded-l-md px-4 py-2 text-sm font-medium ${
-              timeRange === "7d"
-                ? "bg-primary text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-dark-2 dark:text-white dark:hover:bg-dark-3"
-            }`}
-          >
-            7 Days
-          </button>
-          <button
-            type="button"
-            onClick={() => setTimeRange("30d")}
-            className={`px-4 py-2 text-sm font-medium ${
-              timeRange === "30d"
-                ? "bg-primary text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-dark-2 dark:text-white dark:hover:bg-dark-3"
-            }`}
-          >
-            30 Days
-          </button>
-          <button
-            type="button"
-            onClick={() => setTimeRange("90d")}
-            className={`rounded-r-md px-4 py-2 text-sm font-medium ${
-              timeRange === "90d"
-                ? "bg-primary text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-dark-2 dark:text-white dark:hover:bg-dark-3"
-            }`}
-          >
-            90 Days
-          </button>
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-500 mb-2">Error</h2>
+          <p className="text-gray-400">{error}</p>
         </div>
       </div>
+    );
+  }
 
-      {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        </div>
-      ) : (
-        <>
-          <div className="mb-8 grid gap-4 md:grid-cols-4">
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Total Conversations</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.totalConversations}</p>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Total Messages</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.totalMessages}</p>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Unique Visitors</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.uniqueVisitors}</p>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Messages/Day</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">{analytics?.averageMessagesPerDay}</p>
-            </div>
-          </div>
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Analytics</h1>
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select time range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7d">Last 7 days</SelectItem>
+            <SelectItem value="30d">Last 30 days</SelectItem>
+            <SelectItem value="90d">Last 90 days</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-          <div className="mb-8 grid gap-4 md:grid-cols-4">
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Response Time</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.avgResponseTime.toFixed(2)}s
-              </p>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Messages/Conversation</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.avgMessagesPerConversation.toFixed(1)}
-              </p>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Min Response Time</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.responseTime.min.toFixed(2)}s
-              </p>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Max Response Time</h2>
-              <p className="text-3xl font-bold text-dark dark:text-white">
-                {analytics?.responseTime.max.toFixed(2)}s
-              </p>
-            </div>
-          </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data?.totalQueries}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Successful Queries</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data?.successfulQueries}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data?.successRate.toFixed(1)}%</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data?.averageResponseTime.toFixed(2)}ms</div>
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="mb-8 grid gap-6 md:grid-cols-2">
-            <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">Messages Over Time</h2>
-              {mounted && analytics && (
-                <Chart
-                  options={timeSeriesOptions}
-                  series={timeSeriesSeries}
-                  type="area"
-                  height={350}
-                />
-              )}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Query Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Chart
+              options={chartOptions}
+              series={chartSeries}
+              type="line"
+              height={350}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Visitors</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {data?.topVisitors.map((visitor, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">Visitor {visitor.visitorId.slice(0, 8)}</span>
+                  <div className="text-sm">
+                    <span className="font-medium">{visitor.queryCount} queries</span>
+                    <span className="text-gray-400 ml-2">({(visitor.averageDuration / 60).toFixed(1)} min avg)</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">Top Keywords</h2>
-              {mounted && analytics && (
-                <Chart
-                  options={keywordsChartOptions}
-                  series={keywordsChartSeries}
-                  type="bar"
-                  height={350}
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="mb-8 grid gap-6 md:grid-cols-3">
-            <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">Device Distribution</h2>
-              {mounted && analytics && (
-                <Chart
-                  options={deviceChartOptions}
-                  series={deviceChartSeries}
-                  type="donut"
-                  height={350}
-                />
-              )}
-            </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">Browser Distribution</h2>
-              {mounted && analytics && (
-                <Chart
-                  options={browserChartOptions}
-                  series={browserChartSeries}
-                  type="donut"
-                  height={350}
-                />
-              )}
-            </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-              <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">Operating System Distribution</h2>
-              {mounted && analytics && (
-                <Chart
-                  options={osChartOptions}
-                  series={osChartSeries}
-                  type="donut"
-                  height={350}
-                />
-              )}
-            </div>
-          </div>
-        </>
-      )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 } 

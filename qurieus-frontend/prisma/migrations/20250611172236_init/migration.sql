@@ -241,11 +241,10 @@ CREATE TABLE "Log" (
 -- CreateTable
 CREATE TABLE "QueryAnalytics" (
     "id" TEXT NOT NULL,
-    "documentId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
     "query" TEXT NOT NULL,
     "response" TEXT NOT NULL,
     "responseTime" INTEGER NOT NULL,
-    "userId" TEXT NOT NULL,
     "visitorId" TEXT NOT NULL,
     "success" BOOLEAN NOT NULL DEFAULT true,
     "error" TEXT,
@@ -327,9 +326,6 @@ CREATE UNIQUE INDEX "Embedding_chunkId_key" ON "Embedding"("chunkId");
 CREATE INDEX "Embedding_userId_idx" ON "Embedding"("userId");
 
 -- CreateIndex
-CREATE INDEX "QueryAnalytics_documentId_idx" ON "QueryAnalytics"("documentId");
-
--- CreateIndex
 CREATE INDEX "QueryAnalytics_userId_idx" ON "QueryAnalytics"("userId");
 
 -- CreateIndex
@@ -385,9 +381,6 @@ ALTER TABLE "Embedding" ADD CONSTRAINT "Embedding_userId_fkey" FOREIGN KEY ("use
 
 -- AddForeignKey
 ALTER TABLE "Log" ADD CONSTRAINT "Log_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "QueryAnalytics" ADD CONSTRAINT "QueryAnalytics_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "QueryAnalytics" ADD CONSTRAINT "QueryAnalytics_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

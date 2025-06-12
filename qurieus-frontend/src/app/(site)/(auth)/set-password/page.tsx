@@ -24,7 +24,7 @@ export default function SetPasswordPage() {
 
   const handleSetPassword = async (password: string) => {
     try {
-      const { data } = await axios.post("/api/set-password", { password });
+      const { data } = await axios.post("/api/user/set-password", { password });
       toast.success("Password set successfully!");
       // Refresh session by signing in with new credentials
       await signIn("credentials", {

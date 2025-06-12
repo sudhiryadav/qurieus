@@ -61,6 +61,43 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
+  const [hasDocuments, setHasDocuments] = useState<boolean | null>(false);
+
+  // Add useEffect for document check
+  useEffect(() => {
+    const checkDocuments = async () => {
+      try {
+        const response = await axiosInstance.get(
+          `/api/documents/check/${apiKey}`,
+        );
+        const hasDocs = response.data.hasDocuments;
+        setHasDocuments(hasDocs);
+
+        if (!hasDocs) {
+          setMessages([
+            {
+              role: "assistant",
+              content: "The system needs to be configured before using it.",
+            },
+          ]);
+        } else {
+          setMessages([{ role: "assistant", content: initialMessage }]);
+        }
+      } catch (error) {
+        console.error("Error checking documents:", error);
+        setHasDocuments(false);
+        setMessages([
+          {
+            role: "assistant",
+            content: "The system needs to be configured before using it.",
+          },
+        ]);
+      }
+    };
+
+    checkDocuments();
+  }, [apiKey, initialMessage]);
+
   useEffect(() => {
     if (!inline) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -93,7 +130,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || !hasDocuments) return;
 
     const userMessage = inputMessage;
     setInputMessage("");
@@ -126,12 +163,14 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
             const responseText = progressEvent.event.target?.responseText || "";
             const newChunk = responseText.slice(previousLength);
             previousLength = responseText.length;
-            
+
             if (!newChunk.trim()) return;
-            
+
             try {
               // Split by newlines in case we get multiple JSON objects
-              const lines = newChunk.split("\n").filter((line: string) => line.trim());
+              const lines = newChunk
+                .split("\n")
+                .filter((line: string) => line.trim());
               for (const line of lines) {
                 const data = JSON.parse(line);
                 if (data.response) {
@@ -139,6 +178,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                     setShowThinking(false);
                     gotFirstChunk = true;
                     fullResponse = data.response;
+
                     setMessages((prev) => [
                       ...prev,
                       { role: "assistant", content: fullResponse },
@@ -166,7 +206,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
             } catch (e) {
               console.error("JSON parse error:", e, "Chunk:", newChunk);
             }
-          }
+          },
         },
       );
     } catch (error) {
@@ -268,28 +308,30 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 </div>
               )}
             </div>
-            <form
-              onSubmit={handleSubmit}
-              className="border-t bg-transparent p-4"
-            >
-              <div className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your message..."
-                  className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={`${themeClasses[theme].button} rounded-lg p-2`}
-                >
-                  <Send className="h-5 w-5" />
-                </button>
-              </div>
-            </form>
+            {hasDocuments && (
+              <form
+                onSubmit={handleSubmit}
+                className="border-t bg-transparent p-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type your message..."
+                    className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`${themeClasses[theme].button} rounded-lg p-2`}
+                  >
+                    <Send className="h-5 w-5" />
+                  </button>
+                </div>
+              </form>
+            )}
           </>
         ) : (
           <>
@@ -384,25 +426,27 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                         </div>
                       )}
                     </div>
-                    <form onSubmit={handleSubmit} className="border-t p-4">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          value={inputMessage}
-                          onChange={(e) => setInputMessage(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          placeholder="Type your message..."
-                          className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
-                        />
-                        <button
-                          type="submit"
-                          disabled={isLoading}
-                          className={`${themeClasses[theme].button} rounded-lg p-2`}
-                        >
-                          <Send className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </form>
+                    {hasDocuments && (
+                      <form onSubmit={handleSubmit} className="border-t p-4">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={inputMessage}
+                            onChange={(e) => setInputMessage(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Type your message..."
+                            className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
+                          />
+                          <button
+                            type="submit"
+                            disabled={isLoading}
+                            className={`${themeClasses[theme].button} rounded-lg p-2`}
+                          >
+                            <Send className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </>
                 )}
               </div>

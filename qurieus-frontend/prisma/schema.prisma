@@ -101,7 +101,6 @@ model User {
   logs                  Log[]
   queries               QueryAnalytics[]
   visitorSessions       VisitorSession[]
-
   @@map("Users")
 }
 
@@ -220,7 +219,6 @@ model Document {
   updatedAt   DateTime @updatedAt
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  queries     QueryAnalytics[]
   fileName     String
   originalName String
   fileType     String
@@ -273,20 +271,17 @@ model Log {
 
 model QueryAnalytics {
   id          String   @id @default(cuid())
-  documentId  String
-  document    Document @relation(fields: [documentId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
   query       String
   response    String
   responseTime Int
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
   visitorId   String
   success     Boolean  @default(true)
   error       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([documentId])
   @@index([userId])
   @@index([visitorId])
   @@index([createdAt])

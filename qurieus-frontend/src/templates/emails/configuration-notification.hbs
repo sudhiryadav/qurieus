@@ -1,0 +1,19 @@
+{{> partials/header}}
+<div class="content" style="background: #fff; padding: 32px 24px; border: 1px solid #e9ecef; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #1a202c; margin-bottom: 16px;">System Configuration Required</h2>
+  <p style="font-size: 1.1rem; color: #333; margin-bottom: 24px;">A user attempted to use the chat widget but no documents were found in the system.</p>
+  
+  <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+    <h3 style="color: #2d3748; margin-bottom: 12px;">Details:</h3>
+    <p><strong>User ID:</strong> {{userId}}</p>
+    <p><strong>Query:</strong> {{query}}</p>
+    <p><strong>Timestamp:</strong> {{timestamp}}</p>
+  </div>
+
+  <p style="color: #555; margin-bottom: 24px;">Please ensure that the necessary documents are uploaded and configured in the system to enable the chat functionality.</p>
+  
+  <div style="text-align: center; margin-bottom: 24px;">
+    <a href="{{dashboardUrl}}" style="display: inline-block; background: #007bff; color: #fff; padding: 14px 32px; border-radius: 6px; font-size: 1.1rem; text-decoration: none; font-weight: 600;">Go to Dashboard</a>
+  </div>
+</div>
+{{> partials/footer}} 

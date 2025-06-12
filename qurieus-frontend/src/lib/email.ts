@@ -75,4 +75,30 @@ export async function sendResetPasswordEmail(email: string, resetUrl: string) {
   });
 }
 
+export async function sendConfigurationNotificationEmail(data: { 
+  userId: string; 
+  query: string; 
+  timestamp: string;
+  adminEmail: string;
+  userEmail: string;
+}) {
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || "https://qurieus.com"}/user/dashboard`;
+  
+  // Send to admin
+  await sendEmail({
+    to: data.adminEmail,
+    subject: "System Configuration Required - No Documents Found",
+    template: "configuration-notification",
+    context: { ...data, dashboardUrl },
+  });
+
+  // Send to user
+  await sendEmail({
+    to: data.userEmail,
+    subject: "System Configuration Required - No Documents Found",
+    template: "configuration-notification",
+    context: { ...data, dashboardUrl },
+  });
+}
+
 export { transporter }; 
