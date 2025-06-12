@@ -159,7 +159,11 @@ model Subscription {
   paddlePaymentAmount   Float?
   paddlePaymentDate     DateTime?
   paddlePaymentError    String?
+  paddlePaymentCurrency String?   @default("INR")
+  startDate             DateTime @default(now())
+  nextBillingDate       DateTime @default(now())
   createdAt             DateTime @default(now())
+  billingCycle          String @default("monthly")
   updatedAt             DateTime @updatedAt
 }
 

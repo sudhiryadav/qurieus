@@ -34,7 +34,7 @@ function renderTemplate(templateName: string, context: any) {
   return template({ ...context, logoUrl, year });
 }
 
-export async function sendEmail({ to, subject, template, context, html }: { to: string; subject: string; template?: string; context?: any; html?: string }) {
+export async function sendEmail({ to, subject, template, context, html,attachments }: { to: string; subject: string; template?: string; context?: any; html?: string, attachments?: any }) {
   let htmlContent = html;
   if (template) {
     htmlContent = renderTemplate(template, context || {});
@@ -44,6 +44,7 @@ export async function sendEmail({ to, subject, template, context, html }: { to: 
     to,
     subject,
     html: htmlContent,
+    attachments,
   };
   await transporter.sendMail(mailOptions);
 }
