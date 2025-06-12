@@ -58,8 +58,8 @@ export async function sendVerificationEmail(email: string, code: string) {
 }
 
 export async function sendContactEmail(data: { fullName: string; email: string; phone: string; message: string }) {
-  return sendEmail({
-    to: process.env.CONTACT_EMAIL || 'er.sudhir.yadav@gmail.com',
+  return process.env.CONTACT_EMAIL && await sendEmail({
+    to: process.env.CONTACT_EMAIL,
     subject: `New Contact Form Submission from ${data.fullName}`,
     template: "contact",
     context: data,

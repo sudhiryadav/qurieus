@@ -32,7 +32,7 @@ export default function SignUp({
   const [resendTimer, setResendTimer] = useState(60);
   const [user, setUser] = useState({
     name: "Sudhir Yadav",
-    email: "er.sudhir.yadav@gmail.com",
+    email: "techprosys@gmail.com",
     password: "Sidrules@123",
   });
 
@@ -50,10 +50,22 @@ export default function SignUp({
       }
 
       const response = await axios.post("/api/register", user);
+      
+      // If we get here, either it's a new user or an unverified user
       toast.success("Verification code sent to your email!");
       setShowVerification(true);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Registration failed. Please try again.");
+      if (err.response?.status === 409) {
+        // User exists and is verified
+        toast.error("This email is already registered and verified. Please sign in instead.");
+        if (handleOpenAuthModal) {
+          handleOpenAuthModal("signin");
+        } else {
+          router.push("/signin");
+        }
+      } else {
+        toast.error(err.response?.data?.error || "Registration failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -64,7 +76,7 @@ export default function SignUp({
     setLoading(true);
 
     try {
-      const response = await axios.post("/api/verify-email", {
+      const response = await axios.post("/api/user/verify-email", {
         email: user.email,
         code: verificationCode,
       });
