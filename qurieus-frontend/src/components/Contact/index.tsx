@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { showToast } from "@/components/Common/Toast";
 import axios from "@/lib/axios";
 
 const Contact = () => {
@@ -28,17 +28,16 @@ const Contact = () => {
     setIsLoading(true);
 
     try {
-      const { data } = await axios.post("/api/contact", formData);
-      toast.success("Message sent successfully!");
+      await axios.post("/api/contact", formData);
+      showToast.success("Message sent successfully");
       setFormData({
         fullName: "",
         email: "",
         phone: "",
         message: "",
       });
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message. Please try again.");
+    } catch (error: any) {
+      showToast.error(error.response?.data?.error || "Failed to send message");
     } finally {
       setIsLoading(false);
     }

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useSession } from "next-auth/react";
-import toast from "react-hot-toast";
-import { X, FileText } from "lucide-react";
-import ModalDialog from "../ui/ModalDialog";
 import axiosInstance from "@/lib/axios";
+import { FileText, X } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRef, useState } from "react";
+import ModalDialog from "../ui/ModalDialog";
+import { showToast } from "@/components/Common/Toast";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -66,7 +66,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     let currentValidationErrors: string[] = [];
 
     if (!isSuperAdmin && selectedFiles.length + newFilesArray.length > MAX_FILES_PER_UPLOAD) {
-      toast.error(`Cannot add more files. Maximum ${MAX_FILES_PER_UPLOAD} files allowed.`);
+      showToast.error(`Cannot add more files. Maximum ${MAX_FILES_PER_UPLOAD} files allowed.`);
       return;
     }
     
@@ -101,7 +101,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
 
     if (currentValidationErrors.length > 0) {
       const firstError = currentValidationErrors[0];
-      toast.error(firstError);
+      showToast.error(firstError);
     }
   };
 
@@ -142,13 +142,13 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     console.log('Valid files to upload:', validFiles);
 
     if (validFiles.length === 0) {
-      toast.error("Please select at least one valid file to upload");
+      showToast.error("Please select at least one valid file to upload");
       return;
     }
 
     // Don't proceed if there are any files with errors
     if (selectedFiles.some(f => f.error)) {
-      toast.error("Please remove or fix files with errors before uploading");
+      showToast.error("Please remove or fix files with errors before uploading");
       return;
     }
 
@@ -169,7 +169,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       });
 
       if (data.message === "Files uploaded successfully" && data.files) {
-        toast.success("All files uploaded successfully");
+        showToast.success("All files uploaded successfully");
         onUploadSuccess();
         onClose();
         handleReset();
@@ -178,7 +178,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       }
     } catch (error: any) {
       console.error("Upload error details:", error);
-      toast.error(error.response?.data?.error || error.message || "Failed to upload files");
+      showToast.error(error.response?.data?.error || error.message || "Failed to upload files");
     } finally {
       setLoading(false);
     }

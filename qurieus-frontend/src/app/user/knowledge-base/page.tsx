@@ -1,11 +1,8 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import toast from "react-hot-toast";
 import DocumentList from "@/components/DocumentList";
 import UploadDialog from "@/components/UploadDialog";
+import { useState } from "react";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);

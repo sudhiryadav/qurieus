@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { toast } from "react-hot-toast";
 import { Plus, Search } from "lucide-react";
 import axios from "@/lib/axios";
+import { showToast } from "@/components/Common/Toast";
 
 interface Subscription {
   id: string;
@@ -41,7 +41,7 @@ export default function AdminSubscriptionsPage() {
       setSubscriptions(data);
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
-      toast.error("Failed to fetch subscriptions");
+      showToast.error("Failed to fetch subscriptions");
     } finally {
       setLoading(false);
     }
@@ -67,10 +67,10 @@ export default function AdminSubscriptionsPage() {
       });
       setSubscriptions(subscriptions.map(s => s.id === editingSubscription.id ? { ...s, ...data } : s));
       setEditingSubscription(null);
-      toast.success("Subscription updated successfully");
+      showToast.success("Subscription updated successfully");
     } catch (error) {
       console.error("Error updating subscription:", error);
-      toast.error("Failed to update subscription");
+      showToast.error("Failed to update subscription");
     }
   };
 
@@ -81,10 +81,10 @@ export default function AdminSubscriptionsPage() {
         data: { id }
       });
       setSubscriptions(subscriptions.filter(s => s.id !== id));
-      toast.success("Subscription deleted successfully");
+      showToast.success("Subscription deleted successfully");
     } catch (error) {
       console.error("Error deleting subscription:", error);
-      toast.error("Failed to delete subscription");
+      showToast.error("Failed to delete subscription");
     }
   };
 

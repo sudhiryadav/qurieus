@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { showToast } from "@/components/Common/Toast";
 import axios from '@/lib/axios';
 import Loader from "@/components/Common/Loader";
 import Link from "next/link";
@@ -9,38 +9,24 @@ import Image from "next/image";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [loader, setLoader] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email) {
-      toast.error("Please enter your email address.");
-      return;
-    }
-
-    setLoader(true);
+    setLoading(true);
 
     try {
-      const res = await axios.post("/api/forgot-password/reset", {
-        email: email.toLowerCase(),
+      const response = await axios.post("/api/auth/forgot-password", {
+        email,
       });
 
-      if (res.status === 404) {
-        toast.error("User not found.");
-        return;
-      }
-
-      if (res.status === 200) {
-        toast.success(res.data);
-        setEmail("");
-      }
-
-      setEmail("");
-      setLoader(false);
+      showToast.success("Password reset link sent to your email!");
+      setSent(true);
     } catch (error: any) {
-      toast.error(error?.response?.data || "Something went wrong");
-      setLoader(false);
+      showToast.error(error.response?.data?.error || "Failed to send reset link. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,7 +77,7 @@ const ForgotPassword = () => {
                     type="submit"
                     className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark"
                   >
-                    Send Email {loader && <Loader />}
+                    Send Email {loading && <Loader />}
                   </button>
                 </div>
               </form>

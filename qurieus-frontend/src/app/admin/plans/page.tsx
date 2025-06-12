@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { toast } from "react-hot-toast";
 import { Plus, Search } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "@/lib/axios";
+import { showToast } from "@/components/Common/Toast";
 
 interface Plan {
   id: string;
@@ -71,7 +71,7 @@ export default function AdminPlansPage() {
         setPlans(data);
       } catch (error) {
         console.error("Error fetching plans:", error);
-        toast.error("Failed to load plans");
+        showToast.error("Failed to load plans");
       } finally {
         setLoading(false);
       }
@@ -89,7 +89,7 @@ export default function AdminPlansPage() {
       setPaddleConfig(data);
     } catch (error) {
       console.error("Error fetching Paddle config:", error);
-      toast.error("Failed to fetch Paddle config");
+      showToast.error("Failed to fetch Paddle config");
     }
   };
 
@@ -124,10 +124,10 @@ export default function AdminPlansPage() {
       const updatedPlan = await response.data;
       setPlans(plans.map(plan => plan.id === editingPlan.id ? updatedPlan : plan));
       setEditingPlan(null);
-      toast.success("Plan updated successfully");
+      showToast.success("Plan updated successfully");
     } catch (error) {
       console.error("Error updating plan:", error);
-      toast.error("Failed to update plan");
+      showToast.error("Failed to update plan");
     }
   };
 
@@ -139,10 +139,10 @@ export default function AdminPlansPage() {
       await axios.post(`/api/admin/subscription-plans/${editingPlan.id}/paddle/product`);
       await axios.post(`/api/admin/subscription-plans/${editingPlan.id}/paddle/price`);
       await fetchPaddleConfig(editingPlan.id);
-      toast.success("Paddle sync successful");
+      showToast.success("Paddle sync successful");
     } catch (err: any) {
       setPaddleSyncError("Paddle sync failed");
-      toast.error("Paddle sync failed");
+      showToast.error("Paddle sync failed");
     } finally {
       setPaddleSyncLoading(false);
     }
@@ -170,10 +170,10 @@ export default function AdminPlansPage() {
         maxStorageMB: undefined,
         maxQueriesPerDay: undefined,
       });
-      toast.success("Plan created successfully");
+      showToast.success("Plan created successfully");
     } catch (error) {
       console.error("Error creating plan:", error);
-      toast.error("Failed to create plan");
+      showToast.error("Failed to create plan");
     }
   };
 
@@ -182,10 +182,10 @@ export default function AdminPlansPage() {
     try {
       await axios.delete(`/api/admin/subscription-plans/${planId}`);
       setPlans(plans.filter(plan => plan.id !== planId));
-      toast.success("Plan deleted successfully");
+      showToast.success("Plan deleted successfully");
     } catch (error) {
       console.error("Error deleting plan:", error);
-      toast.error("Failed to delete plan");
+      showToast.error("Failed to delete plan");
     }
   };
 

@@ -1,9 +1,9 @@
 "use client";
+import { showToast } from "@/components/Common/Toast";
+import axios from "@/lib/axios";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast";
-import axios from "@/lib/axios";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -11,7 +11,6 @@ export default function VerifyEmailPage() {
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"loading" | "success" | "error" | "already">("loading");
   const [message, setMessage] = useState("");
-  const [email, setEmail] = useState<string | null>(null);
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -21,8 +20,7 @@ export default function VerifyEmailPage() {
       .then(async ({ data }) => {
         if (data.message === "Email verified successfully") {
           setStatus("success");
-          toast.success("Your email has been verified!");
-          setEmail(data.email);
+          showToast.success("Your email has been verified!");
           signIn("credentials", {
             redirect: false,
             email: data.email,
@@ -31,14 +29,13 @@ export default function VerifyEmailPage() {
             if (res?.ok) {
               router.push("/user/knowledge-base");
             } else {
-              toast.error("Error signing in after verification");
+              showToast.error("Error signing in after verification");
               router.push("/signin");
             }
           });
         } else if (data.message === "Email already verified") {
           setStatus("already");
           setMessage("Your email is already verified.");
-          setEmail(data.email);
         } else {
           setStatus("error");
           setMessage(data || "Invalid or expired verification token.");
@@ -48,7 +45,7 @@ export default function VerifyEmailPage() {
         setStatus("error");
         setMessage("Error verifying email.");
       });
-  }, [token]);
+  }, [token, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">

@@ -4,8 +4,8 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { toast } from "react-hot-toast";
 import { Search, Plus, Filter } from "lucide-react";
+import { showToast } from "@/components/Common/Toast";
 
 interface User {
   id: string;
@@ -82,7 +82,7 @@ export default function AdminUsersPage() {
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
-      toast.error("Failed to fetch users");
+      showToast.error("Failed to fetch users");
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function AdminUsersPage() {
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetch("/api/admin/users",   {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -107,10 +107,10 @@ export default function AdminUsersPage() {
           : user
       ));
       
-      toast.success(`User ${currentStatus ? 'deactivated' : 'activated'} successfully`);
+      showToast.success(`User ${currentStatus ? 'deactivated' : 'activated'} successfully`);
     } catch (error) {
       console.error("Error updating user status:", error);
-      toast.error("Failed to update user status");
+      showToast.error("Failed to update user status");
     }
   };
 
@@ -152,10 +152,10 @@ export default function AdminUsersPage() {
       ));
       
       setEditingUser(null);
-      toast.success("User updated successfully");
+      showToast.success("User updated successfully");
     } catch (error) {
       console.error("Error updating user:", error);
-      toast.error("Failed to update user");
+      showToast.error("Failed to update user");
     }
   };
 
@@ -184,10 +184,10 @@ export default function AdminUsersPage() {
         bio: "",
         phone: "",
       });
-      toast.success("User created successfully");
+      showToast.success("User created successfully");
     } catch (error) {
       console.error("Error creating user:", error);
-      toast.error("Failed to create user");
+      showToast.error("Failed to create user");
     }
   };
 

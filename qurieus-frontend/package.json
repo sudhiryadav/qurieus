@@ -59,6 +59,7 @@
     "react-apexcharts": "^1.7.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.4.1",
+    "react-toastify": "^11.0.5",
     "remark": "^15.0.1",
     "remark-html": "^16.0.1",
     "sonner": "^2.0.5",

@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { Download, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import axiosInstance from '@/lib/axios';
+import { showToast } from "@/components/Common/Toast";
 
 interface Document {
   id: string;
@@ -58,12 +58,12 @@ export default function DocumentList() {
       const response = await axiosInstance.delete(`/api/admin/documents/${documentToDelete}`);
       if (response.status === 200) {
         setDocuments(documents.filter(doc => doc.id !== documentToDelete));
-        toast.success("Document deleted successfully");
+        showToast.success("Document deleted successfully");
         fetchDocuments(); // Refresh the list
       }
     } catch (error) {
       console.error("Error deleting document:", error);
-      toast.error("Failed to delete document");
+      showToast.error("Failed to delete document");
     } finally {
       setDeleteModalOpen(false);
     }
@@ -74,12 +74,12 @@ export default function DocumentList() {
       const response = await axiosInstance.delete('/api/admin/documents/delete-all');
       if (response.status === 200) {
         setDocuments([]);
-        toast.success("All documents deleted successfully");
+        showToast.success("All documents deleted successfully");
         fetchDocuments();
       }
     } catch (error) {
       console.error("Error deleting all documents:", error);
-      toast.error("Failed to delete all documents");
+      showToast.error("Failed to delete all documents");
     } finally {
       setDeleteAllModalOpen(false);
     }
@@ -93,12 +93,12 @@ export default function DocumentList() {
       if (response.status === 200) {
         setDocuments(documents.filter(doc => !selectedDocuments.has(doc.id)));
         setSelectedDocuments(new Set());
-        toast.success("Selected documents deleted successfully");
+        showToast.success("Selected documents deleted successfully");
         fetchDocuments();
       }
     } catch (error) {
       console.error("Error deleting selected documents:", error);
-      toast.error("Failed to delete selected documents");
+      showToast.error("Failed to delete selected documents");
     } finally {
       setDeleteSelectedModalOpen(false);
     }
@@ -120,9 +120,10 @@ export default function DocumentList() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      showToast.success("Document downloaded successfully");
     } catch (error) {
       console.error('Error downloading document:', error);
-      toast.error('Failed to download document');
+      showToast.error('Failed to download document');
     }
   };
 

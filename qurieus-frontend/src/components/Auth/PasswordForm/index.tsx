@@ -1,13 +1,14 @@
 "use client";
-import { useState } from "react";
-import toast from "react-hot-toast";
 import PasswordInput from "@/components/Common/PasswordInput";
+import { showToast } from "@/components/Common/Toast";
+import { useState } from "react";
 
 interface PasswordFormProps {
   onSubmit: (password: string) => Promise<void>;
   submitButtonText?: string;
   requireCurrentPassword?: boolean;
   className?: string;
+  onSuccess?: () => void;
 }
 
 export default function PasswordForm({
@@ -15,6 +16,7 @@ export default function PasswordForm({
   submitButtonText = "Change Password",
   requireCurrentPassword = false,
   className = "",
+  onSuccess,
 }: PasswordFormProps) {
   const [formData, setFormData] = useState({
     currentPassword: "",
@@ -80,8 +82,10 @@ export default function PasswordForm({
         newPassword: "",
         confirmPassword: "",
       });
+      showToast.success("Password updated successfully");
+      onSuccess?.();
     } catch (error: any) {
-      toast.error(error.message || "Failed to change password");
+      showToast.error(error.response?.data?.error || "Failed to update password");
     } finally {
       setLoading(false);
     }

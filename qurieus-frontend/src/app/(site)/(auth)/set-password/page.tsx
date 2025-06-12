@@ -2,9 +2,9 @@
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import toast from "react-hot-toast";
 import PasswordForm from "@/components/Auth/PasswordForm";
 import axios from "@/lib/axios";
+import { showToast } from "@/components/Common/Toast";
 
 export default function SetPasswordPage() {
   const { data: session, status } = useSession();
@@ -25,7 +25,7 @@ export default function SetPasswordPage() {
   const handleSetPassword = async (password: string) => {
     try {
       const { data } = await axios.post("/api/user/set-password", { password });
-      toast.success("Password set successfully!");
+      showToast.success("Password set successfully");
       // Refresh session by signing in with new credentials
       await signIn("credentials", {
         redirect: false,
@@ -40,7 +40,7 @@ export default function SetPasswordPage() {
         }
       }, 1000);
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || "Failed to set password");
+      showToast.error(error.response?.data?.error || "Failed to set password");
     }
   };
 

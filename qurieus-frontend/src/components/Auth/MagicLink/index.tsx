@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import toast from "react-hot-toast";
+import { showToast } from "@/components/Common/Toast";
 import { validateEmail } from "@/utils/validateEmail";
 import Loader from "@/components/Common/Loader";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,44 +9,35 @@ import axios from "@/lib/axios";
 
 const MagicLink = () => {
   const [email, setEmail] = useState("");
-  const [loader, setLoader] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     if (!email) {
-      return toast.error("Please enter your email address.");
+      return showToast.error("Please enter your email address.");
     }
 
     if (!validateEmail(email)) {
-      return toast.error("Please enter a valid email address.");
+      return showToast.error("Please enter a valid email address.");
     }
 
     try {
-      setLoader(true);
-      // Pre-create user for magic link sign-up
-      await axios.post("/api/register-magic-link", { email });
-      const result = await signIn("email", {
+      const response = await axios.post("/api/auth/magic-link", {
         email,
-        redirect: false,
-        callbackUrl,
       });
 
-      if (result?.error) {
-        toast.error(result.error || "Unable to send email");
-      } else {
-        toast.success("Magic link sent to your email");
-        setEmail("");
-        router.push("/verify-request");
-      }
-    } catch (error) {
-      console.error("Magic link error:", error);
-      toast.error("Unable to send email!");
+      showToast.success("Magic link sent to your email!");
+      setSent(true);
+    } catch (error: any) {
+      showToast.error(error.response?.data?.error || "Failed to send magic link. Please try again.");
     } finally {
-      setLoader(false);
+      setLoading(false);
     }
   };
 
@@ -66,10 +57,10 @@ const MagicLink = () => {
       <div className="mb-9">
         <button
           type="submit"
-          disabled={loader}
+          disabled={loading}
           className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-70"
         >
-          Send Magic Link {loader && <Loader />}
+          Send Magic Link {loading && <Loader />}
         </button>
       </div>
     </form>

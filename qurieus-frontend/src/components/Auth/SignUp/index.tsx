@@ -1,16 +1,16 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
-import { toast } from "react-hot-toast";
-import Link from "next/link";
-import Logo from "@/components/Common/Logo";
+import MagicLink from "@/components/Auth/MagicLink";
 import SwitchOption from "@/components/Auth/SwitchOption";
 import Loader from "@/components/Common/Loader";
-import MagicLink from "@/components/Auth/MagicLink";
-import { OTPInput } from "@/components/OTPInput";
+import Logo from "@/components/Common/Logo";
+import { showToast } from "@/components/Common/Toast";
 import { CountdownTimer } from "@/components/CountdownTimer";
-import { signIn } from "next-auth/react";
+import { OTPInput } from "@/components/OTPInput";
 import axios from "@/lib/axios";
+import { signIn } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface SignUpFormProps {
   onSuccess?: () => void;
@@ -31,7 +31,7 @@ export default function SignUp({
   const [resendDisabled, setResendDisabled] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
   const [user, setUser] = useState({
-    name: "Sudhir Yadav",
+    name: "TechProSys User",
     email: "techprosys@gmail.com",
     password: "Sidrules@123",
   });
@@ -44,7 +44,7 @@ export default function SignUp({
       const email = user.email;
 
       if (process.env.NODE_ENV !== "development" && !isBusinessEmail(email)) {
-        toast.error("Please use a business email address");
+        showToast.error("Please use a business email address");
         setLoading(false);
         return;
       }
@@ -52,19 +52,19 @@ export default function SignUp({
       const response = await axios.post("/api/register", user);
       
       // If we get here, either it's a new user or an unverified user
-      toast.success("Verification code sent to your email!");
+      showToast.success("Verification code sent to your email!");
       setShowVerification(true);
     } catch (err: any) {
       if (err.response?.status === 409) {
         // User exists and is verified
-        toast.error("This email is already registered and verified. Please sign in instead.");
+        showToast.error("This email is already registered and verified. Please sign in instead.");
         if (handleOpenAuthModal) {
           handleOpenAuthModal("signin");
         } else {
           router.push("/signin");
         }
       } else {
-        toast.error(err.response?.data?.error || "Registration failed. Please try again.");
+        showToast.error(err.response?.data?.error || "Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ export default function SignUp({
         code: verificationCode,
       });
 
-      toast.success("Email verified successfully!");
+      showToast.success("Email verified successfully!");
       // Auto-login after verification
       const signInResult = await signIn("credentials", {
         redirect: false,
@@ -96,7 +96,7 @@ export default function SignUp({
         }
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Verification failed. Please try again.");
+      showToast.error(err.response?.data?.error || "Verification failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ export default function SignUp({
         email: user.email
       });
 
-      toast.success("Verification code resent!");
+      showToast.success("Verification code resent!");
 
       // Start countdown timer
       const timer = setInterval(() => {
@@ -125,7 +125,7 @@ export default function SignUp({
         });
       }, 1000);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to resend code");
+      showToast.error(err.response?.data?.error || "Failed to resend code");
       setResendDisabled(false);
     }
   };

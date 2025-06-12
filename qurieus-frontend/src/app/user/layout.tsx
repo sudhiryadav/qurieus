@@ -1,10 +1,10 @@
 "use client";
 
+import { showToast } from "@/components/Common/Toast";
 import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 
 export default function UserLayout({
   children,
@@ -18,7 +18,7 @@ export default function UserLayout({
   // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
-      toast.error("Please sign in to access this page");
+      showToast.error("Please sign in to access this page");
       router.push("/auth/signin");
       return;
     }
@@ -30,7 +30,7 @@ export default function UserLayout({
         const data = response.data;
 
         if (!data) {
-          toast.error("Please subscribe to a plan to access this page");
+          showToast.error("Please subscribe to a plan to access this page");
           router.push("/pricing");
           return;
         }
@@ -38,7 +38,7 @@ export default function UserLayout({
         setIsSubscriptionChecked(true);
       } catch (error) {
         console.error("Error checking subscription:", error);
-        toast.error("Error checking subscription status. Please try again later.");
+        showToast.error("Error checking subscription status. Please try again later.");
         router.push("/pricing");
       }
     };

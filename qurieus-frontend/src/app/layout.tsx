@@ -12,7 +12,7 @@ import PreLoader from "@/components/Common/PreLoader";
 import Sidebar from "@/components/Sidebar";
 import { usePathname } from "next/navigation";
 import SessionRedirector from "@/components/SessionRedirector";
-import ToasterContext from "@/components/contex/ToasetContex";
+import { Toast } from "@/components/Common/Toast";
 
 export default function RootLayout({
   children,
@@ -35,7 +35,7 @@ export default function RootLayout({
         head.js. Find out more at https://beta.nextjs.org/docs/api-reference/file-conventions/head
       */}
       <head>
-        <link rel="icon" href="/images/logo/logo.svg" sizes="any" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
 
       <body>
@@ -49,7 +49,7 @@ export default function RootLayout({
               enableSystem={false}
               defaultTheme="light"
             >
-              <ToasterContext />
+              <Toast />
               <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
               <div className="flex">
                 {showSidebar && (

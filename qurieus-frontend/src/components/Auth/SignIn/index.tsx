@@ -2,13 +2,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { toast } from "react-hot-toast";
 import Link from "next/link";
 import Logo from "@/components/Common/Logo";
 import SwitchOption from "@/components/Auth/SwitchOption";
 import Loader from "@/components/Common/Loader";
 import MagicLink from "@/components/Auth/MagicLink";
 import axios from "@/lib/axios";
+import { showToast } from "@/components/Common/Toast";
 
 interface SignInFormProps {
   onSuccess?: () => void;
@@ -37,38 +37,46 @@ export default function SignIn({
     }
   }, [status, router, callbackUrl]);
 
-  const loginUser = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    if (!loginData.email || !loginData.password) {
-      setError("Please enter both email and password");
-      return;
-    }
+    setLoading(true);
+
     try {
-      setLoading(true);
       const result = await signIn("credentials", {
-        ...loginData,
         redirect: false,
-        callbackUrl,
+        email: loginData.email,
+        password: loginData.password,
       });
+
       if (result?.error) {
-        if (result.error === "Please verify your email before signing in") {
-          setError(
-            "Please verify your email before signing in. Check your inbox for the verification link.",
-          );
-        } else {
-          setError(result.error);
-        }
-      } else if (result) {
+        showToast.error(result.error);
+      } else {
         if (onSuccess) {
+          showToast.success("Signed in successfully!");
           onSuccess();
-        }
-        else if (result.url) {
-          router.push(result.url || callbackUrl);
+        } else {
+          router.push("/user/knowledge-base");
         }
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during sign in");
+    } catch (error: any) {
+      showToast.error(error.message || "Sign in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await axios.post("/api/auth/magic-link", {
+        email: loginData.email,
+      });
+
+      showToast.success("Magic link sent to your email!");
+    } catch (error: any) {
+      showToast.error(error.response?.data?.error || "Failed to send magic link. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +117,7 @@ export default function SignIn({
       </p>
       <SwitchOption isPassword={isPassword} setIsPassword={setIsPassword} />
       {isPassword ? (
-        <form onSubmit={loginUser}>
+        <form onSubmit={handleSubmit}>
           {error && (
             <div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900">
               <div className="flex flex-col gap-2">
@@ -121,19 +129,7 @@ export default function SignIn({
                     type="button"
                     className="w-fit text-left text-primary underline"
                     disabled={loading}
-                    onClick={async () => {
-                      setLoading(true);
-                      try {
-                        const res = await axios.post("/api/resend-verification", {
-                          email: loginData.email
-                        });
-                        toast.success(res.data.message);
-                      } catch (err: any) {
-                        toast.error(err.response?.data?.error || "Failed to resend verification email");
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
+                    onClick={handleMagicLink}
                   >
                     Resend verification email
                   </button>

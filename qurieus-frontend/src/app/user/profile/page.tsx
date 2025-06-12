@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import toast from "react-hot-toast";
 import PasswordForm from "@/components/Auth/PasswordForm";
+import { showToast } from "@/components/Common/Toast";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 export default function Profile() {
   const { data: session, update } = useSession();
@@ -46,7 +46,7 @@ export default function Profile() {
       });
         } catch (error) {
           console.error("Error fetching profile:", error);
-          toast.error("Failed to load profile data");
+          showToast.error("Failed to load profile data");
         }
       }
     };
@@ -89,10 +89,10 @@ export default function Profile() {
         },
       });
 
-      toast.success("Profile updated successfully");
+      showToast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile. Please try again.");
+      showToast.error("Failed to update profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -115,7 +115,7 @@ export default function Profile() {
       throw new Error(data.message || "Failed to change password");
     }
 
-    toast.success("Password changed successfully");
+    showToast.success("Password changed successfully");
   };
 
   return (

@@ -4,7 +4,7 @@ import Logo from "@/components/Common/Logo";
 import axios from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { showToast } from "@/components/Common/Toast";
 
 const ResetPassword = ({ token }: { token: string }) => {
   const [data, setData] = useState({
@@ -32,14 +32,13 @@ const ResetPassword = ({ token }: { token: string }) => {
           });
         }
       } catch (error: any) {
-        toast.error(error?.response?.data);
+        showToast.error(error?.response?.data);
         router.push("/forgot-password");
       }
     };
 
     verifyToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setData({
@@ -53,25 +52,23 @@ const ResetPassword = ({ token }: { token: string }) => {
     setLoader(true);
 
     if (data.newPassword === "") {
-      toast.error("Please enter your password.");
+      showToast.error("Please enter your password.");
       return;
     }
 
     try {
-      const res = await axios.post(`/api/forgot-password/update`, {
-        email: user?.email,
+      await axios.post("/api/auth/reset-password", {
+        token,
         password: data.newPassword,
+        confirmPassword: data.ReNewPassword,
       });
 
-      if (res.status === 200) {
-        toast.success(res.data);
-        setData({ newPassword: "", ReNewPassword: "" });
-        router.push("/signin");
-      }
-
-      setLoader(false);
+      showToast.success("Password reset successfully");
+      setData({ newPassword: "", ReNewPassword: "" });
+      router.push("/signin");
     } catch (error: any) {
-      toast.error(error.response.data);
+      showToast.error(error.response?.data?.error || "Failed to reset password");
+    } finally {
       setLoader(false);
     }
   };

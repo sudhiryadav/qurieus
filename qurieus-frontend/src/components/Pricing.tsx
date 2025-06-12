@@ -4,12 +4,12 @@ import { Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import toast from "react-hot-toast";
 import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
 import { SubscriptionPlanWithPaddle } from "@/app/(site)/pricing/page";
 import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
 import axios from "@/lib/axios";
+import { showToast } from "@/components/Common/Toast";
 
 export default function Pricing() {
   const router = useRouter();
@@ -48,13 +48,15 @@ export default function Pricing() {
     if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
       paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId);
     } else {
-      toast.error(
+      showToast.error(
         "Subscription configuration is incomplete. Please contact support.",
       );
     }
   };
 
-  const handlePaddleComplete = async (data: CheckoutEventsData | undefined): Promise<void> => {
+  const handlePaddleComplete = async (
+    data: CheckoutEventsData | undefined,
+  ): Promise<void> => {
     console.log("Paddle complete", data);
     // Call the subscription creation API
     try {
@@ -64,11 +66,13 @@ export default function Pricing() {
         planId: selectedPlan?.id,
         status: "active",
         currentPeriodStart: new Date().toISOString(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        currentPeriodEnd: new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 30 days from now
       });
-      toast.success("Subscription created successfully");
+      showToast.success("Subscription created successfully");
     } catch (error) {
-      toast.error("Failed to create subscription");
+      showToast.error("Failed to create subscription");
     }
   };
   const handlePaddleClose = (data: CheckoutEventsData | undefined) => {
@@ -96,7 +100,7 @@ export default function Pricing() {
         return;
       }
     } catch (error) {
-      toast.error("An error occurred while processing your request");
+      showToast.error("An error occurred while processing your request");
     } finally {
       setLoading(null);
     }
