@@ -120,7 +120,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!user?.password) {
-          throw new Error("Please set a password for your account");
+          throw new Error("Please set a password for your account.");
         }
 
         const passwordMatch = await bcrypt.compare(
@@ -129,7 +129,7 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!passwordMatch) {
-          throw new Error("Incorrect username or password");
+          throw new Error("Incorrect username or password.");
         }
 
         return {
