@@ -3,10 +3,9 @@
 import { showToast } from "@/components/Common/Toast";
 import Sidebar from "@/components/Sidebar";
 import { useSidebar } from "@/contexts/SidebarContext";
-import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function UserLayout({
   children,
@@ -15,44 +14,15 @@ export default function UserLayout({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isSubscriptionChecked, setIsSubscriptionChecked] = useState(false);
   const { sidebarOpen, setSidebarOpen } = useSidebar();
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
-      showToast.error("Please sign in to access this page");
-      router.push("/auth/signin");
+      router.push("/signin");
       return;
     }
+  }, [status, router]);
 
-    const checkSubscription = async () => {
-      try {
-        const response = await axiosInstance.get("/api/subscription/check");
-        const data = response.data;
-
-        if (!data) {
-          showToast.error("Please subscribe to a plan to access this page");
-          router.push("/pricing");
-          return;
-        }
-
-        setIsSubscriptionChecked(true);
-      } catch (error) {
-        console.error("Error checking subscription:", error);
-        showToast.error(
-          "Error checking subscription status. Please try again later.",
-        );
-        router.push("/pricing");
-      }
-    };
-
-    if (session?.user) {
-      checkSubscription();
-    }
-  }, [status, router, session]);
-
-  // Show loading state while checking auth
   if (status === "loading") {
     return (
       <div className="flex h-screen w-full items-center justify-center pt-16">
@@ -61,19 +31,13 @@ export default function UserLayout({
     );
   }
 
-  // Don't render anything if not authenticated or subscription not checked
-  if (!session?.user || !isSubscriptionChecked) {
-    return null;
-  }
-
-  // If authenticated and subscription checked, show the layout
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex">
-        {sidebarOpen && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
-        <main className="flex-1 p-8">
-          {children}
-        </main>
+        {sidebarOpen && (
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        )}
+        <main className="flex-1 p-8">{children}</main>
       </div>
     </div>
   );

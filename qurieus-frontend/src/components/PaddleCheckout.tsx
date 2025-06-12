@@ -32,6 +32,7 @@ export type PaddleCheckoutProps = {
 
 export type PaddleCheckoutRef = {
   openCheckout: (priceId: string) => void;
+  closeCheckout: () => void;
 };
 
 export const PaddleCheckout = forwardRef<
@@ -80,6 +81,10 @@ export const PaddleCheckout = forwardRef<
 
   useImperativeHandle(ref, () => ({
     openCheckout,
+    closeCheckout: () => {
+      if (!paddle) return;
+      paddle.Checkout.close();
+    },
   }));
 
   function openCheckout(priceId: string) {

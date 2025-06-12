@@ -57,7 +57,7 @@ export default function Pricing() {
   const handlePaddleComplete = async (
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
-    console.log("Paddle complete", data);
+    paddleRef.current?.closeCheckout();
     // Call the subscription creation API
     try {
       await axios.post("/api/subscription/create", {
@@ -98,6 +98,8 @@ export default function Pricing() {
       if (plan.paddleConfig?.priceId && paddleRef.current) {
         paddleRef.current.openCheckout(plan.paddleConfig.priceId);
         return;
+      }else{
+        showToast.error("Paddle configuration is incomplete. Please contact support.");
       }
     } catch (error) {
       showToast.error("An error occurred while processing your request");

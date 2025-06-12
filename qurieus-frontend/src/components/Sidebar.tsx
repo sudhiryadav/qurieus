@@ -53,7 +53,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 href={item.href}
                 className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
                   ${isActive ? "bg-primary/10 text-primary" : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"}`}
-                onClick={onClose}
               >
                 {item.icon}
                 {item.name}
@@ -81,7 +80,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         href={item.href}
                         className={`flex items-center px-2 py-1 text-sm rounded-md transition-colors
                           ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 dark:text-gray-300 hover:text-primary"}`}
-                        onClick={onClose}
                       >
                         {item.icon}
                         {item.name}

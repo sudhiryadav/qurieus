@@ -71,7 +71,6 @@ const Header: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut({ redirect: false });
-      showToast.success("Signed out successfully");
     } catch (error) {
       showToast.error("Failed to sign out");
     }
