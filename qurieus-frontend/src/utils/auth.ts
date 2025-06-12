@@ -129,7 +129,7 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!passwordMatch) {
-          throw new Error("Incorrect password");
+          throw new Error("Incorrect username or password");
         }
 
         return {
