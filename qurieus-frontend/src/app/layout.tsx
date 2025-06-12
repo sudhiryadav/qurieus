@@ -34,7 +34,9 @@ export default function RootLayout({
         <head /> will contain the components returned by the nearest parent
         head.js. Find out more at https://beta.nextjs.org/docs/api-reference/file-conventions/head
       */}
-      <head />
+      <head>
+        <link rel="icon" href="/images/logo/logo.svg" sizes="any" />
+      </head>
 
       <body>
         <SessionProvider>
