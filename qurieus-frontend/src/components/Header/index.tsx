@@ -1,21 +1,19 @@
 "use client";
+import { showToast } from "@/components/Common/Toast";
+import { Menu } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Logo from "../Common/Logo";
 
+import { useSidebar } from "@/contexts/SidebarContext";
 import menuData from "./menuData";
 
-interface HeaderProps {
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
+const Header: React.FC = () => {
   const { data: session } = useSession();
+  const { sidebarOpen, setSidebarOpen } = useSidebar();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -68,22 +66,31 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
   const { theme, setTheme } = useTheme();
 
+  const isUserRoute = pathUrl.startsWith("/user") || pathUrl.startsWith("/admin");
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ redirect: false });
+      showToast.success("Signed out successfully");
+    } catch (error) {
+      showToast.error("Failed to sign out");
+    }
+  };
+
   return (
     <header className="fixed left-0 top-0 z-50 w-full bg-white shadow-sm dark:bg-dark-2">
       <div className="flex h-16 items-center justify-between px-4">
         <div className="flex items-center">
           {/* Sidebar toggle button (mobile only) */}
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            className="block lg:hidden p-2 rounded focus:outline-none"
-            aria-label="Open sidebar"
-          >
-            <span className="sr-only">Open sidebar</span>
-            <svg className="h-6 w-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          {isUserRoute && setSidebarOpen && (
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+          )}
           {/* Brand logo */}
           <div className="flex-shrink-0 ml-2">
             <Logo />
@@ -215,7 +222,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
                           </Link>
                           <hr className="my-1 border-gray-200 dark:border-dark-3" />
                           <button
-                            onClick={() => signOut({ callbackUrl: "/" })}
+                            onClick={handleSignOut}
                             className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                           >
                             Sign Out

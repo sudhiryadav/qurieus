@@ -1,6 +1,8 @@
 "use client";
 
 import { showToast } from "@/components/Common/Toast";
+import Sidebar from "@/components/Sidebar";
+import { useSidebar } from "@/contexts/SidebarContext";
 import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -14,6 +16,7 @@ export default function UserLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isSubscriptionChecked, setIsSubscriptionChecked] = useState(false);
+  const { sidebarOpen, setSidebarOpen } = useSidebar();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -25,7 +28,6 @@ export default function UserLayout({
 
     const checkSubscription = async () => {
       try {
-        
         const response = await axiosInstance.get("/api/subscription/check");
         const data = response.data;
 
@@ -34,11 +36,13 @@ export default function UserLayout({
           router.push("/pricing");
           return;
         }
-        
+
         setIsSubscriptionChecked(true);
       } catch (error) {
         console.error("Error checking subscription:", error);
-        showToast.error("Error checking subscription status. Please try again later.");
+        showToast.error(
+          "Error checking subscription status. Please try again later.",
+        );
         router.push("/pricing");
       }
     };
@@ -65,9 +69,11 @@ export default function UserLayout({
   // If authenticated and subscription checked, show the layout
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Main content */}
-      <div className="flex-1">
-        <div className="container mx-auto px-4 py-8">{children}</div>
+      <div className="flex">
+        {sidebarOpen && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+        <main className="flex-1 p-8">
+          {children}
+        </main>
       </div>
     </div>
   );

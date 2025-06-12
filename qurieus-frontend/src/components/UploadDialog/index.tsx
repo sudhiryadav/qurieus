@@ -137,18 +137,10 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const validFiles = selectedFiles.filter(f => !f.error);
-    console.log('Valid files to upload:', validFiles);
 
     if (validFiles.length === 0) {
       showToast.error("Please select at least one valid file to upload");
-      return;
-    }
-
-    // Don't proceed if there are any files with errors
-    if (selectedFiles.some(f => f.error)) {
-      showToast.error("Please remove or fix files with errors before uploading");
       return;
     }
 

@@ -1,18 +1,17 @@
 "use client";
 
+import PreLoader from "@/components/Common/PreLoader";
+import { Toast } from "@/components/Common/Toast";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ScrollToTop from "@/components/ScrollToTop";
+import SessionRedirector from "@/components/SessionRedirector";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
+import { useEffect, useState } from "react";
 import "../styles/index.css";
 import "../styles/prism-vsc-dark-plus.css";
-import { useEffect, useState } from "react";
-import PreLoader from "@/components/Common/PreLoader";
-import Sidebar from "@/components/Sidebar";
-import { usePathname } from "next/navigation";
-import SessionRedirector from "@/components/SessionRedirector";
-import { Toast } from "@/components/Common/Toast";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 
 export default function RootLayout({
   children,
@@ -21,8 +20,6 @@ export default function RootLayout({
 }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const pathname = usePathname();
-  const showSidebar = pathname.startsWith("/user") || pathname.startsWith("/admin");
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
@@ -30,10 +27,6 @@ export default function RootLayout({
 
   return (
     <html suppressHydrationWarning={true} className="!scroll-smooth" lang="en">
-      {/*
-        <head /> will contain the components returned by the nearest parent
-        head.js. Find out more at https://beta.nextjs.org/docs/api-reference/file-conventions/head
-      */}
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
@@ -50,15 +43,10 @@ export default function RootLayout({
               defaultTheme="light"
             >
               <Toast />
-              <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-              <div className="flex">
-                {showSidebar && (
-                  <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-                )}
-                <main className="flex-1 pt-16">
-                  {children}
-                </main>
-              </div>
+              <SidebarProvider>
+                <Header />
+                <main className="flex-1 pt-16">{children}</main>
+              </SidebarProvider>
               <Footer />
               <ScrollToTop />
             </ThemeProvider>

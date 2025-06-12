@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       />
       <div className="flex flex-col h-full py-6 px-4">
         <div className="mb-8">
-          <span className="text-lg font-bold">Menu</span>
+          <span className="text-lg font-bold">User Menu</span>
         </div>
         <nav className="flex-1 space-y-2">
           {userNav.map((item) => {
