@@ -58,7 +58,6 @@ export default function Pricing() {
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
     paddleRef.current?.closeCheckout();
-    showToast.success("Subscription created successfully");
     // Call the subscription creation API
     try {
       await axios.post("/api/subscription/create", {
@@ -77,7 +76,6 @@ export default function Pricing() {
       });
       showToast.success("Subscription created successfully");
     } catch (error) {
-      debugger;
       showToast.error("Failed to create subscription");
     }
   };
