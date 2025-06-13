@@ -30,7 +30,7 @@ cp .env.example .env.local
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:8000
+NEXT_PUBLIC_APP_URL=http://localhost:8000
 ```
 
 ### 3. Development

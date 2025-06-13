@@ -49,6 +49,7 @@ export async function POST(
           currencyCode: plan.currency as any,
         },
         description: plan.description || plan.name,
+        name: plan.name || plan.description,
         billingCycle: {
           interval: "month",
           frequency: 1,
@@ -63,6 +64,7 @@ export async function POST(
           currencyCode: plan.currency as any,
         },
         description: plan.description || plan.name,
+        name: plan.name || plan.description,
         billingCycle: {
           interval: "month",
           frequency: 1,

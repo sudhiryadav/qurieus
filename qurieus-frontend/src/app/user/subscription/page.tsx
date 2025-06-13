@@ -10,26 +10,38 @@ import { Subscription, SubscriptionPlan } from "@prisma/client";
 export default function SubscriptionPage() {
   const { data: session } = useSession();
   const [subscription, setSubscription] = useState<SubscriptionAndPlan | null>(null);
+  const [attempts, setAttempts] = useState(0);
   interface SubscriptionAndPlan extends Subscription {
     plan: SubscriptionPlan;
   }
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      try {
-        const response = await axiosInstance.get("/api/subscription");
-        setSubscription(response.data as SubscriptionAndPlan);
-      } catch (error) {
-        console.error("Error fetching subscription:", error);
-        showToast.error("Failed to load subscription details");
-      } finally {
-        setLoading(false);
+  const fetchSubscription = async (force: boolean = false) => {
+    try {
+      const response = await axiosInstance.get("/api/subscription");
+      setSubscription(response.data as SubscriptionAndPlan);
+      if (force) {
+        setAttempts(0);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      showToast.error("Failed to load subscription details");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (session?.user) {
-      fetchSubscription();
+      // Check every 5 seconds if the subscription is active for 3 times then stop checking
+      const interval = setInterval(() => {
+        setAttempts((prev) => prev + 1);
+        fetchSubscription(true);
+        if (attempts >= 3) {
+          clearInterval(interval);
+        }
+      }, 5000);
+      return () => clearInterval(interval);
     }
   }, [session]);
 
@@ -55,6 +67,17 @@ export default function SubscriptionPage() {
           >
             View Plans
           </a>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            {/* Show reload button after the attemts are completed in the interval above */}
+            {attempts >= 3 && (
+              <button onClick={() => fetchSubscription(true)} className="inline-block rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90">Reload</button>
+            )}
+            {attempts < 3 && (
+              <p className="mt-4 text-gray-600 dark:text-gray-400">
+                or wait for 5 seconds to check again while we are processing your subscription.
+              </p>
+            )}
+          </p>
         </div>
       </div>
     );
@@ -74,7 +97,8 @@ export default function SubscriptionPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
-              <p className="text-lg font-medium capitalize">{subscription.status}</p>
+              {/* set color green if active, red if inactive and show it with background color and padding */}
+              <p className={`text-lg font-medium capitalize ${subscription.status === "active" ? "text-green-500 bg-green-500/10 p-2 rounded-md" : "text-red-500 bg-red-500/10 p-2 rounded-md"}`}>{subscription.status === "active" ? "Active" : "Inactive (Processing)"}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Billing Cycle</p>

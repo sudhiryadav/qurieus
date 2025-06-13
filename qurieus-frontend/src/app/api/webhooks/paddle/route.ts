@@ -1,9 +1,75 @@
 import { sendEmail } from "@/lib/email";
-import { generateInvoicePDF } from "@/lib/invoice";
 import { prisma } from "@/utils/prismaDB";
 import { verifyPaddleWebhook } from "@/lib/paddle";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import puppeteer from "puppeteer";
+import handlebars from "handlebars";
+import fs from "fs/promises";
+import path from "path";
+
+// Register Handlebars helpers
+handlebars.registerHelper("formatDate", (date: Date) => date.toLocaleDateString());
+handlebars.registerHelper("formatAmount", (amount: string) => (parseFloat(amount) / 100).toFixed(2));
+handlebars.registerHelper("eq", (a: string, b: string) => a === b);
+
+async function generateInvoicePDF({
+  customerName,
+  customerEmail,
+  subscriptionId,
+  planName,
+  amount,
+  currency,
+  date,
+  status,
+}: {
+  customerName: string;
+  customerEmail: string;
+  subscriptionId: string;
+  planName: string;
+  amount: string;
+  currency: string;
+  date: Date;
+  status: string;
+}) {
+  const browser = await puppeteer.launch({
+    headless: true,
+  });
+  const page = await browser.newPage();
+
+  // Read and compile the template
+  const templatePath = path.join(process.cwd(), "src", "templates", "pdf", "invoice.hbs");
+  const templateContent = await fs.readFile(templatePath, "utf-8");
+  const template = handlebars.compile(templateContent);
+
+  // Generate HTML from template
+  const html = template({
+    customerName,
+    customerEmail,
+    subscriptionId,
+    planName,
+    amount,
+    currency,
+    date,
+    status,
+    logoUrl: `${process.env.NEXT_PUBLIC_APP_URL}/images/logo.svg`,
+  });
+
+  await page.setContent(html);
+  const pdf = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: {
+      top: "20px",
+      right: "20px",
+      bottom: "20px",
+      left: "20px",
+    },
+  });
+
+  await browser.close();
+  return pdf;
+}
 
 export async function POST(req: Request) {
   try {
@@ -37,17 +103,17 @@ export async function POST(req: Request) {
     if (event_type === "subscription.created") {
       const {
         id: subscriptionId,
-        customer_id: customerId,
         status,
         items,
         next_billed_at,
         billing_cycle,
         currency,
         created_at,
+        customer_id: customerId,
         custom_data,
       } = data;
 
-      const plan = items[0].product.name;
+      const plan = items[0].product.name || items[0].product.description;
       const amount = items[0].price.unit_price.amount;
 
       const user = await prisma.user.findFirst({
@@ -71,29 +137,35 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      await prisma.subscription.create({
-        data: {
+      // if the subscription already exists, update it
+      await prisma.subscription.upsert({
+        where: {
+          paddleSubscriptionId: subscriptionId,
+        },
+        create: {
           paddleSubscriptionId: subscriptionId,
           paddleCustomerId: customerId,
           status,
-          paddlePaymentAmount:  amount ? parseFloat(amount) : 0,
+          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
           paddlePaymentCurrency: currency,
           nextBillingDate: new Date(next_billed_at),
           billingCycle: billing_cycle.interval,
           startDate: new Date(created_at),
           currentPeriodStart: new Date(created_at),
           currentPeriodEnd: new Date(next_billed_at),
-          user: {
-            connect: {
-              id: user.id
-            }
-          },
-          plan: {
-            connect: {
-              id: subscriptionPlan.id
-            }
-          }
+          userId: user.id,
+          planId: subscriptionPlan.id
         },
+        update: {
+          status,
+          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+          paddlePaymentCurrency: currency,
+          nextBillingDate: new Date(next_billed_at),
+          billingCycle: billing_cycle.interval,
+          currentPeriodStart: new Date(created_at),
+          currentPeriodEnd: new Date(next_billed_at),
+          planId: subscriptionPlan.id
+        }
       });
 
       try {
@@ -202,10 +274,22 @@ export async function POST(req: Request) {
         billing_cycle,
         currency,
         created_at,
+        customer_id: customerId,
+        custom_data,
       } = data;
 
-      const plan = items[0].product.name;
+      const plan = items[0].product.name || items[0].product.description;
       const amount = items[0].price.unit_price.amount;
+
+      const user = await prisma.user.findFirst({
+        where: {
+          id: custom_data.application_customer_id,
+        },
+      });
+
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
 
       // First find the plan in our database
       const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
@@ -218,11 +302,25 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      await prisma.subscription.update({
+      await prisma.subscription.upsert({
         where: {
           paddleSubscriptionId: subscriptionId,
         },
-        data: {
+        create: {
+          paddleSubscriptionId: subscriptionId,
+          paddleCustomerId: customerId,
+          status,
+          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+          paddlePaymentCurrency: currency,
+          nextBillingDate: new Date(next_billed_at),
+          billingCycle: billing_cycle.interval,
+          startDate: new Date(created_at),
+          currentPeriodStart: new Date(created_at),
+          currentPeriodEnd: new Date(next_billed_at),
+          userId: user.id,
+          planId: subscriptionPlan.id
+        },
+        update: {
           status,
           paddlePaymentAmount: amount ? parseFloat(amount) : 0,
           paddlePaymentCurrency: currency,
@@ -230,12 +328,8 @@ export async function POST(req: Request) {
           billingCycle: billing_cycle.interval,
           currentPeriodStart: new Date(created_at),
           currentPeriodEnd: new Date(next_billed_at),
-          plan: {
-            connect: {
-              id: subscriptionPlan.id
-            }
-          }
-        },
+          planId: subscriptionPlan.id
+        }
       });
 
       return NextResponse.json({ success: true });

@@ -14,7 +14,6 @@ import { showToast } from "@/components/Common/Toast";
 export default function Pricing() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const { data: session } = useSession();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
@@ -58,26 +57,7 @@ export default function Pricing() {
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
     paddleRef.current?.closeCheckout();
-    // Call the subscription creation API
-    try {
-      await axios.post("/api/subscription/create", {
-        paddleSubscriptionId: data?.id,
-        paddleCustomerId: data?.customer.id,
-        planId: selectedPlan?.id,
-        status: "in-progress",
-        currentPeriodStart: new Date().toISOString(),
-        currentPeriodEnd: new Date(
-          Date.now() + 30 * 24 * 60 * 60 * 1000,
-        ).toISOString(), // 30 days from now
-        startDate: new Date().toISOString(),
-        nextBillingDate: new Date(
-          Date.now() + 30 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
-      });
-      showToast.success("Subscription created successfully");
-    } catch (error) {
-      showToast.error("Failed to create subscription");
-    }
+    router.push("/user/subscription");
   };
   const handlePaddleClose = (data: CheckoutEventsData | undefined) => {
     console.log("User Closed Checkout");
@@ -92,7 +72,6 @@ export default function Pricing() {
 
   const handleSubscribe = async (plan: SubscriptionPlanWithPaddle) => {
     setLoading(plan.id);
-    setError(null);
     setSelectedPlan(plan);
     try {
       if (!session) {
@@ -135,9 +114,19 @@ export default function Pricing() {
     return loading === plan.id || plan.id === currentPlanId;
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Loading...</h1>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section
-      id="about"
+      id="pricing"
       className="bg-gray-1 pb-8 pt-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-16"
     >
       <AuthModal
@@ -155,11 +144,6 @@ export default function Pricing() {
           onFailed={handlePaddleFailed}
         />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {error && (
-          <div className="mx-auto mt-4 max-w-2xl text-center">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
         <div className="isolate mx-auto grid max-w-md grid-cols-1 gap-8 md:max-w-2xl md:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-4">
           {nonEnterprisePlans?.map((plan: SubscriptionPlanWithPaddle) => (
             <div

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body { 
+        font-family: Arial, sans-serif; 
+        padding: 40px;
+        color: #333;
+      }
+      .header { 
+        text-align: center; 
+        margin-bottom: 40px;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 20px;
+      }
+      .logo {
+        max-width: 200px;
+        margin-bottom: 20px;
+      }
+      .details { 
+        margin-bottom: 30px;
+        line-height: 1.6;
+      }
+      .amount { 
+        font-size: 24px; 
+        font-weight: bold; 
+        margin: 20px 0;
+        color: #2c5282;
+      }
+      .footer { 
+        margin-top: 40px; 
+        font-size: 12px; 
+        color: #666;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+      }
+      .status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 4px;
+        background-color: {{#if (eq status "active")}}#48bb78{{else}}#e53e3e{{/if}};
+        color: white;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img src="{{logoUrl}}" alt="Qurieus Logo" class="logo">
+      <h1>Invoice</h1>
+    </div>
+    <div class="details">
+      <p><strong>Customer:</strong> {{customerName}}</p>
+      <p><strong>Email:</strong> {{customerEmail}}</p>
+      <p><strong>Subscription ID:</strong> {{subscriptionId}}</p>
+      <p><strong>Plan:</strong> {{planName}}</p>
+      <p><strong>Date:</strong> {{formatDate date}}</p>
+      <p><strong>Status:</strong> <span class="status">{{status}}</span></p>
+    </div>
+    <div class="amount">
+      Amount: {{currency}} {{formatAmount amount}}
+    </div>
+    <div class="footer">
+      <p>Thank you for choosing Qurieus!</p>
+      <p>This is an automatically generated invoice.</p>
+      <p>For any questions, please contact our support team.</p>
+    </div>
+  </body>
+</html> 
