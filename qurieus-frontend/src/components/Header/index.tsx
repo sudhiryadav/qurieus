@@ -199,6 +199,13 @@ const Header: React.FC = () => {
                             Profile
                           </Link>
                           <Link
+                            href="/user/subscription"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                          >
+                            Subscription
+                          </Link>
+                          <Link
                             href="/user/knowledge-base"
                             onClick={() => setUserMenuOpen(false)}
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"

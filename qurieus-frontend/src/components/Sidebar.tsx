@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp } from "lucide-react";
+import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -12,6 +12,7 @@ interface SidebarProps {
 const userNav = [
   { name: "Dashboard", href: "/user/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
   { name: "Profile", href: "/user/profile", icon: <User className="h-5 w-5" /> },
+  { name: "Subscription", href: "/user/subscription", icon: <CreditCard className="h-5 w-5" /> },
   { name: "Knowledge Base", href: "/user/knowledge-base", icon: <Upload className="h-5 w-5" /> },
   { name: "Analytics", href: "/user/analytics", icon: <BarChart3 className="h-5 w-5" /> },
   { name: "Embed Code", href: "/user/embed-code", icon: <Code className="h-5 w-5" /> },

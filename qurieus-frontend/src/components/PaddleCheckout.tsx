@@ -5,7 +5,15 @@ import React, {
   forwardRef,
   useState,
 } from "react";
-import { initializePaddle, Paddle, PaddleEventData, CheckoutEventNames, CheckoutEventsData, CheckoutEventError, CheckoutSettings } from "@paddle/paddle-js";
+import {
+  initializePaddle,
+  Paddle,
+  PaddleEventData,
+  CheckoutEventNames,
+  CheckoutEventsData,
+  CheckoutEventError,
+  CheckoutSettings,
+} from "@paddle/paddle-js";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 
@@ -38,77 +46,93 @@ export type PaddleCheckoutRef = {
 export const PaddleCheckout = forwardRef<
   PaddleCheckoutRef,
   PaddleCheckoutProps
->(({ mode = "overlay", onComplete, onClose, onError, onFailed, className = "" }, ref) => {
-  const { theme } = useTheme();
-  const inlineContainerRef = useRef<HTMLDivElement>(null);
-  const [paddle, setPaddle] = useState<Paddle | null>(null);
-
-  // get the user email from the session
-  const { data: session } = useSession();
-  const email = session?.user?.email || "";
-
-  // Download and initialize Paddle instance from CDN
-  useEffect(() => {
-    initializePaddle({
-      environment:
-        process.env.NODE_ENV === "production" ? "production" : "sandbox",
-      token: process.env.NEXT_PUBLIC_PADDLE_VENDOR_ID || "",
-      eventCallback: (event: PaddleEventData) => {
-        console.log("xxx Paddle event", event);
-        if (event.name === CheckoutEventNames.CHECKOUT_COMPLETED) {
-          onComplete?.(event.data);
-          paddle?.Checkout.close();
-        }
-        if (event.name === CheckoutEventNames.CHECKOUT_CLOSED) {
-          onClose?.(event.data);
-          paddle?.Checkout.close();
-        }
-        if (event.name === CheckoutEventNames.CHECKOUT_ERROR) {
-          onError?.(event.error);
-          paddle?.Checkout.close();
-        }
-        if (event.name === CheckoutEventNames.CHECKOUT_FAILED) {
-          onFailed?.(event.data);
-          paddle?.Checkout.close();
-        }
-      },
-    }).then((paddleInstance: Paddle | undefined) => {
-      if (paddleInstance) {
-        setPaddle(paddleInstance);
-      }
-    });
-  }, []);
-
-  useImperativeHandle(ref, () => ({
-    openCheckout,
-    closeCheckout: () => {
-      if (!paddle) return;
-      paddle.Checkout.close();
+>(
+  (
+    {
+      mode = "overlay",
+      onComplete,
+      onClose,
+      onError,
+      onFailed,
+      className = "",
     },
-  }));
+    ref,
+  ) => {
+    const { theme } = useTheme();
+    const inlineContainerRef = useRef<HTMLDivElement>(null);
+    const [paddle, setPaddle] = useState<Paddle | null>(null);
 
-  function openCheckout(priceId: string) {
-    if (!paddle) return;
-    const settings: CheckoutSettings = {
-      theme: theme === "dark" ? "dark" : "light",
-      displayMode: mode,
-    };
-    if (mode === "inline" && inlineContainerRef.current) {
-      settings.frameTarget = inlineContainerRef.current.id;
-      settings.frameInitialHeight = 416;
-      settings.frameStyle =
-        "width:100%; min-width:312px; background:transparent; border:none;";
+    // get the user email from the session
+    const { data: session } = useSession();
+    const { email, id, name } = session?.user || {};
+
+    // Download and initialize Paddle instance from CDN
+    useEffect(() => {
+      initializePaddle({
+        environment:
+          process.env.NODE_ENV === "production" ? "production" : "sandbox",
+        token: process.env.NEXT_PUBLIC_PADDLE_VENDOR_ID || "",
+        eventCallback: (event: PaddleEventData) => {
+          if (event.name === CheckoutEventNames.CHECKOUT_COMPLETED) {
+            onComplete?.(event.data);
+            paddle?.Checkout.close();
+          }
+          if (event.name === CheckoutEventNames.CHECKOUT_CLOSED) {
+            onClose?.(event.data);
+            paddle?.Checkout.close();
+          }
+          if (event.name === CheckoutEventNames.CHECKOUT_ERROR) {
+            onError?.(event.error);
+            paddle?.Checkout.close();
+          }
+          if (event.name === CheckoutEventNames.CHECKOUT_FAILED) {
+            onFailed?.(event.data);
+            paddle?.Checkout.close();
+          }
+        },
+      }).then((paddleInstance: Paddle | undefined) => {
+        if (paddleInstance) {
+          setPaddle(paddleInstance);
+        }
+      });
+    }, []);
+
+    useImperativeHandle(ref, () => ({
+      openCheckout,
+      closeCheckout: () => {
+        if (!paddle) return;
+        paddle.Checkout.close();
+      },
+    }));
+
+    function openCheckout(priceId: string) {
+      if (!paddle) return;
+      const settings: CheckoutSettings = {
+        theme: theme === "dark" ? "dark" : "light",
+        displayMode: mode,
+      };
+      if (mode === "inline" && inlineContainerRef.current) {
+        settings.frameTarget = inlineContainerRef.current.id;
+        settings.frameInitialHeight = 416;
+        settings.frameStyle =
+          "width:100%; min-width:312px; background:transparent; border:none;";
+      }
+      paddle.Checkout.open({
+        settings,
+        items: [{ priceId }],
+        customer: email ? { email } : undefined,
+        customData: {
+          application_customer_id: id,
+          application_customer_email: email,
+          application_customer_name: name,
+        },
+      });
     }
-    paddle.Checkout.open({
-      settings,
-      items: [{ priceId }],
-      customer: email ? { email } : undefined,
-    });
-  }
 
-  return mode === "inline" ? (
-    <div ref={inlineContainerRef} className={className} />
-  ) : null;
-});
+    return mode === "inline" ? (
+      <div ref={inlineContainerRef} className={className} />
+    ) : null;
+  },
+);
 
 PaddleCheckout.displayName = "PaddleCheckout";

@@ -49,7 +49,7 @@ export default function Pricing() {
       paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId);
     } else {
       showToast.error(
-        "Subscription configuration is incomplete. Please contact support.",
+        "Paddle configuration is incomplete. Please contact support.",
       );
     }
   };
@@ -58,31 +58,38 @@ export default function Pricing() {
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
     paddleRef.current?.closeCheckout();
+    showToast.success("Subscription created successfully");
     // Call the subscription creation API
     try {
       await axios.post("/api/subscription/create", {
         paddleSubscriptionId: data?.id,
         paddleCustomerId: data?.customer.id,
         planId: selectedPlan?.id,
-        status: "active",
+        status: "in-progress",
         currentPeriodStart: new Date().toISOString(),
         currentPeriodEnd: new Date(
           Date.now() + 30 * 24 * 60 * 60 * 1000,
         ).toISOString(), // 30 days from now
+        startDate: new Date().toISOString(),
+        nextBillingDate: new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
       });
       showToast.success("Subscription created successfully");
     } catch (error) {
+      debugger;
       showToast.error("Failed to create subscription");
     }
   };
   const handlePaddleClose = (data: CheckoutEventsData | undefined) => {
-    console.log("Paddle close", data);
+    console.log("User Closed Checkout");
   };
+
   const handlePaddleError = (data: CheckoutEventError | undefined) => {
-    console.log("Paddle error", data);
+    showToast.error("An error occurred while processing your request");
   };
   const handlePaddleFailed = (data: CheckoutEventsData | undefined) => {
-    console.log("Paddle failed", data);
+    showToast.error("An error occurred while processing your request");
   };
 
   const handleSubscribe = async (plan: SubscriptionPlanWithPaddle) => {
@@ -98,8 +105,10 @@ export default function Pricing() {
       if (plan.paddleConfig?.priceId && paddleRef.current) {
         paddleRef.current.openCheckout(plan.paddleConfig.priceId);
         return;
-      }else{
-        showToast.error("Paddle configuration is incomplete. Please contact support.");
+      } else {
+        showToast.error(
+          "Paddle configuration is incomplete. Please contact support.",
+        );
       }
     } catch (error) {
       showToast.error("An error occurred while processing your request");
@@ -139,7 +148,6 @@ export default function Pricing() {
         mode={authMode}
         onSuccess={startSubscriptionProcess}
       />
-      {selectedPlan && (
         <PaddleCheckout
           ref={paddleRef}
           mode="overlay"
@@ -148,7 +156,6 @@ export default function Pricing() {
           onError={handlePaddleError}
           onFailed={handlePaddleFailed}
         />
-      )}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {error && (
           <div className="mx-auto mt-4 max-w-2xl text-center">
