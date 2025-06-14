@@ -16,20 +16,11 @@ import {
 } from "@paddle/paddle-js";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import axios from "axios"; // Import axios for backend calls
+import { Subscription } from "@prisma/client";
+import { toast } from "react-toastify";
 
-/**
- * PaddleCheckout - Reusable Paddle checkout component (Overlay or Inline)
- * @param priceId Paddle Price ID (optional)
- * @param mode 'overlay' | 'inline' (default: 'overlay')
- * @param email User email (optional)
- * @param passthrough Any passthrough data (optional)
- * @param onComplete Callback after successful checkout (optional)
- * Usage:
- *   <PaddleCheckout ref={ref} priceId="..." mode="overlay" onComplete={fn} />
- *   ref.current?.openCheckout();
- */
 export type PaddleCheckoutProps = {
-  // priceId?: string;
   mode?: "overlay" | "inline";
   onComplete?: (data: CheckoutEventsData | undefined) => void;
   className?: string;
@@ -40,7 +31,9 @@ export type PaddleCheckoutProps = {
 
 export type PaddleCheckoutRef = {
   openCheckout: (priceId: string) => void;
+  redirectToCustomerPortal: (customerId: string) => void;
   closeCheckout: () => void;
+  updatePlan: (subscriptionId: string, priceId: string) => void;
 };
 
 export const PaddleCheckout = forwardRef<
@@ -62,11 +55,9 @@ export const PaddleCheckout = forwardRef<
     const inlineContainerRef = useRef<HTMLDivElement>(null);
     const [paddle, setPaddle] = useState<Paddle | null>(null);
 
-    // get the user email from the session
     const { data: session } = useSession();
-    const { email, id, name } = session?.user || {};
+    const { email, id: applicationCustomerId, name } = session?.user || {}; // Use 'id' as applicationCustomerId
 
-    // Download and initialize Paddle instance from CDN
     useEffect(() => {
       initializePaddle({
         environment:
@@ -79,7 +70,8 @@ export const PaddleCheckout = forwardRef<
           }
           if (event.name === CheckoutEventNames.CHECKOUT_CLOSED) {
             onClose?.(event.data);
-            paddle?.Checkout.close();
+            // Don't call close again here, it's already closed.
+            // paddle?.Checkout.close();
           }
           if (event.name === CheckoutEventNames.CHECKOUT_ERROR) {
             onError?.(event.error);
@@ -99,11 +91,13 @@ export const PaddleCheckout = forwardRef<
 
     useImperativeHandle(ref, () => ({
       openCheckout,
+      redirectToCustomerPortal,
       closeCheckout: () => {
         if (!paddle) return;
         paddle.Checkout.close();
       },
-    }));
+      updatePlan,
+    }));  
 
     function openCheckout(priceId: string) {
       if (!paddle) return;
@@ -120,17 +114,62 @@ export const PaddleCheckout = forwardRef<
       paddle.Checkout.open({
         settings,
         items: [{ priceId }],
-        customer: email ? { email } : undefined,
+        customer: email ? { email } : undefined, // Ensure email is valid
         customData: {
-          application_customer_id: id,
+          application_customer_id: applicationCustomerId,
           application_customer_email: email,
           application_customer_name: name,
         },
       });
     }
 
+    async function updatePlan(subscriptionId: string, priceId: string) {
+      if (!subscriptionId || !priceId)  return;
+
+      try {
+        const response = await axios.post('/api/paddle/update-plan', {
+          subscriptionId,
+          priceId,
+        });
+        if (response.data.success) {
+          toast.success("Plan updated successfully");
+        } else {
+          toast.error(response.data.error);
+        }
+      } catch (error) {
+        console.error("Error updating plan:", error);
+        toast.error("Error updating plan");
+      }
+    }
+
+    // New function to redirect to Paddle Customer Portal
+    async function redirectToCustomerPortal(paddleCustomerId: string) {
+      if (!paddleCustomerId) {
+        console.error("Paddle Customer ID is required to redirect to portal.");
+        // You might want to show a user-friendly error here
+        return;
+      }
+
+      try {
+        // Call your backend API to get the Customer Portal URL
+        const response = await axios.post('/api/paddle/get-customer-portal-link', {
+          paddleCustomerId,
+        });
+        const { portalUrl } = response.data;
+
+        if (portalUrl) {
+          window.location.href = portalUrl; // Redirect the user
+        } else {
+          console.error("No portal URL received from backend.");
+        }
+      } catch (error) {
+        console.error("Error redirecting to customer portal:", error);
+        // Handle error, e.g., show a toast message
+      }
+    }
+
     return mode === "inline" ? (
-      <div ref={inlineContainerRef} className={className} />
+      <div ref={inlineContainerRef} className={className} id="paddle-inline-checkout" />
     ) : null;
   },
 );

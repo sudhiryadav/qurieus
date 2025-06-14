@@ -49,7 +49,7 @@ export default function SignUp({
         return;
       }
 
-      const response = await axios.post("/api/register", user);
+      const response = await axios.post("/api/user/signup", user);
       
       // If we get here, either it's a new user or an unverified user
       showToast.success("Verification code sent to your email!");
@@ -107,7 +107,7 @@ export default function SignUp({
     setResendTimer(60);
 
     try {
-      const response = await axios.post("/api/resend-verification", {
+      const response = await axios.post("/api/user/resend-verification", {
         email: user.email
       });
 

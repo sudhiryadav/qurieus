@@ -19,7 +19,7 @@ export default function KnowledgeBase() {
   useEffect(() => {
     const checkSubscription = async () => {
       try {
-        const response = await axiosInstance.get("/api/subscription/check");
+        const response = await axiosInstance.get("/api/user/subscription/check");
         const data = response.data;
         setIsSubscriptionChecked(data.hasSubscription);
       } catch (error) {

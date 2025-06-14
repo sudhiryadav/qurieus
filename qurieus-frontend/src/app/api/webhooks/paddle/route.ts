@@ -335,6 +335,53 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
+    if (event_type === "transaction.completed") {
+      const {
+        id: transactionId,
+        subscription_id: subscriptionId,
+        status,
+        items,
+        billing_period,
+        currency,
+        created_at,
+        customer_id: customerId,
+      } = data;
+
+      const plan = items[0].price.product.name;
+      const amount = items[0].price.unit_price.amount;
+
+      // Find the subscription in our database
+      const subscription = await prisma.subscription.findFirst({
+        where: {
+          paddleSubscriptionId: subscriptionId,
+        },
+        include: {
+          plan: true,
+        },
+      });
+
+      if (!subscription) {
+        return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+      }
+
+      // Update the subscription with new billing period and transaction details
+      await prisma.subscription.update({
+        where: {
+          paddleSubscriptionId: subscriptionId,
+        },
+        data: {
+          status: "active",
+          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+          paddlePaymentCurrency: currency,
+          nextBillingDate: new Date(billing_period.end_date),
+          currentPeriodStart: new Date(billing_period.start_date),
+          currentPeriodEnd: new Date(billing_period.end_date),
+        },
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
     return NextResponse.json(
       { error: "Unhandled event type" },
       { status: 400 },

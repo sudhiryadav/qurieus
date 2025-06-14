@@ -17,7 +17,6 @@ export async function GET() {
     const subscription = await prisma.subscription.findFirst({
       where: {
         userId: session.user.id,
-        status: "active",
       },
       orderBy: {
         createdAt: "desc",

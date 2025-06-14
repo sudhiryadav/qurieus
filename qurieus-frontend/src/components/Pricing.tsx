@@ -10,10 +10,12 @@ import { SubscriptionPlanWithPaddle } from "@/app/(site)/pricing/page";
 import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
+import { Subscription } from "@prisma/client";
 
 export default function Pricing() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [loadingPricing, setLoadingPricing] = useState(false);
   const { data: session } = useSession();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
@@ -22,6 +24,8 @@ export default function Pricing() {
   const paddleRef = useRef<PaddleCheckoutRef>(null);
   const [plans, setPlans] = useState<SubscriptionPlanWithPaddle[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+  const [currentSubscriptionId, setCurrentSubscriptionId] = useState<string | null>(null);
+  const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
 
   useEffect(() => {
     //Get the plans
@@ -35,10 +39,16 @@ export default function Pricing() {
   useEffect(() => {
     // Get current subscription
     const fetchCurrentSubscription = async () => {
+      setLoadingPricing(true);
       if (session) {
-        const { data } = await axios.get("/api/subscription/check");
+        const { data } = await axios.get("/api/user/subscription/check");
+        if(data.hasSubscription) {
         setCurrentPlanId(data.currentPlanId);
+        setCurrentSubscriptionId( data.subscription.paddleSubscriptionId);
+        setCurrentSubscription(data.subscription);
+        }
       }
+      setLoadingPricing(false);
     };
     fetchCurrentSubscription();
   }, [session]);
@@ -80,7 +90,11 @@ export default function Pricing() {
         return;
       }
       if (plan.paddleConfig?.priceId && paddleRef.current) {
-        paddleRef.current.openCheckout(plan.paddleConfig.priceId);
+        if (currentSubscriptionId) {
+          paddleRef.current.updatePlan(currentSubscriptionId, plan.paddleConfig.priceId);
+        } else {
+          paddleRef.current.openCheckout(plan.paddleConfig.priceId);
+        }
         return;
       } else {
         showToast.error(
@@ -88,6 +102,7 @@ export default function Pricing() {
         );
       }
     } catch (error) {
+      console.error("Error updating plan:", error);
       showToast.error("An error occurred while processing your request");
     } finally {
       setLoading(null);
@@ -114,11 +129,15 @@ export default function Pricing() {
     return loading === plan.id || plan.id === currentPlanId;
   };
 
-  if (loading) {
+  if (loadingPricing) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Loading...</h1>
+          <h1 className="text-2xl font-bold">Loading pricing...</h1>
+          <p className="text-sm text-gray-500">Please wait while we load your pricing.</p>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
+          </div>
         </div>
       </div>
     );

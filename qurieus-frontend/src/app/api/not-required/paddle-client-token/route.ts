@@ -4,8 +4,8 @@ import axios from '@/lib/axios';
 export async function GET() {
   try {
     const response = await axios.post(
-      "https://api.paddle.com/client-token",
-      {},
+      process.env.NODE_ENV === "production" ? "https://api.paddle.com/client-token" : "https://sandbox-api.paddle.com/client-token",
+      {}, 
       {
         headers: {
           Authorization: `Bearer ${process.env.PADDLE_API_KEY}`,

@@ -1,24 +1,54 @@
 "use client";
 
+import { showToast } from "@/components/Common/Toast";
+import Pricing from "@/components/Pricing";
+import FullScreenDialog from "@/components/ui/FullScreenDialog";
+import axiosInstance from "@/lib/axios";
+import { Subscription, SubscriptionPlan } from "@prisma/client";
+import { format } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import axiosInstance from "@/lib/axios";
-import { format } from "date-fns";
-import { showToast } from "@/components/Common/Toast";
-import { Subscription, SubscriptionPlan } from "@prisma/client";
+
+const FullScreenPricing = ({
+  showPricingModal,
+  setShowPricingModal,
+}: {
+  showPricingModal: boolean;
+  setShowPricingModal: (show: boolean) => void;
+}) => {
+  return (
+    <FullScreenDialog
+      isOpen={showPricingModal}
+      onClose={() => setShowPricingModal(false)}
+      header={<h2 className="text-2xl font-bold">Change Plan</h2>}
+      footer={
+        <button
+          onClick={() => setShowPricingModal(false)}
+          className="rounded-lg border border-primary bg-white px-6 py-3 text-primary hover:bg-primary hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+        >
+          Cancel
+        </button>
+      }
+    >
+      <Pricing />
+    </FullScreenDialog>
+  );
+};
 
 export default function SubscriptionPage() {
   const { data: session } = useSession();
-  const [subscription, setSubscription] = useState<SubscriptionAndPlan | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionAndPlan | null>(
+    null,
+  );
   const [attempts, setAttempts] = useState(0);
   interface SubscriptionAndPlan extends Subscription {
     plan: SubscriptionPlan;
   }
   const [loading, setLoading] = useState(true);
-
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const fetchSubscription = async (force: boolean = false) => {
     try {
-      const response = await axiosInstance.get("/api/subscription");
+      const response = await axiosInstance.get("/api/user/subscription");
       setSubscription(response.data as SubscriptionAndPlan);
       if (force) {
         setAttempts(0);
@@ -59,26 +89,39 @@ export default function SubscriptionPage() {
         <div className="text-center">
           <h2 className="mb-4 text-2xl font-bold">No Active Subscription</h2>
           <p className="mb-6 text-gray-600 dark:text-gray-400">
-            You don&apos;t have an active subscription. Please subscribe to a plan to access our services.
+            You don&apos;t have an active subscription. Please subscribe to a
+            plan to access our services.
           </p>
-          <a
-            href="/pricing"
+          <button
             className="inline-block rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90"
+            onClick={() => {
+              setShowPricingModal(true);
+            }}
           >
             View Plans
-          </a>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
+          </button>
+          <div className="mt-4 flex flex-col gap-2 text-gray-600 dark:text-gray-400">
             {/* Show reload button after the attemts are completed in the interval above */}
             {attempts >= 3 && (
-              <button onClick={() => fetchSubscription(true)} className="inline-block rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90">Reload</button>
+              <button
+                onClick={() => fetchSubscription(true)}
+                className="inline-block rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90"
+              >
+                Reload
+              </button>
             )}
             {attempts < 3 && (
               <p className="mt-4 text-gray-600 dark:text-gray-400">
-                or wait for 5 seconds to check again while we are processing your subscription.
+                or wait for 5 seconds to check again while we are processing
+                your subscription.
               </p>
             )}
-          </p>
+          </div>
         </div>
+        <FullScreenPricing
+          showPricingModal={showPricingModal}
+          setShowPricingModal={setShowPricingModal}
+        />
       </div>
     );
   }
@@ -98,16 +141,27 @@ export default function SubscriptionPage() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
               {/* set color green if active, red if inactive and show it with background color and padding */}
-              <p className={`text-lg font-medium capitalize ${subscription.status === "active" ? "text-green-500 bg-green-500/10 p-2 rounded-md" : "text-red-500 bg-red-500/10 p-2 rounded-md"}`}>{subscription.status === "active" ? "Active" : "Inactive (Processing)"}</p>
+              <p
+                className={`text-lg font-medium capitalize ${subscription.status === "active" ? "rounded-md bg-green-500/10 p-2 text-green-500" : "rounded-md bg-red-500/10 p-2 text-red-500"}`}
+              >
+                {subscription.status === "active"
+                  ? "Active"
+                  : "Inactive (Processing)"}
+              </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Billing Cycle</p>
-              <p className="text-lg font-medium capitalize">{subscription.billingCycle}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Billing Cycle
+              </p>
+              <p className="text-lg font-medium capitalize">
+                {subscription.billingCycle}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
               <p className="text-lg font-medium">
-                {subscription.paddlePaymentCurrency} {subscription.paddlePaymentAmount}
+                {subscription.paddlePaymentCurrency}{" "}
+                {subscription.paddlePaymentAmount}
               </p>
             </div>
           </div>
@@ -117,19 +171,25 @@ export default function SubscriptionPage() {
           <h2 className="mb-4 text-xl font-semibold">Billing Information</h2>
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Start Date</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Start Date
+              </p>
               <p className="text-lg font-medium">
                 {format(new Date(subscription.startDate), "PPP")}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Next Billing Date</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Next Billing Date
+              </p>
               <p className="text-lg font-medium">
                 {format(new Date(subscription.nextBillingDate), "PPP")}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Current Period</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Current Period
+              </p>
               <p className="text-lg font-medium">
                 {format(new Date(subscription.currentPeriodStart), "PPP")} -{" "}
                 {format(new Date(subscription.currentPeriodEnd), "PPP")}
@@ -140,13 +200,20 @@ export default function SubscriptionPage() {
       </div>
 
       <div className="mt-8 flex justify-end">
-        <a
-          href="/pricing"
+        {/* Dont redirect instead show a modal with the pricing page */}
+        <button
+          onClick={() => {
+            setShowPricingModal(true);
+          }}
           className="rounded-lg border border-primary bg-white px-6 py-3 text-primary hover:bg-primary hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
         >
           Change Plan
-        </a>
+        </button>
       </div>
+      <FullScreenPricing
+        showPricingModal={showPricingModal}
+        setShowPricingModal={setShowPricingModal}
+      />
     </div>
   );
 }
