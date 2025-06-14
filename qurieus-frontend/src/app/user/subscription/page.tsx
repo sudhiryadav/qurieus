@@ -12,9 +12,11 @@ import { useEffect, useState } from "react";
 const FullScreenPricing = ({
   showPricingModal,
   setShowPricingModal,
+  onUpdatePlan,
 }: {
   showPricingModal: boolean;
   setShowPricingModal: (show: boolean) => void;
+  onUpdatePlan: (subscriptionId: string, priceId: string) => void;
 }) => {
   return (
     <FullScreenDialog
@@ -30,7 +32,7 @@ const FullScreenPricing = ({
         </button>
       }
     >
-      <Pricing />
+      <Pricing onUpdatePlan={onUpdatePlan} />
     </FullScreenDialog>
   );
 };
@@ -40,19 +42,19 @@ export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<SubscriptionAndPlan | null>(
     null,
   );
-  const [attempts, setAttempts] = useState(0);
   interface SubscriptionAndPlan extends Subscription {
     plan: SubscriptionPlan;
   }
   const [loading, setLoading] = useState(true);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const onUpdatePlan = (subscriptionId: string, priceId: string) => {
+    setShowPricingModal(false);
+    fetchSubscription(true);
+  };
   const fetchSubscription = async (force: boolean = false) => {
     try {
       const response = await axiosInstance.get("/api/user/subscription");
       setSubscription(response.data as SubscriptionAndPlan);
-      if (force) {
-        setAttempts(0);
-      }
     } catch (error) {
       console.error("Error fetching subscription:", error);
       showToast.error("Failed to load subscription details");
@@ -63,15 +65,7 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     if (session?.user) {
-      // Check every 5 seconds if the subscription is active for 3 times then stop checking
-      const interval = setInterval(() => {
-        setAttempts((prev) => prev + 1);
-        fetchSubscription(true);
-        if (attempts >= 3) {
-          clearInterval(interval);
-        }
-      }, 5000);
-      return () => clearInterval(interval);
+      fetchSubscription(true);
     }
   }, [session]);
 
@@ -100,27 +94,17 @@ export default function SubscriptionPage() {
           >
             View Plans
           </button>
-          <div className="mt-4 flex flex-col gap-2 text-gray-600 dark:text-gray-400">
-            {/* Show reload button after the attemts are completed in the interval above */}
-            {attempts >= 3 && (
-              <button
-                onClick={() => fetchSubscription(true)}
-                className="inline-block rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90"
-              >
-                Reload
-              </button>
-            )}
-            {attempts < 3 && (
-              <p className="mt-4 text-gray-600 dark:text-gray-400">
-                or wait for 5 seconds to check again while we are processing
-                your subscription.
-              </p>
-            )}
-          </div>
+          <button
+            onClick={() => fetchSubscription(true)}
+            className="ml-2 inline-block rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
+          >
+            Reload
+          </button>
         </div>
         <FullScreenPricing
           showPricingModal={showPricingModal}
           setShowPricingModal={setShowPricingModal}
+          onUpdatePlan={onUpdatePlan}
         />
       </div>
     );
@@ -209,9 +193,16 @@ export default function SubscriptionPage() {
         >
           Change Plan
         </button>
+        <button
+            onClick={() => fetchSubscription(true)}
+            className="ml-2 inline-block rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
+          >
+            Refresh
+          </button>
       </div>
       <FullScreenPricing
         showPricingModal={showPricingModal}
+        onUpdatePlan={onUpdatePlan}
         setShowPricingModal={setShowPricingModal}
       />
     </div>

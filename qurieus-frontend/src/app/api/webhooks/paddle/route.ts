@@ -9,8 +9,12 @@ import fs from "fs/promises";
 import path from "path";
 
 // Register Handlebars helpers
-handlebars.registerHelper("formatDate", (date: Date) => date.toLocaleDateString());
-handlebars.registerHelper("formatAmount", (amount: string) => (parseFloat(amount) / 100).toFixed(2));
+handlebars.registerHelper("formatDate", (date: Date) =>
+  date.toLocaleDateString(),
+);
+handlebars.registerHelper("formatAmount", (amount: string) =>
+  (parseFloat(amount) / 100).toFixed(2),
+);
 handlebars.registerHelper("eq", (a: string, b: string) => a === b);
 
 async function generateInvoicePDF({
@@ -38,7 +42,13 @@ async function generateInvoicePDF({
   const page = await browser.newPage();
 
   // Read and compile the template
-  const templatePath = path.join(process.cwd(), "src", "templates", "pdf", "invoice.hbs");
+  const templatePath = path.join(
+    process.cwd(),
+    "src",
+    "templates",
+    "pdf",
+    "invoice.hbs",
+  );
   const templateContent = await fs.readFile(templatePath, "utf-8");
   const template = handlebars.compile(templateContent);
 
@@ -129,8 +139,8 @@ export async function POST(req: Request) {
       // First find the plan in our database
       const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
         where: {
-          name: plan
-        }
+          name: plan,
+        },
       });
 
       if (!subscriptionPlan) {
@@ -154,7 +164,7 @@ export async function POST(req: Request) {
           currentPeriodStart: new Date(created_at),
           currentPeriodEnd: new Date(next_billed_at),
           userId: user.id,
-          planId: subscriptionPlan.id
+          planId: subscriptionPlan.id,
         },
         update: {
           status,
@@ -164,8 +174,8 @@ export async function POST(req: Request) {
           billingCycle: billing_cycle.interval,
           currentPeriodStart: new Date(created_at),
           currentPeriodEnd: new Date(next_billed_at),
-          planId: subscriptionPlan.id
-        }
+          planId: subscriptionPlan.id,
+        },
       });
 
       try {
@@ -220,6 +230,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
+    //#region Subscription Updated
     if (event_type === "subscription.updated") {
       const {
         id: subscriptionId,
@@ -228,19 +239,41 @@ export async function POST(req: Request) {
         next_billed_at,
         billing_cycle,
         currency,
+        custom_data,
       } = data;
 
-      const plan = items[0].price.product.name;
       const amount = items[0].price.unit_price.amount;
+
+      const user = await prisma.user.findFirst({
+        where: {
+          id: custom_data.application_customer_id,
+        },
+      });
+
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+
+      const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
+        where: {
+          paddleConfig: {
+            priceId: items[0].price.id,
+          },
+        },
+      });
+
+      if (!subscriptionPlan) {
+        return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+      }
 
       await prisma.subscription.update({
         where: {
-          paddleSubscriptionId: subscriptionId,
+          userId: user.id,
         },
         data: {
           status,
-          plan,
-          paddlePaymentAmount: amount,
+          planId: subscriptionPlan.id,
+          paddlePaymentAmount: parseFloat(amount),
           paddlePaymentCurrency: currency,
           nextBillingDate: new Date(next_billed_at),
           billingCycle: billing_cycle.interval,
@@ -249,7 +282,9 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ success: true });
     }
+    //#endregion
 
+    //#region Subscription Cancelled
     if (event_type === "subscription.cancelled") {
       const { id: subscriptionId, status } = data;
 
@@ -264,7 +299,9 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ success: true });
     }
+    //#endregion
 
+    //#region Subscription Activated
     if (event_type === "subscription.activated") {
       const {
         id: subscriptionId,
@@ -274,11 +311,9 @@ export async function POST(req: Request) {
         billing_cycle,
         currency,
         created_at,
-        customer_id: customerId,
         custom_data,
       } = data;
 
-      const plan = items[0].product.name || items[0].product.description;
       const amount = items[0].price.unit_price.amount;
 
       const user = await prisma.user.findFirst({
@@ -294,48 +329,67 @@ export async function POST(req: Request) {
       // First find the plan in our database
       const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
         where: {
-          name: plan
-        }
+          id: custom_data.application_plan_id,
+        },
       });
 
       if (!subscriptionPlan) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      await prisma.subscription.upsert({
+      await prisma.subscription.update({
         where: {
-          paddleSubscriptionId: subscriptionId,
-        },
-        create: {
-          paddleSubscriptionId: subscriptionId,
-          paddleCustomerId: customerId,
-          status,
-          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-          paddlePaymentCurrency: currency,
-          nextBillingDate: new Date(next_billed_at),
-          billingCycle: billing_cycle.interval,
-          startDate: new Date(created_at),
-          currentPeriodStart: new Date(created_at),
-          currentPeriodEnd: new Date(next_billed_at),
           userId: user.id,
-          planId: subscriptionPlan.id
         },
-        update: {
+        data: {
           status,
+          planId: subscriptionPlan.id,
           paddlePaymentAmount: amount ? parseFloat(amount) : 0,
           paddlePaymentCurrency: currency,
           nextBillingDate: new Date(next_billed_at),
           billingCycle: billing_cycle.interval,
           currentPeriodStart: new Date(created_at),
           currentPeriodEnd: new Date(next_billed_at),
-          planId: subscriptionPlan.id
-        }
+          startDate: new Date(created_at),
+        },
       });
+
+      // await prisma.subscription.upsert({
+      //   where: {
+      //     paddleSubscriptionId: subscriptionId,
+      //   },
+      //   create: {
+      //     paddleSubscriptionId: subscriptionId,
+      //     paddleCustomerId: customerId,
+      //     status,
+      //     paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+      //     paddlePaymentCurrency: currency,
+      //     nextBillingDate: new Date(next_billed_at),
+      //     billingCycle: billing_cycle.interval,
+      //     startDate: new Date(created_at),
+      //     currentPeriodStart: new Date(created_at),
+      //     currentPeriodEnd: new Date(next_billed_at),
+      //     userId: user.id,
+      //     planId: subscriptionPlan.id
+      //   },
+      //   update: {
+      //     status,
+      //     paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+      //     paddlePaymentCurrency: currency,
+      //     nextBillingDate: new Date(next_billed_at),
+      //     billingCycle: billing_cycle.interval,
+      //     currentPeriodStart: new Date(created_at),
+      //     currentPeriodEnd: new Date(next_billed_at),
+      //     planId: subscriptionPlan.id
+      //   }
+      // });
 
       return NextResponse.json({ success: true });
     }
+    //#endregion
 
-    if (event_type === "transaction.completed") {
+    //#region Transaction Completed
+    if (event_type === "transaction.created") {
       const {
         id: transactionId,
         subscription_id: subscriptionId,
@@ -344,16 +398,26 @@ export async function POST(req: Request) {
         billing_period,
         currency,
         created_at,
-        customer_id: customerId,
+        custom_data,
       } = data;
 
-      const plan = items[0].price.product.name;
       const amount = items[0].price.unit_price.amount;
+      const subscriptionPlanId = items[0].price.id;
+
+      const user = await prisma.user.findFirst({
+        where: {
+          id: custom_data.application_customer_id,
+        },
+      });
+
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
 
       // Find the subscription in our database
       const subscription = await prisma.subscription.findFirst({
         where: {
-          paddleSubscriptionId: subscriptionId,
+          userId: user.id,
         },
         include: {
           plan: true,
@@ -361,27 +425,110 @@ export async function POST(req: Request) {
       });
 
       if (!subscription) {
-        return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Subscription not found" },
+          { status: 404 },
+        );
+      }
+
+      const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
+        where: {
+          paddleConfig: {
+            priceId: subscriptionPlanId,
+          },
+        },
+      });
+
+      if (!subscriptionPlan) {
+        return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
       // Update the subscription with new billing period and transaction details
       await prisma.subscription.update({
         where: {
-          paddleSubscriptionId: subscriptionId,
+          userId: user.id,
         },
         data: {
-          status: "active",
+          status: status === "billed" ? "active" : "in-progress",
+          planId: subscriptionPlan.id,
           paddlePaymentAmount: amount ? parseFloat(amount) : 0,
           paddlePaymentCurrency: currency,
-          nextBillingDate: new Date(billing_period.end_date),
-          currentPeriodStart: new Date(billing_period.start_date),
-          currentPeriodEnd: new Date(billing_period.end_date),
+          nextBillingDate: new Date(billing_period.ends_at),
+          currentPeriodStart: new Date(billing_period.starts_at),
+          currentPeriodEnd: new Date(billing_period.ends_at),
+          startDate: new Date(created_at),
         },
       });
 
       return NextResponse.json({ success: true });
     }
+    //#endregion
 
+    //#region Subscription Paused
+    if (event_type === "subscription.paused") {
+      const { id: subscriptionId, status, custom_data } = data;
+
+      await prisma.subscription.update({
+        where: {
+          paddleSubscriptionId: subscriptionId,
+        },
+        data: {
+          status,
+        },
+      });
+
+      return NextResponse.json({ success: true });
+    }
+    //#endregion
+
+    //#region Subscription Unpaused
+    if (event_type === "subscription.unpaused") {
+      const { id: subscriptionId, status, custom_data } = data;
+
+      await prisma.subscription.update({
+        where: {
+          paddleSubscriptionId: subscriptionId,
+        },
+        data: {
+          status,
+        },
+      });
+
+      return NextResponse.json({ success: true });
+    }
+    //#endregion
+
+    //#region Subscription Unpaused
+    if (event_type === "subscription.unpaused") {
+      const { id: subscriptionId, status, custom_data } = data;
+
+      await prisma.subscription.update({
+        where: {
+          paddleSubscriptionId: subscriptionId,
+        },
+        data: {
+          status,
+        },
+      });
+    }
+    //#endregion
+
+    //#region Subscription Expired
+    if (event_type === "subscription.expired") {
+      const { id: subscriptionId, status, custom_data } = data;
+
+      await prisma.subscription.update({
+        where: {
+          paddleSubscriptionId: subscriptionId,
+        },
+        data: {
+          status,
+        },
+      });
+
+      return NextResponse.json({ success: true });
+    }
+    //#endregion
     return NextResponse.json(
       { error: "Unhandled event type" },
       { status: 400 },

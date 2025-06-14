@@ -12,7 +12,7 @@ import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
 import { Subscription } from "@prisma/client";
 
-export default function Pricing() {
+export default function Pricing({ onUpdatePlan }: { onUpdatePlan: (subscriptionId: string, priceId: string) => void }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [loadingPricing, setLoadingPricing] = useState(false);
@@ -55,7 +55,7 @@ export default function Pricing() {
 
   const startSubscriptionProcess = () => {
     if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
-      paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId);
+      paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId, selectedPlan.id);
     } else {
       showToast.error(
         "Paddle configuration is incomplete. Please contact support.",
@@ -161,6 +161,7 @@ export default function Pricing() {
           onClose={handlePaddleClose}
           onError={handlePaddleError}
           onFailed={handlePaddleFailed}
+          onUpdatePlan={onUpdatePlan}
         />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="isolate mx-auto grid max-w-md grid-cols-1 gap-8 md:max-w-2xl md:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-4">

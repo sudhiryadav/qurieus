@@ -1,23 +1,22 @@
-import React, {
-  useEffect,
-  useRef,
-  useImperativeHandle,
-  forwardRef,
-  useState,
-} from "react";
 import {
+  CheckoutEventError,
+  CheckoutEventNames,
+  CheckoutEventsData,
+  CheckoutSettings,
   initializePaddle,
   Paddle,
   PaddleEventData,
-  CheckoutEventNames,
-  CheckoutEventsData,
-  CheckoutEventError,
-  CheckoutSettings,
 } from "@paddle/paddle-js";
+import axios from "axios"; // Import axios for backend calls
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import axios from "axios"; // Import axios for backend calls
-import { Subscription } from "@prisma/client";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "react-toastify";
 
 export type PaddleCheckoutProps = {
@@ -27,10 +26,11 @@ export type PaddleCheckoutProps = {
   onClose?: (data: CheckoutEventsData | undefined) => void;
   onError?: (data: CheckoutEventError | undefined) => void;
   onFailed?: (data: CheckoutEventsData | undefined) => void;
+  onUpdatePlan?: (subscriptionId: string, priceId: string) => void;
 };
 
 export type PaddleCheckoutRef = {
-  openCheckout: (priceId: string) => void;
+  openCheckout: (priceId: string, planId: string) => void;
   redirectToCustomerPortal: (customerId: string) => void;
   closeCheckout: () => void;
   updatePlan: (subscriptionId: string, priceId: string) => void;
@@ -48,6 +48,7 @@ export const PaddleCheckout = forwardRef<
       onError,
       onFailed,
       className = "",
+      onUpdatePlan,
     },
     ref,
   ) => {
@@ -99,7 +100,7 @@ export const PaddleCheckout = forwardRef<
       updatePlan,
     }));  
 
-    function openCheckout(priceId: string) {
+    function openCheckout(priceId: string, planId: string) {
       if (!paddle) return;
       const settings: CheckoutSettings = {
         theme: theme === "dark" ? "dark" : "light",
@@ -119,6 +120,7 @@ export const PaddleCheckout = forwardRef<
           application_customer_id: applicationCustomerId,
           application_customer_email: email,
           application_customer_name: name,
+          application_plan_id: planId,
         },
       });
     }
@@ -132,7 +134,8 @@ export const PaddleCheckout = forwardRef<
           priceId,
         });
         if (response.data.success) {
-          toast.success("Plan updated successfully");
+          toast.success("Plan updated successfully. Please wait for the subscription to be updated in the customer portal.");
+          onUpdatePlan?.(subscriptionId, priceId);
         } else {
           toast.error(response.data.error);
         }

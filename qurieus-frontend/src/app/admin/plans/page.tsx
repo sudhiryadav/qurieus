@@ -124,10 +124,10 @@ export default function AdminPlansPage() {
       const updatedPlan = await response.data;
       setPlans(plans.map(plan => plan.id === editingPlan.id ? updatedPlan : plan));
       setEditingPlan(null);
-      showToast.success("Plan updated successfully");
+      showToast.success("Subscription plan updated successfully. Please sync with Paddle to update the plan in the customer portal. You can do this by clicking the sync button below.");
     } catch (error) {
-      console.error("Error updating plan:", error);
-      showToast.error("Failed to update plan");
+      console.error("Error updating subscription plan:", error);
+      showToast.error("Failed to update subscription plan");
     }
   };
 
