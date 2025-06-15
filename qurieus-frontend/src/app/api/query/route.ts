@@ -116,6 +116,14 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
+    // --- Rate Limiting ---
+    const rateKey = `rate:${apiKey}:${ip}`;
+    if (await isRateLimited(rateKey))
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429 },
+      );
+
     // --- Fetch user and check domain/origin/referrer/ip restrictions ---
     const user = await prisma.user.findUnique({
       where: { id: apiKey },
@@ -124,8 +132,14 @@ export async function POST(request: Request) {
         allowedOrigins: true,
         allowedReferrers: true,
         allowedIPs: true,
+        subscription: {
+          select: {
+            plan: true,
+          },
+        },
       },
     });
+
     if (!user)
       return NextResponse.json({ error: "Invalid API Key" }, { status: 404 });
     if (!checkAllowed(user.allowedOrigins, origin))
@@ -141,13 +155,19 @@ export async function POST(request: Request) {
     if (!checkAllowed(user.allowedIPs, ip))
       return NextResponse.json({ error: "IP not allowed" }, { status: 403 });
 
-    // --- Rate Limiting ---
-    const rateKey = `rate:${apiKey}:${ip}`;
-    if (await isRateLimited(rateKey))
-      return NextResponse.json(
-        { error: "Rate limit exceeded" },
-        { status: 429 },
-      );
+    // --- Check if user has a subscription ---
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId: apiKey },
+    });
+    if (!subscription)
+      return NextResponse.json({ error: "User has no subscription" }, { status: 403 });
+
+    // --- Check if number of request is greater than the subscription plan ---
+    const queryCount = await prisma.queryAnalytics.count({
+      where: { userId: apiKey, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 1)) } },
+    });
+    if (user.subscription?.plan.maxQueriesPerDay && user.subscription.plan.maxQueriesPerDay < queryCount)
+      return NextResponse.json({ error: "Number of requests exceeded" }, { status: 403 });
 
     // --- (DEV) Test Response ---
     if (process.env.NODE_ENV === "development") {
@@ -163,7 +183,7 @@ export async function POST(request: Request) {
         startTime: Date.now(),
       });
       return new Response(
-        JSON.stringify({ response: "This is a test response" }),
+        JSON.stringify({ response: "This is a test response" + queryCount }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
