@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import "../styles/index.css";
 import "../styles/prism-vsc-dark-plus.css";
 import { SidebarProvider } from "@/contexts/SidebarContext";
+import Head from "./head";
 
 export default function RootLayout({
   children,
@@ -27,10 +28,7 @@ export default function RootLayout({
 
   return (
     <html suppressHydrationWarning={true} className="!scroll-smooth" lang="en">
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-      </head>
-
+      <Head />
       <body>
         <SessionProvider>
           <SessionRedirector />

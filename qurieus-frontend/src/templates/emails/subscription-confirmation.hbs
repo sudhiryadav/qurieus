@@ -12,46 +12,103 @@
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
+      background-color: #f5f5f5;
     }
     .header {
       text-align: center;
       margin-bottom: 30px;
+      padding: 20px;
+      background-color: #232a36;
+      color: white;
+      border-radius: 8px;
     }
     .content {
-      background-color: #f9f9f9;
-      padding: 20px;
-      border-radius: 5px;
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .details {
-      margin: 20px 0;
+      margin: 25px 0;
+      background-color: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
     }
     .details ul {
       list-style: none;
       padding: 0;
+      margin: 0;
     }
     .details li {
-      margin: 10px 0;
-      padding: 10px;
-      background-color: #fff;
-      border-radius: 4px;
+      margin: 12px 0;
+      padding: 15px;
+      background-color: white;
+      border-radius: 6px;
+      border-left: 4px solid #232a36;
     }
     .footer {
       margin-top: 30px;
       text-align: center;
       font-size: 0.9em;
       color: #666;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #232a36;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .features {
+      margin: 25px 0;
+      padding: 20px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+    }
+    .features h3 {
+      color: #232a36;
+      margin-bottom: 15px;
+    }
+    .features ul {
+      list-style: none;
+      padding: 0;
+    }
+    .features li {
+      margin: 10px 0;
+      padding-left: 25px;
+      position: relative;
+    }
+    .features li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #232a36;
+    }
+    .support {
+      margin-top: 25px;
+      padding: 20px;
+      background-color: #e9ecef;
+      border-radius: 8px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>Welcome to Qurieus!</h1>
+    <p>Your subscription has been successfully activated</p>
   </div>
   
   <div class="content">
     <p>Dear {{customerName}},</p>
     
-    <p>Thank you for subscribing to our {{plan}} plan. We're excited to have you on board!</p>
+    <p>Thank you for subscribing to our {{plan}} plan. We're excited to have you on board and can't wait to help you achieve your goals!</p>
     
     <div class="details">
       <h2>Your Subscription Details:</h2>
@@ -60,16 +117,31 @@
         <li><strong>Amount:</strong> {{currency}} {{amount}}</li>
         <li><strong>Billing Cycle:</strong> {{billingCycle}}</li>
         <li><strong>Next Billing Date:</strong> {{nextBillingDate}}</li>
+        <li><strong>Subscription ID:</strong> {{subscriptionId}}</li>
+      </ul>
+    </div>
+
+    <div class="features">
+      <h3>Your Plan Features:</h3>
+      <ul>
+        {{#each features}}
+        <li>{{this}}</li>
+        {{/each}}
       </ul>
     </div>
     
-    <p>Please find your invoice attached to this email.</p>
+    <p>Please find your invoice attached to this email for your records.</p>
     
-    <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+    <div class="support">
+      <p>Need help getting started?</p>
+      <a href="{{dashboardUrl}}" class="button">Go to Dashboard</a>
+      <p>If you have any questions or need assistance, our support team is here to help!</p>
+    </div>
   </div>
   
   <div class="footer">
     <p>Best regards,<br>The Qurieus Team</p>
+    <p>© {{currentYear}} Qurieus. All rights reserved.</p>
   </div>
 </body>
 </html> 

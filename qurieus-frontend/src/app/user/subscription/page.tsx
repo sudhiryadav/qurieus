@@ -8,6 +8,8 @@ import { Subscription, SubscriptionPlan } from "@prisma/client";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { FiRefreshCw } from "react-icons/fi";
+
 
 const FullScreenPricing = ({
   showPricingModal,
@@ -47,25 +49,34 @@ export default function SubscriptionPage() {
   }
   const [loading, setLoading] = useState(true);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+
   const onUpdatePlan = (subscriptionId: string, priceId: string) => {
     setShowPricingModal(false);
     fetchSubscription(true);
   };
+  
   const fetchSubscription = async (force: boolean = false) => {
     try {
+      setRefreshing(true);
       const response = await axiosInstance.get("/api/user/subscription");
       setSubscription(response.data as SubscriptionAndPlan);
+      if (force) {
+        showToast.success("Subscription details updated");
+      }
     } catch (error) {
       console.error("Error fetching subscription:", error);
       showToast.error("Failed to load subscription details");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     if (session?.user) {
-      fetchSubscription(true);
+      fetchSubscription(false);
     }
   }, [session]);
 
@@ -98,6 +109,7 @@ export default function SubscriptionPage() {
             onClick={() => fetchSubscription(true)}
             className="ml-2 inline-block rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
           >
+            <FiRefreshCw className="mr-2 h-4 w-4" />
             Reload
           </button>
         </div>
@@ -194,11 +206,13 @@ export default function SubscriptionPage() {
           Change Plan
         </button>
         <button
-            onClick={() => fetchSubscription(true)}
-            className="ml-2 inline-block rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
-          >
-            Refresh
-          </button>
+          onClick={() => fetchSubscription(true)}
+          className="ml-2 inline-flex items-center rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
+          disabled={refreshing}
+        >
+          <FiRefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </button>
       </div>
       <FullScreenPricing
         showPricingModal={showPricingModal}
