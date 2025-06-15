@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { showToast } from "@/components/Common/Toast";
 import DocumentList from "@/components/DocumentList";
@@ -8,20 +8,28 @@ import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Document, Subscription, SubscriptionPlan } from "@prisma/client";
+import { formatFileSize } from "@/lib/utils";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isSubscriptionChecked, setIsSubscriptionChecked] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] =
+    useState<SubscriptionPlan | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [remainingFiles, setRemainingFiles] = useState(0);
+  const [totalSize, setTotalSize] = useState(0);
+  const [remainingSize, setRemainingSize] = useState(0);
 
   useEffect(() => {
     const checkSubscription = async () => {
       try {
-        const response = await axiosInstance.get("/api/user/subscription/check");
+        const response = await axiosInstance.get("/api/user/subscription");
         const data = response.data;
-        setIsSubscriptionChecked(data.hasSubscription);
+        setSubscriptionPlan(data.plan);
       } catch (error) {
         console.error("Error checking subscription:", error);
         showToast.error(
@@ -36,11 +44,35 @@ export default function KnowledgeBase() {
     }
   }, [status, router, session]);
 
-  if (!isSubscriptionChecked) {
+  useEffect(() => {
+    if (subscriptionPlan) {
+      setTotalFiles(subscriptionPlan.maxDocs ?? 0);
+      setRemainingFiles(
+        subscriptionPlan.maxDocs
+          ? subscriptionPlan.maxDocs - documents.length
+          : 0,
+      );
+      setTotalSize(
+        subscriptionPlan.maxStorageMB
+          ? subscriptionPlan.maxStorageMB * 1024 * 1024
+          : 0,
+      );
+      setRemainingSize(
+        subscriptionPlan.maxStorageMB
+          ? subscriptionPlan.maxStorageMB * 1024 * 1024 -
+              documents.reduce((acc, doc) => acc + doc.fileSize, 0)
+          : 0,
+      );
+    }
+  }, [documents, subscriptionPlan]);
+
+  if (!subscriptionPlan) {
     return (
-      <div className="flex h-screen w-full items-center flex-col">
-        <span className="text-xl font-bold text-dark dark:text-white mb-4">Please subscribe to a plan to start uploading documents.</span>
-        <Pricing/>
+      <div className="flex h-screen w-full flex-col items-center">
+        <span className="mb-4 text-xl font-bold text-dark dark:text-white">
+          Please subscribe to a plan to start uploading documents.
+        </span>
+        <Pricing />
       </div>
     );
   }
@@ -48,7 +80,9 @@ export default function KnowledgeBase() {
   return (
     <div className="mx-auto">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-dark dark:text-white">Knowledge Base</h1>
+        <h1 className="text-2xl font-bold text-dark dark:text-white">
+          Knowledge Base
+        </h1>
         <button
           onClick={() => setIsUploadDialogOpen(true)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
@@ -57,15 +91,22 @@ export default function KnowledgeBase() {
         </button>
       </div>
 
-      <DocumentList key={refreshKey} />
+      <div className="mb-4 flex flex-row gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <p>Allowed Files: {totalFiles}</p>
+        <p>Remaining Files: {remainingFiles}</p>
+        <p>Allowed Size: {formatFileSize(totalSize)}</p>
+        <p>Remaining Size: {formatFileSize(remainingSize)}</p>
+      </div>
+
+      <DocumentList key={refreshKey} onFetchDocuments={setDocuments} />
 
       <UploadDialog
         isOpen={isUploadDialogOpen}
         onClose={() => setIsUploadDialogOpen(false)}
         onUploadSuccess={() => {
-          setRefreshKey(prev => prev + 1);
+          setRefreshKey((prev) => prev + 1);
         }}
       />
     </div>
   );
-} 
+}

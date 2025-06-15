@@ -101,6 +101,10 @@ model User {
   logs                  Log[]
   queries               QueryAnalytics[]
   visitorSessions       VisitorSession[]
+
+  allowedOrigins        String[] // e.g. ["https://mydomain.com"]
+  allowedReferrers      String[] // e.g. ["https://mydomain.com/page"]
+  allowedIPs            String[] // e.g. ["1.2.3.4"]
   @@map("Users")
 }
 

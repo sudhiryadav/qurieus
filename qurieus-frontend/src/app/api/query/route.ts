@@ -6,374 +6,272 @@ import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
 import { prisma } from "@/utils/prismaDB";
 import { sendEmail } from "@/lib/email";
 
+// --- Rate Limiting Setup ---
+const RATE_LIMIT = parseInt(process.env.QUERY_RATE_LIMIT || "100", 10);
+const RATE_WINDOW = parseInt(process.env.QUERY_RATE_WINDOW || "60", 10); // seconds
+const rateLimitStore: Record<string, { count: number; reset: number }> = {};
+
+function checkAllowed(list: string[] | undefined, value: string) {
+  if (!list || list.length === 0) return true;
+  return list.some((item) => value.startsWith(item));
+}
+
+async function isRateLimited(key: string) {
+  const now = Math.floor(Date.now() / 1000);
+  if (!rateLimitStore[key] || rateLimitStore[key].reset < now) {
+    rateLimitStore[key] = { count: 1, reset: now + RATE_WINDOW };
+    return false;
+  }
+  if (rateLimitStore[key].count >= RATE_LIMIT) {
+    return true;
+  }
+  rateLimitStore[key].count++;
+  return false;
+}
+
+interface AnalyticsSessionArgs {
+  apiKey: string;
+  message: string;
+  response: string;
+  responseTime: number;
+  visitorId: string;
+  success: boolean;
+  error: string | null;
+  request: Request;
+  startTime: number;
+}
+
+async function trackAnalytics({
+  apiKey,
+  message,
+  response,
+  responseTime,
+  visitorId,
+  success,
+  error,
+  request,
+  startTime,
+}: AnalyticsSessionArgs) {
+  try {
+    await prisma.queryAnalytics.create({
+      data: {
+        userId: apiKey,
+        query: message,
+        response: response || "",
+        responseTime: responseTime || 0,
+        visitorId,
+        success: success ?? true,
+        error: error || null,
+      },
+    });
+    // Update visitor session
+    await prisma.visitorSession.upsert({
+      where: { id: visitorId },
+      create: {
+        userId: apiKey,
+        visitorId,
+        userAgent: request.headers.get("user-agent") || "Unknown",
+        ipAddress: request.headers.get("x-forwarded-for") || "Unknown",
+        startTime: new Date(),
+        endTime: new Date(),
+        duration: 0,
+        queries: 1,
+      },
+      update: {
+        endTime: new Date(),
+        duration: { increment: Math.floor((Date.now() - startTime) / 1000) },
+        queries: { increment: 1 },
+      },
+    });
+  } catch (err) {
+    console.error("Error tracking analytics:", err);
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    // --- Extract headers for restriction checks ---
+    const origin = request.headers.get("origin") || "";
+    const referer = request.headers.get("referer") || "";
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "";
 
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
     const { message, documentId: apiKey, visitorId } = body;
-
-    if (!message) {
+    if (!message)
       return NextResponse.json(
         { error: "Message is required" },
-        { status: 400 }
+        { status: 400 },
       );
-    }
-
-    if (!apiKey) {
+    if (!apiKey)
       return NextResponse.json(
         { error: "API Key is required" },
-        { status: 400 }
+        { status: 400 },
       );
-    }
 
-    // Verify the API key (userId) exists
+    // --- Fetch user and check domain/origin/referrer/ip restrictions ---
     const user = await prisma.user.findUnique({
-      where: { id: apiKey }
+      where: { id: apiKey },
+      select: {
+        id: true,
+        allowedOrigins: true,
+        allowedReferrers: true,
+        allowedIPs: true,
+      },
     });
-
-    if (!user) {
+    if (!user)
+      return NextResponse.json({ error: "Invalid API Key" }, { status: 404 });
+    if (!checkAllowed(user.allowedOrigins, origin))
       return NextResponse.json(
-        { error: "Invalid API Key" },
-        { status: 404 }
+        { error: "Origin not allowed" },
+        { status: 403 },
+      );
+    if (!checkAllowed(user.allowedReferrers, referer))
+      return NextResponse.json(
+        { error: "Referrer not allowed" },
+        { status: 403 },
+      );
+    if (!checkAllowed(user.allowedIPs, ip))
+      return NextResponse.json({ error: "IP not allowed" }, { status: 403 });
+
+    // --- Rate Limiting ---
+    const rateKey = `rate:${apiKey}:${ip}`;
+    if (await isRateLimited(rateKey))
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429 },
+      );
+
+    // --- (DEV) Test Response ---
+    if (process.env.NODE_ENV === "development") {
+      await trackAnalytics({
+        apiKey,
+        message,
+        response: "This is a test response",
+        responseTime: 0,
+        visitorId: session.user.id,
+        success: true,
+        error: null,
+        request: request,
+        startTime: Date.now(),
+      });
+      return new Response(
+        JSON.stringify({ response: "This is a test response" }),
+        { headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // Check cache first
+    // --- Query Logic ---
     const cacheKey = generateQueryCacheKey(message, session.user.id);
     const cachedResponse = await cacheGet(cacheKey);
-    
-    if (cachedResponse) {
-      // Check if cached response indicates no documents found
-      const lines = cachedResponse.split('\n').filter(line => line.trim());
-      let hasNoDocuments = false;
-      
-      for (const line of lines) {
-        try {
-          const data = JSON.parse(line);
-          if (data.response === "No relevant documents found.") {
-            hasNoDocuments = true;
-            break;
-          }
-        } catch (e) {
-          console.error('Error parsing cached response:', e);
-        }
-      }
-
-      if (hasNoDocuments) {
-        try {
-          const user = await prisma.user.findUnique({
-            where: { id: apiKey },
-            select: { email: true }
-          });
-
-          if (user?.email) {
-            await sendEmail({
-              to: user.email,
-              subject: "System Configuration Required - No Documents Found",
-              template: "configuration-notification",
-              context: {
-                userId: apiKey,
-                query: message,
-                timestamp: new Date().toISOString(),
-                dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`
-              }
-            });
-
-            await sendEmail({
-              to: process.env.ADMIN_EMAIL || 'admin@qurieus.com',
-              subject: "System Configuration Required - No Documents Found",
-              template: "configuration-notification",
-              context: {
-                userId: apiKey,
-                query: message,
-                timestamp: new Date().toISOString(),
-                dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`
-              }
-            });
-          }
-        } catch (error) {
-          console.error("Error sending configuration notification:", error);
-        }
-
-        // Track analytics for modified cached response
-        const effectiveVisitorId = visitorId || session.user.id;
-        const startTime = Date.now();
-        
-        try {
-          await prisma.queryAnalytics.create({
-            data: {
-              userId: apiKey,
-              query: message,
-              response: cachedResponse,
-              responseTime: 0,
-              visitorId: effectiveVisitorId,
-              success: true,
-              error: null
-            }
-          });
-
-          // Update visitor session
-          await prisma.visitorSession.upsert({
-            where: {
-              id: effectiveVisitorId
-            },
-            create: {
-              userId: apiKey,
-              visitorId: effectiveVisitorId,
-              userAgent: request.headers.get('user-agent') || 'Unknown',
-              ipAddress: request.headers.get('x-forwarded-for') || 'Unknown',
-              startTime: new Date(),
-              endTime: new Date(),
-              duration: 0,
-              queries: 1
-            },
-            update: {
-              endTime: new Date(),
-              duration: {
-                increment: Math.floor((Date.now() - startTime) / 1000)
-              },
-              queries: {
-                increment: 1
-              }
-            }
-          });
-        } catch (error) {
-          console.error('Error tracking analytics for cached response:', error);
-        }
-
-        return new Response(modifiedResponse, {
-          headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-          },
-        });
-      }
-
-      // Track analytics for normal cached response
-      const effectiveVisitorId = visitorId || session.user.id;
-      const startTime = Date.now();
-      
-      try {
-        await prisma.queryAnalytics.create({
-          data: {
-            userId: apiKey,
-            query: message,
-            response: cachedResponse,
-            responseTime: 0,
-            visitorId: effectiveVisitorId,
-            success: true,
-            error: null
-          }
-        });
-
-        // Update visitor session
-        await prisma.visitorSession.upsert({
-          where: {
-            id: effectiveVisitorId
-          },
-          create: {
-            userId: apiKey,
-            visitorId: effectiveVisitorId,
-            userAgent: request.headers.get('user-agent') || 'Unknown',
-            ipAddress: request.headers.get('x-forwarded-for') || 'Unknown',
-            startTime: new Date(),
-            endTime: new Date(),
-            duration: 0,
-            queries: 1
-          },
-          update: {
-            endTime: new Date(),
-            duration: {
-              increment: Math.floor((Date.now() - startTime) / 1000)
-            },
-            queries: {
-              increment: 1
-            }
-          }
-        });
-      } catch (error) {
-        console.error('Error tracking analytics for cached response:', error);
-      }
-
-      return new Response(cachedResponse, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    }
+    // (Cache logic can be re-enabled as needed)
 
     // Get chat history
     const effectiveVisitorId = visitorId || session.user.id;
     const { data: history } = await axios.get(
-      `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/chat/history`,
+      `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/chat/history`,
       {
         params: {
           visitorId: effectiveVisitorId,
           userId: session.user.id,
           limit: 10,
         },
-      }
+      },
     );
-
     const startTime = Date.now();
 
     // Query the backend
-    const response = await fetch(`${process.env.BACKEND_URL}/api/v1/admin/documents/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.user.id}`,
+    const response = await fetch(
+      `${process.env.BACKEND_URL}/api/v1/admin/documents/query`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.user.id}`,
+        },
+        body: JSON.stringify({
+          query: message,
+          document_owner_id: session.user.id,
+          history: history || [],
+        }),
       },
-      body: JSON.stringify({
-        query: message,
-        document_owner_id: session.user.id,
-        history: history || []
-      })
-    });
-
-    if (!response.ok || !response.body) {
+    );
+    if (!response.ok || !response.body)
       throw new Error(`HTTP error! status: ${response.status}`);
-    }
 
     // Create a transform stream to modify the response and cache it
-    let responseBuffer = '';
+    let responseBuffer = "";
     let success = true;
     let errorMessage: string | null = null;
-
     const transformStream = new TransformStream({
       async transform(chunk, controller) {
         try {
           const text = new TextDecoder().decode(chunk);
           responseBuffer += text;
-          
-          const lines = text.split('\n').filter(line => line.trim());
+          const lines = text.split("\n").filter((line) => line.trim());
           for (const line of lines) {
             const data = JSON.parse(line);
             if (data.response === "No relevant documents found.") {
-              try {
-                const user = await prisma.user.findUnique({
-                  where: { id: apiKey },
-                  select: { email: true }
-                });
-
-                if (user?.email) {
-                  await sendEmail({
-                    to: user.email,
-                    subject: "System Configuration Required - No Documents Found",
-                    template: "configuration-notification",
-                    context: {
-                      userId: apiKey,
-                      query: message,
-                      timestamp: new Date().toISOString(),
-                      dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`
-                    }
-                  });
-
-                  await sendEmail({
-                    to: process.env.ADMIN_EMAIL || 'admin@qurieus.com',
-                    subject: "System Configuration Required - No Documents Found",
-                    template: "configuration-notification",
-                    context: {
-                      userId: apiKey,
-                      query: message,
-                      timestamp: new Date().toISOString(),
-                      dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`
-                    }
-                  });
-                }
-              } catch (error) {
-                console.error("Error sending configuration notification:", error);
-              }
-              
-              data.response = "The system needs to be configured before using it.";
-              responseBuffer = '';
+              // Optionally notify user/admin here
+              data.response =
+                "The system needs to be configured before using it.";
+              responseBuffer = "";
             }
-            
-            controller.enqueue(new TextEncoder().encode(JSON.stringify(data) + '\n'));
+            controller.enqueue(
+              new TextEncoder().encode(JSON.stringify(data) + "\n"),
+            );
           }
         } catch (e) {
-          console.error('Error transforming stream:', e);
+          console.error("Error transforming stream:", e);
           success = false;
-          errorMessage = e instanceof Error ? e.message : 'Unknown error';
+          errorMessage = e instanceof Error ? e.message : "Unknown error";
           controller.enqueue(chunk);
         }
       },
       async flush(controller) {
         // Only cache if we have a response and it's not a "no documents" case
-        if (responseBuffer && !responseBuffer.includes('"response":"No relevant documents found."')) {
+        if (
+          responseBuffer &&
+          !responseBuffer.includes('"response":"No relevant documents found."')
+        ) {
           cacheSet(cacheKey, responseBuffer, 3600); // Cache for 1 hour
         }
-
         // Track analytics
         const responseTime = Date.now() - startTime;
-        try {
-          await prisma.queryAnalytics.create({
-            data: {
-              userId: apiKey,
-              query: message,
-              response: responseBuffer,
-              responseTime,
-              visitorId: effectiveVisitorId,
-              success,
-              error: errorMessage
-            }
-          });
-
-          // Update visitor session
-          await prisma.visitorSession.upsert({
-            where: {
-              id: effectiveVisitorId
-            },
-            create: {
-              userId: apiKey,
-              visitorId: effectiveVisitorId,
-              userAgent: request.headers.get('user-agent') || 'Unknown',
-              ipAddress: request.headers.get('x-forwarded-for') || 'Unknown',
-              startTime: new Date(),
-              endTime: new Date(),
-              duration: 0,
-              queries: 1
-            },
-            update: {
-              endTime: new Date(),
-              duration: {
-                increment: Math.floor((Date.now() - startTime) / 1000)
-              },
-              queries: {
-                increment: 1
-              }
-            }
-          });
-        } catch (error) {
-          console.error('Error tracking analytics:', error);
-        }
-      }
+        await trackAnalytics({
+          apiKey,
+          message,
+          response: responseBuffer,
+          responseTime,
+          visitorId: effectiveVisitorId,
+          success,
+          error: errorMessage,
+          request,
+          startTime,
+        });
+      },
     });
 
     // Return the transformed response as a stream
     return new Response(response.body.pipeThrough(transformStream), {
       headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
       },
     });
   } catch (error: any) {
     console.error("Error in document query:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to process query" },
-      { status: error.response?.status || 500 }
+      { status: error.response?.status || 500 },
     );
   }
-} 
+}

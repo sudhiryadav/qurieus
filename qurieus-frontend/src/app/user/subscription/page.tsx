@@ -172,10 +172,13 @@ export default function SubscriptionPage() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
               <p className="text-lg font-medium">
-                {subscription.paddlePaymentCurrency}{" "}
-                {subscription.paddlePaymentAmount
-                  ? subscription.paddlePaymentAmount / 100
-                  : "-"}
+                {subscription.plan.name === "Free Trial"
+                  ? "Free"
+                  : subscription.paddlePaymentCurrency +
+                    " " +
+                    (subscription.paddlePaymentAmount
+                      ? subscription.paddlePaymentAmount / 100
+                      : "-")}
               </p>
             </div>
           </div>
@@ -227,9 +230,7 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 No of Documents
               </p>
-              <p className="text-lg font-medium">
-                {subscription.plan.maxDocs}
-              </p>
+              <p className="text-lg font-medium">{subscription.plan.maxDocs}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">

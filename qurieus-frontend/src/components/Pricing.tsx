@@ -12,7 +12,7 @@ import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
 import { Subscription } from "@prisma/client";
 
-export default function Pricing({ onUpdatePlan }: { onUpdatePlan: (subscriptionId: string, priceId: string) => void }) {
+export default function Pricing({ onUpdatePlan }: { onUpdatePlan?: (subscriptionId: string, priceId: string) => void }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [loadingPricing, setLoadingPricing] = useState(false);

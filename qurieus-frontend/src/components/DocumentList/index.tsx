@@ -7,18 +7,11 @@ import { Download, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import axiosInstance from '@/lib/axios';
 import { showToast } from "@/components/Common/Toast";
+import { Document } from "@prisma/client";
+import { formatFileSize } from "@/lib/utils";
 
-interface Document {
-  id: string;
-  fileName: string;
-  originalName: string;
-  fileType: string;
-  fileSize: number;
-  uploadedAt: string;
-  createdAt: string;
-}
 
-export default function DocumentList() {
+export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (documents: Document[]) => void }) {
   const { data: session } = useSession();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +27,7 @@ export default function DocumentList() {
       const response = await axiosInstance.get('/api/admin/documents');
       setDocuments(response.data.documents);
       setSelectedDocuments(new Set()); // Reset selections after refresh
-      
+      onFetchDocuments(response.data.documents);
     } catch (error) {
       console.error('Error fetching documents:', error);
     } finally {
@@ -125,14 +118,6 @@ export default function DocumentList() {
       console.error('Error downloading document:', error);
       showToast.error('Failed to download document');
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const toggleDocumentSelection = (documentId: string) => {
