@@ -37,10 +37,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       aria-label="Sidebar"
     >
       {/* Overlay for mobile */}
-      <div
+      {/* <div
         className={`fixed inset-0 z-30 bg-black bg-opacity-40 lg:hidden transition-opacity duration-300 ${isOpen ? "block" : "hidden"}`}
         onClick={onClose}
-      />
+      /> */}
       <div className="flex flex-col h-full py-6 px-4">
         <div className="mb-8">
           <span className="text-lg font-bold">User Menu</span>

@@ -1,12 +1,11 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/utils/auth";
 import axios from "@/lib/axios";
-import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
+import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
-import { sendEmail } from "@/lib/email";
+import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
+import { errorResponse } from "@/utils/responser";
+import { getServerSession } from "next-auth";
 
-// --- Rate Limiting Setup ---
+// Rate Limiting Setup
 const RATE_LIMIT = parseInt(process.env.QUERY_RATE_LIMIT || "100", 10);
 const RATE_WINDOW = parseInt(process.env.QUERY_RATE_WINDOW || "60", 10); // seconds
 const rateLimitStore: Record<string, { count: number; reset: number }> = {};
@@ -90,7 +89,7 @@ async function trackAnalytics({
 
 export async function POST(request: Request) {
   try {
-    // --- Extract headers for restriction checks ---
+    // Extract headers for restriction checks
     const origin = request.headers.get("origin") || "";
     const referer = request.headers.get("referer") || "";
     const ip =
@@ -100,31 +99,22 @@ export async function POST(request: Request) {
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return errorResponse({ error: "Unauthorized", status: 401, errorCode: "UNAUTHORIZED" });
     }
 
     const body = await request.json();
     const { message, documentId: apiKey, visitorId } = body;
     if (!message)
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 },
-      );
+      return errorResponse({ error: "Message is required", status: 400 });
     if (!apiKey)
-      return NextResponse.json(
-        { error: "API Key is required" },
-        { status: 400 },
-      );
+      return errorResponse({ error: "API Key is required", status: 400 });
 
-    // --- Rate Limiting ---
+    // Rate Limiting
     const rateKey = `rate:${apiKey}:${ip}`;
     if (await isRateLimited(rateKey))
-      return NextResponse.json(
-        { error: "Rate limit exceeded" },
-        { status: 429 },
-      );
+      return errorResponse({ error: "Rate limit exceeded", status: 429 });
 
-    // --- Fetch user and check domain/origin/referrer/ip restrictions ---
+    // Fetch user and check domain/origin/referrer/ip restrictions
     const user = await prisma.user.findUnique({
       where: { id: apiKey },
       select: {
@@ -141,35 +131,29 @@ export async function POST(request: Request) {
     });
 
     if (!user)
-      return NextResponse.json({ error: "Invalid API Key" }, { status: 404 });
+      return errorResponse({ error: "Invalid API Key", status: 404, errorCode: "INVALID_API_KEY" });
     if (!checkAllowed(user.allowedOrigins, origin))
-      return NextResponse.json(
-        { error: "Origin not allowed" },
-        { status: 403 },
-      );
+      return errorResponse({ error: "Origin not allowed", status: 403, errorCode: "ORIGIN_NOT_ALLOWED" });
     if (!checkAllowed(user.allowedReferrers, referer))
-      return NextResponse.json(
-        { error: "Referrer not allowed" },
-        { status: 403 },
-      );
+      return errorResponse({ error: "Referrer not allowed", status: 403, errorCode: "REFERER_NOT_ALLOWED" });
     if (!checkAllowed(user.allowedIPs, ip))
-      return NextResponse.json({ error: "IP not allowed" }, { status: 403 });
+      return errorResponse({ error: "IP not allowed", status: 403, errorCode: "IP_NOT_ALLOWED" });
 
-    // --- Check if user has a subscription ---
+    // Check if user has a subscription
     const subscription = await prisma.subscription.findUnique({
       where: { userId: apiKey },
     });
     if (!subscription)
-      return NextResponse.json({ error: "User has no subscription" }, { status: 403 });
+      return errorResponse({ error: "User has no subscription", status: 403, errorCode: "NO_SUBSCRIPTION" });
 
-    // --- Check if number of request is greater than the subscription plan ---
+    // Check if number of request is greater than the subscription plan
     const queryCount = await prisma.queryAnalytics.count({
       where: { userId: apiKey, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 1)) } },
     });
     if (user.subscription?.plan.maxQueriesPerDay && user.subscription.plan.maxQueriesPerDay < queryCount)
-      return NextResponse.json({ error: "Number of requests exceeded" }, { status: 403 });
+      return errorResponse({ error: "Number of requests exceeded", status: 403, errorCode: "QUERY_LIMIT_EXCEEDED" });
 
-    // --- (DEV) Test Response ---
+    // (DEV) Test Response
     if (process.env.NODE_ENV === "development") {
       await trackAnalytics({
         apiKey,
@@ -183,12 +167,12 @@ export async function POST(request: Request) {
         startTime: Date.now(),
       });
       return new Response(
-        JSON.stringify({ response: "This is a test response" + queryCount }),
+        JSON.stringify({ response: "This is a test response. You have made " + queryCount + " requests today." }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // --- Query Logic ---
+    // Query Logic
     const cacheKey = generateQueryCacheKey(message, session.user.id);
     const cachedResponse = await cacheGet(cacheKey);
     // (Cache logic can be re-enabled as needed)
@@ -289,9 +273,6 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("Error in document query:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to process query" },
-      { status: error.response?.status || 500 },
-    );
+    return errorResponse({ error: error.response?.data?.error || "Failed to process query", status: error.response?.status || 500 });
   }
 }

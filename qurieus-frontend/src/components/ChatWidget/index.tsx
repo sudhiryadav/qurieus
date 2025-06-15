@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send, X, Minimize2, Maximize2 } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import { AxiosProgressEvent } from "axios";
+import { showToast } from "@/components/Common/Toast";
+import { extractErrorMessage } from "@/utils/errorMessage";
 
 interface ChatWidgetProps {
   apiKey: string;
@@ -100,7 +102,10 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   useEffect(() => {
     if (!inline) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollTo({
+        top: messagesEndRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages, inline]);
 
@@ -183,6 +188,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                       ...prev,
                       { role: "assistant", content: fullResponse },
                     ]);
+                    setTimeout(() => {
+                      messagesEndRef.current?.scrollTo({
+                        top: messagesEndRef.current.scrollHeight,
+                        behavior: "smooth",
+                      });
+                    }, 0);
                   } else {
                     setMessages((prev) => {
                       const lastAssistantIdx = [...prev]
@@ -197,6 +208,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                       };
                       return updated;
                     });
+                    setTimeout(() => {
+                      messagesEndRef.current?.scrollTo({
+                        top: messagesEndRef.current.scrollHeight,
+                        behavior: "smooth",
+                      });
+                    }, 0);
                   }
                 }
                 if (data.done) {
@@ -209,16 +226,23 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
           },
         },
       );
-    } catch (error) {
+    } catch (error: any) {
       setShowThinking(false);
-      console.error("Error:", error);
+      const errorMsg = extractErrorMessage(error);
+      showToast.error(errorMsg);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
+          content: errorMsg,
         },
       ]);
+      setTimeout(() => {
+        messagesEndRef.current?.scrollTo({
+          top: messagesEndRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }, 0);
     } finally {
       setIsLoading(false);
     }
@@ -263,7 +287,10 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       >
         {inline ? (
           <>
-            <div className="flex-1 overflow-y-auto bg-transparent p-4">
+            <div
+              ref={messagesEndRef}
+              className="flex-1 overflow-y-auto bg-transparent p-4"
+            >
               {messages.map((message, index) => (
                 <div
                   key={index}
@@ -381,7 +408,10 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 </div>
                 {!isMinimized && (
                   <>
-                    <div className="h-[calc(600px-8rem)] overflow-y-auto p-4">
+                    <div
+                      ref={messagesEndRef}
+                      className="h-[calc(600px-8rem)] overflow-y-auto p-4"
+                    >
                       {messages.map((message, index) => (
                         <div
                           key={index}
@@ -401,7 +431,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                           <span className="shimmer">Thinking...</span>
                         </div>
                       )}
-                      <div ref={messagesEndRef} />
+                      {/* <div ref={messagesEndRef} /> */}
                       {showSources && sources && (
                         <div className="mt-4">
                           <button
