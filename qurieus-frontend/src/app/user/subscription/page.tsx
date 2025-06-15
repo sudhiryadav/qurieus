@@ -10,7 +10,6 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
 
-
 const FullScreenPricing = ({
   showPricingModal,
   setShowPricingModal,
@@ -51,12 +50,11 @@ export default function SubscriptionPage() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-
   const onUpdatePlan = (subscriptionId: string, priceId: string) => {
     setShowPricingModal(false);
     fetchSubscription(true);
   };
-  
+
   const fetchSubscription = async (force: boolean = false) => {
     try {
       setRefreshing(true);
@@ -123,8 +121,26 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-8 text-3xl font-bold">Subscription Details</h1>
+    <div className="container mx-auto">
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="mb-4 text-3xl font-bold">Subscription Details</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPricingModal(true)}
+            className="rounded-lg border border-primary bg-white px-6 py-3 text-primary hover:bg-primary hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+          >
+            Change Plan
+          </button>
+          <button
+            onClick={() => fetchSubscription(true)}
+            className="inline-flex items-center rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
+            disabled={refreshing}
+          >
+            <FiRefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </button>
+        </div>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -157,7 +173,9 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
               <p className="text-lg font-medium">
                 {subscription.paddlePaymentCurrency}{" "}
-                {subscription.paddlePaymentAmount}
+                {subscription.paddlePaymentAmount
+                  ? subscription.paddlePaymentAmount / 100
+                  : "-"}
               </p>
             </div>
           </div>
@@ -193,27 +211,46 @@ export default function SubscriptionPage() {
             </div>
           </div>
         </div>
+
+        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h2 className="mb-4 text-xl font-semibold">Features</h2>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Ideal For
+              </p>
+              <p className="text-lg font-medium">
+                {subscription.plan.idealFor}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                No of Documents
+              </p>
+              <p className="text-lg font-medium">
+                {subscription.plan.maxDocs}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Storage
+              </p>
+              <p className="text-lg font-medium">
+                {subscription.plan.maxStorageMB} MB
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Queries Per Day
+              </p>
+              <p className="text-lg font-medium">
+                {subscription.plan.maxQueriesPerDay}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-8 flex justify-end">
-        {/* Dont redirect instead show a modal with the pricing page */}
-        <button
-          onClick={() => {
-            setShowPricingModal(true);
-          }}
-          className="rounded-lg border border-primary bg-white px-6 py-3 text-primary hover:bg-primary hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-        >
-          Change Plan
-        </button>
-        <button
-          onClick={() => fetchSubscription(true)}
-          className="ml-2 inline-flex items-center rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
-          disabled={refreshing}
-        >
-          <FiRefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </button>
-      </div>
       <FullScreenPricing
         showPricingModal={showPricingModal}
         onUpdatePlan={onUpdatePlan}
