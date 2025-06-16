@@ -134,7 +134,6 @@ export default function SubscriptionPage() {
             className="inline-flex items-center rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
             disabled={refreshing}
           >
-            <FiRefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </button>
         </div>
