@@ -27,6 +27,7 @@ export async function POST(req: Request) {
         });
 
         // Send new verification email
+        console.log("Sending verification email to", email,'with code',verificationCode);
         await sendVerificationEmail(email, verificationCode);
 
         return NextResponse.json(

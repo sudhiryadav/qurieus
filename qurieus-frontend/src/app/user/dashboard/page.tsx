@@ -50,6 +50,15 @@ export default function Dashboard() {
     }
   };
 
+  // Group and sum by day for weekly activity
+  const weeklySums: Record<string, number> = {};
+  dashboardData?.weeklyActivity.forEach(({ date, count }) => {
+    if (!weeklySums[date]) weeklySums[date] = 0;
+    weeklySums[date] += count;
+  });
+  const weeklyCategories = Object.keys(weeklySums);
+  const weeklyCounts = Object.values(weeklySums);
+
   // Chart options
   const chartOptions = {
     chart: {
@@ -60,7 +69,7 @@ export default function Dashboard() {
       foreColor: "#64748b",
     },
     xaxis: {
-      categories: dashboardData?.weeklyActivity.map(day => day.date) || [],
+      categories: weeklyCategories,
     },
     colors: ["#3758F9"],
     plotOptions: {
@@ -84,7 +93,7 @@ export default function Dashboard() {
   const chartSeries = [
     {
       name: "Queries",
-      data: dashboardData?.weeklyActivity.map(day => day.count) || [],
+      data: weeklyCounts,
     },
   ];
 

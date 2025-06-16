@@ -2,14 +2,14 @@
 
 import { showToast } from "@/components/Common/Toast";
 import DocumentList from "@/components/DocumentList";
-import Pricing from "@/components/Pricing";
 import UploadDialog from "@/components/UploadDialog";
 import axiosInstance from "@/lib/axios";
+import { formatFileSize } from "@/lib/utils";
+import { Document, SubscriptionPlan } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Document, Subscription, SubscriptionPlan } from "@prisma/client";
-import { formatFileSize } from "@/lib/utils";
+import SubscriptionPage from "../subscription/page";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -29,13 +29,12 @@ export default function KnowledgeBase() {
       try {
         const response = await axiosInstance.get("/api/user/subscription");
         const data = response.data;
-        setSubscriptionPlan(data.plan);
+        setSubscriptionPlan(data?.plan ?? null);
       } catch (error) {
         console.error("Error checking subscription:", error);
         showToast.error(
           "Error checking subscription status. Please try again later.",
         );
-        router.push("/pricing");
       }
     };
 
@@ -68,12 +67,7 @@ export default function KnowledgeBase() {
 
   if (!subscriptionPlan) {
     return (
-      <div className="flex h-screen w-full flex-col items-center">
-        <span className="mb-4 text-xl font-bold text-dark dark:text-white">
-          Please subscribe to a plan to start uploading documents.
-        </span>
-        <Pricing />
-      </div>
+      <SubscriptionPage />
     );
   }
 

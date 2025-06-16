@@ -8,7 +8,6 @@ import { Subscription, SubscriptionPlan } from "@prisma/client";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { FiRefreshCw } from "react-icons/fi";
 
 const FullScreenPricing = ({
   showPricingModal,
@@ -61,7 +60,7 @@ export default function SubscriptionPage() {
       const response = await axiosInstance.get("/api/user/subscription");
       setSubscription(response.data as SubscriptionAndPlan);
       if (force) {
-        showToast.success("Subscription details updated");
+        showToast.info(response.data === null ? "No subscription found" : "Subscription details updated");
       }
     } catch (error) {
       console.error("Error fetching subscription:", error);
@@ -105,9 +104,8 @@ export default function SubscriptionPage() {
           </button>
           <button
             onClick={() => fetchSubscription(true)}
-            className="ml-2 inline-block rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
+            className="ml-2 inline-block rounded-lg px-6 py-3 text-white hover:bg-secondary/90 outline"
           >
-            <FiRefreshCw className="mr-2 h-4 w-4" />
             Reload
           </button>
         </div>
