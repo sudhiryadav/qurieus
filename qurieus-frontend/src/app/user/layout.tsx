@@ -36,7 +36,7 @@ export default function UserLayout({
     <SubscriptionProvider>
       <div className="relative flex h-screen overflow-hidden">
         <Sidebar />
-        <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden lg:ml-72">
+        <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
           <main className="flex-1 p-4 md:p-6 2xl:p-10">
             <UserLayoutContent>
               {children}

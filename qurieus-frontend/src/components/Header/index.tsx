@@ -87,7 +87,7 @@ const Header: React.FC = () => {
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="mr-1 sm:mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="mr-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 sm:mr-4 lg:hidden"
             >
               <Menu className="h-6 w-6" />
             </button>
