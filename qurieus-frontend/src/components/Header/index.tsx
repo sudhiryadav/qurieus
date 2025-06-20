@@ -102,14 +102,40 @@ const Header: React.FC = () => {
               <ul className="flex gap-x-12">
                 {menuData.filter((menuItem) => menuItem.hidden !== true).map((menuItem, index) => (
                   <li key={index} className="group relative">
-                    <Link
-                      href={menuItem.path || '#'}
-                      className={`ud-menu-scroll flex py-2 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary lg:inline-flex lg:px-0 lg:py-6 ${
-                        pathUrl === menuItem?.path && "text-primary"
-                      }`}
-                    >
-                      {menuItem.title}
-                    </Link>
+                    {menuItem.submenu ? (
+                      <>
+                        <button
+                          type="button"
+                          className={`ud-menu-scroll flex items-center py-2 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary lg:inline-flex lg:px-0 lg:py-6 ${
+                            pathUrl === menuItem?.path && "text-primary"
+                          }`}
+                        >
+                          {menuItem.title}
+                          <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        <ul className="absolute left-0 top-full z-20 hidden min-w-[180px] rounded-md bg-white py-2 shadow-lg group-hover:block dark:bg-dark-2">
+                          {menuItem.submenu.map((sub, subIdx) => (
+                            <li key={subIdx}>
+                              <Link
+                                href={sub.path || '#'}
+                                className="block px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              >
+                                {sub.title}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : (
+                      <Link
+                        href={menuItem.path || '#'}
+                        className={`ud-menu-scroll flex py-2 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary lg:inline-flex lg:px-0 lg:py-6 ${
+                          pathUrl === menuItem?.path && "text-primary"
+                        }`}
+                      >
+                        {menuItem.title}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -120,15 +146,45 @@ const Header: React.FC = () => {
                 <ul className="flex flex-col py-4">
                   {menuData.filter((menuItem) => menuItem.hidden !== true).map((menuItem, index) => (
                     <li key={index} className="group relative">
-                      <Link
-                        href={menuItem.path || '#'}
-                        onClick={navbarToggleHandler}
-                        className={`block px-6 py-3 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary ${
-                          pathUrl === menuItem?.path && "text-primary"
-                        }`}
-                      >
-                        {menuItem.title}
-                      </Link>
+                      {menuItem.submenu ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmenu(index)}
+                            className={`flex w-full items-center justify-between px-6 py-3 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary ${
+                              pathUrl === menuItem?.path && "text-primary"
+                            }`}
+                          >
+                            {menuItem.title}
+                            <svg className={`ml-2 h-4 w-4 transition-transform ${openIndex === index ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                          </button>
+                          {openIndex === index && (
+                            <ul className="pl-6">
+                              {menuItem.submenu.map((sub, subIdx) => (
+                                <li key={subIdx}>
+                                  <Link
+                                    href={sub.path || '#'}
+                                    onClick={navbarToggleHandler}
+                                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                                  >
+                                    {sub.title}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      ) : (
+                        <Link
+                          href={menuItem.path || '#'}
+                          onClick={navbarToggleHandler}
+                          className={`block px-6 py-3 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary ${
+                            pathUrl === menuItem?.path && "text-primary"
+                          }`}
+                        >
+                          {menuItem.title}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>

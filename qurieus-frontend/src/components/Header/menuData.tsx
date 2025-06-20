@@ -82,5 +82,36 @@ const menuData: Menu[] = [
       },
     ],
   },
+  {
+    id: 7,
+    title: "For You",
+    newTab: false,
+    submenu: [
+      {
+        id: 71,
+        title: "Lawyers",
+        path: "/for-you/lawyers",
+        newTab: false,
+      },
+      {
+        id: 72,
+        title: "HR",
+        path: "/for-you/hr",
+        newTab: false,
+      },
+      {
+        id: 73,
+        title: "SaaS",
+        path: "/for-you/saas",
+        newTab: false,
+      },
+      {
+        id: 74,
+        title: "Startups",
+        path: "/for-you/startups",
+        newTab: false,
+      },
+    ],
+  },
 ];
 export default menuData;
