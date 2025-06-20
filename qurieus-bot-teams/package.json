@@ -1,0 +1,46 @@
+{
+  "name": "qurieus-bot-teams",
+  "version": "0.0.0",
+  "description": "Intelligent bot using AI",
+  "repository": {
+    "url": "sudhiryadav/qurieus-bot-teams",
+    "type": "git"
+  },
+  "main": "index.ts",
+  "scripts": {
+    "dev": "nodemon --watch './**/*.ts' --exec ts-node index.ts",
+    "start": "ts-node index.ts",
+    "build": "tsc",
+    "lint": "eslint .",
+    "test": "npm run lint"
+  },
+  "engines": {
+    "node": ">=8.5.0"
+  },
+  "author": "Sudhir Yadav <er.sudhir.yadav@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@azure/openai": "^2.0.0",
+    "@microsoft/agents-hosting": "^0.4.3",
+    "body-parser": "^2.2.0",
+    "botbuilder": "4.22.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "restify": "^11.1.0",
+    "telegraf": "^3.34.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.3",
+    "eslint": "^6.7.1",
+    "eslint-config-standard": "^14.1.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "nodemon": "^3.1.10",
+    "supervisor": "^0.12.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}
