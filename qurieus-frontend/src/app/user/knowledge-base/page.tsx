@@ -3,45 +3,20 @@
 import { showToast } from "@/components/Common/Toast";
 import DocumentList from "@/components/DocumentList";
 import UploadDialog from "@/components/UploadDialog";
-import axiosInstance from "@/lib/axios";
 import { formatFileSize } from "@/lib/utils";
-import { Document, SubscriptionPlan } from "@prisma/client";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { Document } from "@prisma/client";
 import { useEffect, useState } from "react";
-import SubscriptionPage from "../subscription/page";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [subscriptionPlan, setSubscriptionPlan] =
-    useState<SubscriptionPlan | null>(null);
+  const { subscriptionPlan } = useSubscription();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [totalFiles, setTotalFiles] = useState(0);
   const [remainingFiles, setRemainingFiles] = useState(0);
   const [totalSize, setTotalSize] = useState(0);
   const [remainingSize, setRemainingSize] = useState(0);
-
-  useEffect(() => {
-    const checkSubscription = async () => {
-      try {
-        const response = await axiosInstance.get("/api/user/subscription");
-        const data = response.data;
-        setSubscriptionPlan(data?.plan ?? null);
-      } catch (error) {
-        console.error("Error checking subscription:", error);
-        showToast.error(
-          "Error checking subscription status. Please try again later.",
-        );
-      }
-    };
-
-    if (session?.user) {
-      checkSubscription();
-    }
-  }, [status, router, session]);
 
   useEffect(() => {
     if (subscriptionPlan) {
@@ -64,12 +39,6 @@ export default function KnowledgeBase() {
       );
     }
   }, [documents, subscriptionPlan]);
-
-  if (!subscriptionPlan) {
-    return (
-      <SubscriptionPage />
-    );
-  }
 
   return (
     <div className="mx-auto">

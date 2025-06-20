@@ -6,6 +6,8 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import UserLayoutContent from "./UserLayoutContent";
 
 export default function UserLayout({
   children,
@@ -32,13 +34,21 @@ export default function UserLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <div className="flex">
-        {sidebarOpen && (
-          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        )}
-        <main className="flex-1 p-8">{children}</main>
+    <SubscriptionProvider>
+      <div className="flex h-screen overflow-hidden">
+        <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+          <div className="flex">
+            {sidebarOpen && (
+              <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            )}
+            <main className="flex-1 p-8">
+              <UserLayoutContent>
+                {children}
+              </UserLayoutContent>
+            </main>
+          </div>
+        </div>
       </div>
-    </div>
+    </SubscriptionProvider>
   );
 }
