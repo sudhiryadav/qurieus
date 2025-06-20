@@ -75,3 +75,8 @@ body {
 .blog-details h3 {
   @apply text-dark mb-6 text-2xl font-bold dark:text-white sm:text-[28px] sm:leading-[40px];
 }
+
+/* Custom CSS to force Paddle checkout modal to the front */
+.paddle-checkout-overlay {
+  z-index: 100 !important;
+}

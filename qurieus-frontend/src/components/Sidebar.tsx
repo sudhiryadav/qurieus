@@ -52,11 +52,11 @@ const Sidebar: React.FC<SidebarProps> = () => {
   return (
     <aside
       ref={sidebarRef}
-      className={`absolute left-0 top-0 z-[9999] flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-dark-2 lg:static lg:translate-x-0 ${
+      className={`absolute left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-dark-2 lg:static lg:translate-x-0 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="flex items-center justify-between gap-2 px-2 py-2 lg:py-6.5 lg:hidden">
+      <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
         <Link href="/">
           {/* <img src="/logo.png" alt="Logo" className="h-8 w-auto" /> */}
         </Link>

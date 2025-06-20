@@ -106,12 +106,6 @@ export const PaddleCheckout = forwardRef<
         theme: theme === "dark" ? "dark" : "light",
         displayMode: mode,
       };
-      if (mode === "inline" && inlineContainerRef.current) {
-        settings.frameTarget = inlineContainerRef.current.id;
-        settings.frameInitialHeight = 416;
-        settings.frameStyle =
-          "width:100%; min-width:312px; background:transparent; border:none;";
-      }
       paddle.Checkout.open({
         settings,
         items: [{ priceId }],
