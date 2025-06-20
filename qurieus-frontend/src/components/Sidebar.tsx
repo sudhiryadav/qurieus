@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
         </button>
       </div>
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
-        <nav className="mt-0 px-4 py-4 lg:px-6">
+        <nav className="mt-0 px-2">
           {userNav.map((item) => {
             const isActive = pathname === item.href;
             return (
