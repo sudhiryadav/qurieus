@@ -7,6 +7,10 @@
     {
       "name": "Backend",
       "path": "qurieus-backend"
+    },
+    {
+      "name": "MSTeamsBot",
+      "path": "qurieus-bot-teams"
     }
   ],
   "settings": {
@@ -73,6 +77,15 @@
         "console": "integratedTerminal",
         "justMyCode": false,
         "python": "${workspaceFolder:Backend}/.venv/bin/python"
+      },
+      {
+        "name": "MSTeamsBot",
+        "type": "node",
+        "request": "launch",
+        "runtimeExecutable": "yarn",
+        "runtimeArgs": ["dev"],
+        "cwd": "${workspaceFolder:MSTeamsBot}",
+        "console": "integratedTerminal"
       }
     ],
     "compounds": [
