@@ -77,7 +77,7 @@ const Contact = () => {
                       Our Location
                     </h3>
                     <p className="text-base text-body-color dark:text-dark-6">
-                      Frontslash, Sector 8, Dwarka, New Delhi, India
+                      Frontslash,  New Delhi, India
                     </p>
                   </div>
                 </div>

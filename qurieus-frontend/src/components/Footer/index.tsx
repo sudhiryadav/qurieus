@@ -213,6 +213,47 @@ const Footer = () => {
               </ul>
             </div>
           </div>
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12">
+            <div className="mb-10 w-full">
+              <h4 className="mb-9 text-lg font-semibold text-white">
+                For You
+              </h4>
+              <ul>
+                <li>
+                  <Link
+                    href="/for-you/lawyers"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Lawyers
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/for-you/hr"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    HR
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/for-you/saas"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    SaaS
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/for-you/startups"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Startups
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 

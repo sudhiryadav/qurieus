@@ -129,7 +129,7 @@ export default function RefundPolicyPage() {
                   </p>
                   <p className="text-gray-600 dark:text-gray-400 mt-4">
                     Email: support@qurieus.com<br />
-                    Address: FrontSlash, Sector 8, Dwarka, New Delhi 110077<br />
+                    Address: FrontSlash,  New Delhi<br />
                     Phone: +919953633888
                   </p>
                 </div>

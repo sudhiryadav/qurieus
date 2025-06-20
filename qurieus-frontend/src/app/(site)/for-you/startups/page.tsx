@@ -60,7 +60,7 @@ const StartupsPage = () => (
       </section>
 
       <section className="text-center">
-        <Link href="/upload" className="inline-block bg-primary text-white px-6 py-3 rounded hover:bg-primary-dark transition">
+        <Link href="/user/knowledge-base" className="inline-block bg-primary text-white px-6 py-3 rounded hover:bg-primary-dark transition">
           Try Qurieus with Your Own Files
         </Link>
       </section>
