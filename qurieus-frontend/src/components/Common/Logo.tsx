@@ -59,7 +59,7 @@ const Logo = ({
           className="dark:block"
         />
         {showBrandName && (
-          <span className="ml-2 text-xl font-bold text-black dark:text-white">
+          <span className="ml-2 text-lg sm:text-xl font-bold text-black dark:text-white">
             Qurieus
           </span>
         )}
@@ -81,7 +81,7 @@ const Logo = ({
           className="dark:hidden"
         />
         {showBrandName && (
-          <span className="ml-2 text-xl font-bold text-black dark:text-white">
+          <span className="ml-2 text-lg sm:text-xl font-bold text-black dark:text-white">
             Qurieus
           </span>
         )}
