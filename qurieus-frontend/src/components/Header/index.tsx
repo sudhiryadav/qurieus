@@ -77,7 +77,9 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="fixed left-0 top-0 z-50 w-full bg-white shadow-sm dark:bg-dark-2">
+    <header
+      className={`fixed left-0 top-0 z-40 w-full bg-white shadow-sm dark:bg-dark-2 transition-all duration-300 ease-linear`}
+    >
       <div className="flex h-16 items-center justify-between px-2 sm:px-4">
         <div className="flex items-center">
           {/* Sidebar toggle button (mobile only) */}
@@ -96,8 +98,8 @@ const Header: React.FC = () => {
           </div>
         </div>
         <div className="flex w-full items-center justify-end">
-          <div className="flex items-center space-x-1 sm:space-x-2">
-            {/* Desktop menu */}
+          {/* Desktop menu */}
+          {!isUserRoute && (
             <nav className="hidden pr-4 lg:flex">
               <ul className="flex gap-x-12">
                 {menuData.filter((menuItem) => menuItem.hidden !== true).map((menuItem, index) => (
@@ -140,6 +142,9 @@ const Header: React.FC = () => {
                 ))}
               </ul>
             </nav>
+          )}
+
+          <div className="flex items-center space-x-1 sm:space-x-2">
             {/* Mobile/Shared Controls */}
             {/* theme toggler */}
             <button

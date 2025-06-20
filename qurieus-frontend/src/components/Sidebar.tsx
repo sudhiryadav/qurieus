@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "@/contexts/SidebarContext";
 
 interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
+  // Props are no longer needed as state is managed by context
 }
 
 const userNav = [
@@ -25,7 +24,7 @@ const adminNav = [
   { name: "Plans", href: "/admin/plans", icon: <Code className="h-4 w-4 mr-2" /> },
 ];
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+const Sidebar: React.FC<SidebarProps> = () => {
   const { data: session } = useSession();
   const [adminOpen, setAdminOpen] = useState(false);
   const pathname = usePathname();
@@ -36,26 +35,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   useEffect(() => {
     const clickHandler = ({ target }: MouseEvent) => {
       if (!sidebarRef.current || !trigger.current) return;
+      // Close sidebar on mobile if clicked outside
       if (
-        !sidebarOpen ||
-        sidebarRef.current.contains(target as Node) ||
-        trigger.current.contains(target as Node)
-      )
-        return;
-      setSidebarOpen(false);
+        window.innerWidth < 1024 &&
+        sidebarOpen &&
+        !sidebarRef.current.contains(target as Node) &&
+        !trigger.current.contains(target as Node)
+      ) {
+        setSidebarOpen(false);
+      }
     };
     document.addEventListener("click", clickHandler);
     return () => document.removeEventListener("click", clickHandler);
-  });
+  }, [sidebarOpen, setSidebarOpen]);
 
   return (
     <aside
       ref={sidebarRef}
-      className={`absolute left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-dark-2 lg:static lg:translate-x-0 ${
+      className={`absolute left-0 top-0 z-[9999] flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-dark-2 lg:static lg:translate-x-0 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
+      <div className="flex items-center justify-between gap-2 px-2 py-2 lg:py-6.5 lg:hidden">
         <Link href="/">
           {/* <img src="/logo.png" alt="Logo" className="h-8 w-auto" /> */}
         </Link>
@@ -70,7 +71,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </button>
       </div>
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
-        <nav className="mt-5 px-4 py-4 lg:mt-9 lg:px-6">
+        <nav className="mt-0 px-4 py-4 lg:px-6">
           {userNav.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -120,4 +121,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       </div>
     </aside>
   );
-} 
+};
+
+export default Sidebar; 

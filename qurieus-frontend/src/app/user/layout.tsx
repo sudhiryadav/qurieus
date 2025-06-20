@@ -16,7 +16,6 @@ export default function UserLayout({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { sidebarOpen, setSidebarOpen } = useSidebar();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -35,18 +34,14 @@ export default function UserLayout({
 
   return (
     <SubscriptionProvider>
-      <div className="flex h-screen overflow-hidden">
-        <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
-          <div className="flex">
-            {sidebarOpen && (
-              <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            )}
-            <main className="flex-1 p-8">
-              <UserLayoutContent>
-                {children}
-              </UserLayoutContent>
-            </main>
-          </div>
+      <div className="relative flex h-screen overflow-hidden">
+        <Sidebar />
+        <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden lg:ml-72">
+          <main className="flex-1 p-4 md:p-6 2xl:p-10">
+            <UserLayoutContent>
+              {children}
+            </UserLayoutContent>
+          </main>
         </div>
       </div>
     </SubscriptionProvider>
