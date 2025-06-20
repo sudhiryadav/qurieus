@@ -77,7 +77,7 @@ const Contact = () => {
                       Our Location
                     </h3>
                     <p className="text-base text-body-color dark:text-dark-6">
-                      Frontslash,  New Delhi, India
+                    Frontslash,  New Delhi, India
                     </p>
                   </div>
                 </div>
@@ -97,7 +97,9 @@ const Contact = () => {
                       How Can We Help?
                     </h3>
                     <p className="text-base text-body-color dark:text-dark-6">
-                      hello@qurieus.com
+                      <a href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}`} className="text-primary">
+                        {process.env.NEXT_PUBLIC_CONTACT_EMAIL}
+                      </a>
                     </p>
                   </div>
                 </div>

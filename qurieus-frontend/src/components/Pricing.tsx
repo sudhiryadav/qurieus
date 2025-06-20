@@ -93,7 +93,7 @@ export default function Pricing({ onUpdatePlan }: { onUpdatePlan?: (subscription
         if (currentSubscriptionId) {
           paddleRef.current.updatePlan(currentSubscriptionId, plan.paddleConfig.priceId);
         } else {
-          paddleRef.current.openCheckout(plan.paddleConfig.priceId);
+          paddleRef.current.openCheckout(plan.paddleConfig.priceId, plan.id);
         }
         return;
       } else {

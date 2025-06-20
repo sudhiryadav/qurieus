@@ -14,6 +14,9 @@ const config: Config = {
         ...colors,
         // primary: "#1A202C",
       },
+      boxShadow: {
+        'dark-sm': '0 1px 2px 0 rgba(255, 255, 255, 0.72)',
+      },
     },
   },
   plugins: [require("tailgrids/plugin")],

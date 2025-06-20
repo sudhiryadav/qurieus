@@ -78,7 +78,7 @@ const Header: React.FC = () => {
 
   return (
     <header
-      className={`fixed left-0 top-0 z-40 w-full bg-white shadow-sm dark:bg-dark-2 transition-all duration-300 ease-linear`}
+      className={`fixed left-0 top-0 z-40 w-full bg-white shadow-sm dark:shadow-dark-sm dark:bg-dark-2 transition-all duration-300 ease-linear`}
     >
       <div className="flex h-16 items-center justify-between px-2 sm:px-4">
         <div className="flex items-center">
@@ -177,9 +177,7 @@ const Header: React.FC = () => {
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className={`flex items-center space-x-1 px-1 sm:px-2 py-2 text-xs sm:text-base font-medium max-w-[80px] sm:max-w-none truncate ${
-                      !sticky && pathUrl === "/" ? "text-white" : "text-dark"
-                    } dark:text-white`}
+                    className={`flex items-center space-x-1 px-1 sm:px-2 py-2 text-xs sm:text-base font-medium max-w-[80px] sm:max-w-none truncate text-dark dark:text-white`}
                   >
                     <span className="truncate">{session?.user?.name}</span>
                     <svg

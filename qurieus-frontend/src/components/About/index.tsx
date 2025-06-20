@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import TryForFreeButton from "../Common/TryForFreeButton";
 
 const About = () => {
   return (
@@ -10,23 +11,27 @@ const About = () => {
       <div className="container">
         <div className="wow fadeInUp" data-wow-delay=".2s">
           <div className="-mx-4 flex flex-wrap items-center">
-            <div className="w-full px-4 lg:w-1/2">
+            <div className="w-full px-4 sm:mt-4 lg:w-1/2">
               <div className="mb-12 max-w-[540px] lg:mb-0">
-                <h2 className="mb-5 text-3xl font-bold leading-tight text-dark dark:text-white sm:text-[40px] sm:leading-[1.2]">
+                <h2 className="mb-5 mt-4 text-3xl font-bold leading-tight text-dark dark:text-white sm:text-[40px] sm:leading-[1.2]">
                   Making Document Knowledge Accessible Through AI
                 </h2>
                 <p className="mb-10 text-base leading-relaxed text-body-color dark:text-dark-6">
-                  At Qurieus, we believe that valuable information locked in documents should be easily accessible to everyone. Our AI-powered platform transforms static PDFs into interactive conversations, making it easier for users to find and understand the information they need.
+                  At Qurieus, we believe that valuable information locked in
+                  documents should be easily accessible to everyone. Our
+                  AI-powered platform transforms static PDFs into interactive
+                  conversations, making it easier for users to find and
+                  understand the information they need.
                   <br /> <br />
-                  Whether you&apos;re a business looking to make your documentation more user-friendly, an educational institution wanting to enhance learning materials, or an organization seeking to improve information accessibility, Qurieus provides the tools you need to make your content more engaging and accessible.
+                  Whether you&apos;re a business looking to make your
+                  documentation more user-friendly, an educational institution
+                  wanting to enhance learning materials, or an organization
+                  seeking to improve information accessibility, Qurieus provides
+                  the tools you need to make your content more engaging and
+                  accessible.
                 </p>
 
-                <Link
-                  href="#"
-                  className="inline-flex items-center justify-center rounded-md bg-primary px-7 py-3 text-center text-base font-medium text-white duration-300 hover:bg-primary/90"
-                >
-                  Know More
-                </Link>
+                <TryForFreeButton />
               </div>
             </div>
 
@@ -58,7 +63,7 @@ const About = () => {
                   <div className="relative z-10 mb-4 flex items-center justify-center overflow-hidden bg-primary px-6 py-12 sm:mb-8 sm:h-[160px] sm:p-5 lg:mb-4 xl:mb-8">
                     <div>
                       <span className="block text-5xl font-extrabold text-white">
-                        09
+                        21
                       </span>
                       <span className="block text-base font-semibold text-white">
                         We have

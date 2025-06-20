@@ -52,14 +52,11 @@ const Sidebar: React.FC<SidebarProps> = () => {
   return (
     <aside
       ref={sidebarRef}
-      className={`absolute left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-dark-2 lg:static lg:translate-x-0 ${
+      className={`absolute left-0 top-0 z-10 flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-dark-2 lg:static lg:translate-x-0 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
+      } lg:relative lg:border-r lg:border-gray-200 dark:border-dark-3`}
     >
-      <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
-        <Link href="/">
-          {/* <img src="/logo.png" alt="Logo" className="h-8 w-auto" /> */}
-        </Link>
+      <div className="pt-2 pr-2 flex items-center justify-end gap-2 px-6 py-5.5 lg:py-6.5">
         <button
           ref={trigger}
           onClick={() => setSidebarOpen(!sidebarOpen)}
