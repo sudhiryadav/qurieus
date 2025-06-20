@@ -10,6 +10,7 @@ import Logo from "../Common/Logo";
 
 import { useSidebar } from "@/contexts/SidebarContext";
 import menuData from "./menuData";
+import { userNav } from "@/components/Sidebar";
 
 const Header: React.FC = () => {
   const { data: session } = useSession();
@@ -192,51 +193,22 @@ const Header: React.FC = () => {
                   {userMenuOpen && (
                     <div className="absolute right-0 mt-2 min-w-[10rem] w-max origin-top rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-dark-2 z-[200]">
                       <div className="py-1">
-                        <Link
-                          href="/user/dashboard"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                        >
-                          Dashboard
-                        </Link>
-                        <Link
-                          href="/user/profile"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                        >
-                          Profile
-                        </Link>
-                        <Link
-                          href="/user/subscription"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                        >
-                          Subscription
-                        </Link>
-                        <Link
-                          href="/user/knowledge-base"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                        >
-                          Knowledge Base
-                        </Link>
-                        <Link
-                          href="/user/analytics"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                        >
-                          Analytics
-                        </Link>
-                        <Link
-                          href="/user/embed-code"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                        >
-                          Embed code
-                        </Link>
+                        {userNav.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setUserMenuOpen(false)}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                          >
+                            {item.name}
+                          </Link>
+                        ))}
                         <hr className="my-1 border-gray-200 dark:border-dark-3" />
                         <button
-                          onClick={handleSignOut}
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            handleSignOut();
+                          }}
                           className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                         >
                           Sign Out

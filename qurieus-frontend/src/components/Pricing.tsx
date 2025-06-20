@@ -6,13 +6,17 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
-import { SubscriptionPlanWithPaddle } from "@/app/(site)/pricing/page";
+import { SubscriptionPlanWithPaddle } from "@/types/subscription";
 import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
 import { Subscription } from "@prisma/client";
 
-export default function Pricing({ onUpdatePlan }: { onUpdatePlan?: (subscriptionId: string, priceId: string) => void }) {
+export default function Pricing({
+  onUpdatePlan,
+}: {
+  onUpdatePlan?: (subscriptionId: string, priceId: string) => void;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [loadingPricing, setLoadingPricing] = useState(false);
@@ -24,38 +28,50 @@ export default function Pricing({ onUpdatePlan }: { onUpdatePlan?: (subscription
   const paddleRef = useRef<PaddleCheckoutRef>(null);
   const [plans, setPlans] = useState<SubscriptionPlanWithPaddle[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
-  const [currentSubscriptionId, setCurrentSubscriptionId] = useState<string | null>(null);
-  const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
-
-  useEffect(() => {
-    //Get the plans
-    const fetchPlans = async () => {
-      const { data } = await axios.get("/api/subscription/plans");
-      setPlans(data);
-    };
-    fetchPlans();
-  }, []);
+  const [currentSubscriptionId, setCurrentSubscriptionId] = useState<
+    string | null
+  >(null);
+  const [currentSubscription, setCurrentSubscription] =
+    useState<Subscription | null>(null);
 
   useEffect(() => {
     // Get current subscription
     const fetchCurrentSubscription = async () => {
-      setLoadingPricing(true);
-      if (session) {
-        const { data } = await axios.get("/api/user/subscription/check");
-        if(data.hasSubscription) {
-        setCurrentPlanId(data.currentPlanId);
-        setCurrentSubscriptionId( data.subscription.paddleSubscriptionId);
-        setCurrentSubscription(data.subscription);
-        }
-      }
-      setLoadingPricing(false);
+      return axios
+        .get<Subscription>(`/api/user/subscription/${session?.user?.id}`)
+        .then((res) => res.data);
     };
-    fetchCurrentSubscription();
+
+    //Get the plans
+    const fetchPlans = async () => {
+      return axios
+        .get<SubscriptionPlanWithPaddle[]>(
+          "/api/subscription/plans",
+        )
+        .then((res) => res.data);
+    };
+
+    if (session?.user?.id) {
+      setLoadingPricing(true);
+      Promise.all([fetchCurrentSubscription(), fetchPlans()])
+        .then(([currentSubscription, plans]) => {
+          setCurrentPlanId(currentSubscription?.planId || null);
+          setCurrentSubscriptionId(currentSubscription?.paddleSubscriptionId || null);
+          setCurrentSubscription(currentSubscription || null);
+          setPlans(plans);
+        })
+        .finally(() => {
+          setLoadingPricing(false);
+        });
+    }
   }, [session]);
 
   const startSubscriptionProcess = () => {
     if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
-      paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId, selectedPlan.id);
+      paddleRef.current.openCheckout(
+        selectedPlan.paddleConfig.priceId,
+        selectedPlan.id,
+      );
     } else {
       showToast.error(
         "Paddle configuration is incomplete. Please contact support.",
@@ -91,7 +107,10 @@ export default function Pricing({ onUpdatePlan }: { onUpdatePlan?: (subscription
       }
       if (plan.paddleConfig?.priceId && paddleRef.current) {
         if (currentSubscriptionId) {
-          paddleRef.current.updatePlan(currentSubscriptionId, plan.paddleConfig.priceId);
+          paddleRef.current.updatePlan(
+            currentSubscriptionId,
+            plan.paddleConfig.priceId,
+          );
         } else {
           paddleRef.current.openCheckout(plan.paddleConfig.priceId, plan.id);
         }
@@ -134,9 +153,11 @@ export default function Pricing({ onUpdatePlan }: { onUpdatePlan?: (subscription
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Loading pricing...</h1>
-          <p className="text-sm text-gray-500">Please wait while we load your pricing.</p>
+          <p className="text-sm text-gray-500">
+            Please wait while we load your pricing.
+          </p>
           <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-gray-900 dark:border-white"></div>
           </div>
         </div>
       </div>
@@ -154,15 +175,15 @@ export default function Pricing({ onUpdatePlan }: { onUpdatePlan?: (subscription
         mode={authMode}
         onSuccess={startSubscriptionProcess}
       />
-        <PaddleCheckout
-          ref={paddleRef}
-          mode="overlay"
-          onComplete={handlePaddleComplete}
-          onClose={handlePaddleClose}
-          onError={handlePaddleError}
-          onFailed={handlePaddleFailed}
-          onUpdatePlan={onUpdatePlan}
-        />
+      <PaddleCheckout
+        ref={paddleRef}
+        mode="overlay"
+        onComplete={handlePaddleComplete}
+        onClose={handlePaddleClose}
+        onError={handlePaddleError}
+        onFailed={handlePaddleFailed}
+        onUpdatePlan={onUpdatePlan}
+      />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="isolate mx-auto grid max-w-md grid-cols-1 gap-8 md:max-w-2xl md:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-4">
           {nonEnterprisePlans?.map((plan: SubscriptionPlanWithPaddle) => (

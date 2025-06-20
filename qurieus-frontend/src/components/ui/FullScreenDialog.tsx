@@ -35,13 +35,13 @@ export default function FullScreenModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="fixed inset-0 w-full h-full bg-[#232a36] flex flex-col">
+      <div className="fixed inset-0 w-full h-full bg-white dark:bg-[#232a36] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-700 p-4">
-          <div className="flex-1 text-lg font-semibold text-white">{header}</div>
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-[#232a36]">
+          <div className="flex-1 text-lg font-semibold text-dark dark:text-white">{header}</div>
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-white focus:outline-none"
+            className="absolute top-4 right-4 text-gray-500 hover:text-dark dark:text-gray-400 dark:hover:text-white focus:outline-none"
             aria-label="Close dialog"
           >
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -56,10 +56,10 @@ export default function FullScreenModal({
           </button>
         </div>
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto min-h-0 ${padding}`}>{children}</div>
+        <div className={`flex-1 overflow-y-auto min-h-0 bg-white dark:bg-[#232a36] text-dark dark:text-white ${padding}`}>{children}</div>
         {/* Footer */}
         {footer && (
-          <div className="flex justify-end border-t border-gray-700 bg-[#232a36] p-2">
+          <div className="flex justify-end border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-[#232a36] p-2">
             {footer}
           </div>
         )}

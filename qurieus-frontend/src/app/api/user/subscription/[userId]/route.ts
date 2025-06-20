@@ -3,11 +3,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/utils/prismaDB";
 import { authOptions } from "@/utils/auth";
 
-export async function GET() {
+export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    const { userId } = await params;
+    if (!session?.user?.id || session.user.id !== userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -16,13 +16,17 @@ export async function GET() {
 
     const subscription = await prisma.subscription.findFirst({
       where: {
-        userId: session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
+        userId: userId,
       },
       include: {
         plan: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
