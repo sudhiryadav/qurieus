@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Breadcrumb from '@/components/Common/Breadcrumb';
+import TryForFreeButton from '@/components/Common/TryForFreeButton';
 
 const StartupsPage = () => (
   <main>
@@ -60,9 +61,7 @@ const StartupsPage = () => (
       </section>
 
       <section className="text-center">
-        <Link href="/user/knowledge-base" className="inline-block bg-primary text-white px-6 py-3 rounded hover:bg-primary-dark transition">
-          Try Qurieus with Your Own Files
-        </Link>
+        <TryForFreeButton />
       </section>
     </div>
   </main>
