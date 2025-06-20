@@ -50,7 +50,7 @@ const Hero = () => {
               >
                 <div className="mt-16">
                   {/* Add the overlay such that if the tem */}
-                  <div className="absolute inset-0 rounded-t-xl rounded-tr-xl bg-black opacity-0 dark:opacity-50"></div>
+                  <div className="absolute inset-0 rounded-t-xl rounded-tr-xl bg-black opacity-0 dark:opacity-20"></div>
                   <Image
                     src="/images/hero/hero-image.jpg"
                     alt="hero"
