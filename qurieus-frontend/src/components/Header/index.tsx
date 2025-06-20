@@ -190,7 +190,7 @@ const Header: React.FC = () => {
                 </ul>
               </nav>
             )}
-            <div className="hidden items-center justify-end sm:flex">
+            <div className="flex items-center justify-end">
               {/* theme toggler */}
               <button
                 aria-label="theme toggler"
@@ -293,39 +293,55 @@ const Header: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  {/* Hamburger button - mobile only, after user dropdown */}
-                  <button
-                    onClick={navbarToggleHandler}
-                    id="navbarToggler"
-                    aria-label="Mobile Menu"
-                    className="block lg:hidden ml-2 p-2 rounded focus:outline-none"
-                  >
-                    <span className="sr-only">Open main menu</span>
-                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      {navbarOpen ? (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      ) : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                      )}
-                    </svg>
-                  </button>
                 </div>
               ) : (
                 <>
                   <Link
                     href="/signin"
-                    className="px-7 py-3 text-base font-medium text-gray-800 hover:opacity-70 dark:text-white"
+                    className="hidden px-7 py-3 text-base font-medium text-gray-800 hover:opacity-70 dark:text-white sm:block"
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/signup"
-                    className="rounded-lg bg-primary px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90 dark:bg-white/10 dark:hover:bg-white/20"
+                    className="hidden rounded-lg bg-primary px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90 dark:bg-white/10 dark:hover:bg-white/20 sm:block"
                   >
                     Sign Up
                   </Link>
                 </>
               )}
+              {/* Hamburger button - mobile only */}
+              <button
+                onClick={navbarToggleHandler}
+                id="navbarToggler"
+                aria-label="Mobile Menu"
+                className="block lg:hidden ml-2 p-2 rounded focus:outline-none"
+              >
+                <span className="sr-only">Open main menu</span>
+                <svg
+                  className="h-6 w-6 text-dark dark:text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {navbarOpen ? (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  ) : (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  )}
+                </svg>
+              </button>
             </div>
           </div>
         </div>

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard } from "lucide-react";
-import { useState } from "react";
+import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,21 +29,48 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { data: session } = useSession();
   const [adminOpen, setAdminOpen] = useState(false);
   const pathname = usePathname();
+  const { sidebarOpen, setSidebarOpen } = useSidebar();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
 
-  // Hide sidebar on mobile if not open
+  useEffect(() => {
+    const clickHandler = ({ target }: MouseEvent) => {
+      if (!sidebarRef.current || !trigger.current) return;
+      if (
+        !sidebarOpen ||
+        sidebarRef.current.contains(target as Node) ||
+        trigger.current.contains(target as Node)
+      )
+        return;
+      setSidebarOpen(false);
+    };
+    document.addEventListener("click", clickHandler);
+    return () => document.removeEventListener("click", clickHandler);
+  });
+
   return (
     <aside
-      className={`min-h-screen w-64 bg-white dark:bg-dark-2 border-r border-gray-200 dark:border-dark-3 shadow-lg transition-transform duration-300 ease-in-out
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:shadow-none`}
-      aria-label="Sidebar"
+      ref={sidebarRef}
+      className={`absolute left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-dark-2 lg:static lg:translate-x-0 ${
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
     >
-      {/* Overlay for mobile */}
-      {/* <div
-        className={`fixed inset-0 z-30 bg-black bg-opacity-40 lg:hidden transition-opacity duration-300 ${isOpen ? "block" : "hidden"}`}
-        onClick={onClose}
-      /> */}
-      <div className="flex flex-col h-full py-6 px-4">
-        <nav className="flex-1 space-y-2">
+      <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
+        <Link href="/">
+          {/* <img src="/logo.png" alt="Logo" className="h-8 w-auto" /> */}
+        </Link>
+        <button
+          ref={trigger}
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-controls="sidebar"
+          aria-expanded={sidebarOpen}
+          className="block lg:hidden"
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
+      <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
+        <nav className="mt-5 px-4 py-4 lg:mt-9 lg:px-6">
           {userNav.map((item) => {
             const isActive = pathname === item.href;
             return (
