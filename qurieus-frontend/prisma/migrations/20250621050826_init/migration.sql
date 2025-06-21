@@ -65,6 +65,9 @@ CREATE TABLE "Users" (
     "jobTitle" TEXT,
     "bio" TEXT,
     "phone" TEXT,
+    "allowedOrigins" TEXT[],
+    "allowedReferrers" TEXT[],
+    "allowedIPs" TEXT[],
 
     CONSTRAINT "Users_pkey" PRIMARY KEY ("id")
 );
@@ -125,7 +128,11 @@ CREATE TABLE "Subscription" (
     "paddlePaymentAmount" DOUBLE PRECISION,
     "paddlePaymentDate" TIMESTAMP(3),
     "paddlePaymentError" TEXT,
+    "paddlePaymentCurrency" TEXT DEFAULT 'INR',
+    "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "nextBillingDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "billingCycle" TEXT NOT NULL DEFAULT 'monthly',
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
