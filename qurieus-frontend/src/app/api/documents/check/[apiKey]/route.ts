@@ -4,10 +4,10 @@ import { sendEmail } from "@/lib/email";
 
 export async function GET(
   request: Request,
-  { params }: { params: { apiKey: string } }
+  { params }: { params: Promise<{ apiKey: string }> }
 ) {
   try {
-    const { apiKey } = params;
+    const { apiKey } = await params;
 
     // Check if user exists
     const user = await prisma.user.findUnique({

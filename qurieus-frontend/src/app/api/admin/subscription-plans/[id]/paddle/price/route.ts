@@ -12,11 +12,11 @@ const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
 });
 
 export async function POST(
-  req: NextRequest,
-  context: { params: { id: string } },
-) {
-  const { params } = context;
-  const awaitedParams = await params;
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<NextResponse> {
+  const { id } = await params;
+  console.log(id);
   const session = await getServerSession(authOptions);
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,7 +27,7 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const plan = await prisma.subscriptionPlan.findUnique({
-    where: { id: awaitedParams.id },
+    where: { id: id },
   });
   if (!plan)
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });

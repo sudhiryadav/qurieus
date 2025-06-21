@@ -5,10 +5,9 @@ import { prisma } from "@/utils/prismaDB";
 
 export async function GET(
   req: Request,
-  context: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { params } = context;
-  const awaitedParams = await params;
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -26,7 +25,7 @@ export async function GET(
     }
 
     const plan = await prisma.subscriptionPlan.findUnique({
-      where: { id: awaitedParams.id },
+      where: { id: id },
       include: {
         paddleConfig: true,
       },
@@ -52,8 +51,9 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -74,7 +74,7 @@ export async function PUT(
     const { productId, priceId, trialDays, billingCycle } = body;
 
     const plan = await prisma.subscriptionPlan.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         paddleConfig: true,
       },
@@ -86,10 +86,10 @@ export async function PUT(
 
     const updatedConfig = await prisma.paddleConfig.upsert({
       where: {
-        subscriptionPlanId: params.id,
+        subscriptionPlanId: id,
       },
       create: {
-        subscriptionPlanId: params.id,
+        subscriptionPlanId: id,
         productId,
         priceId,
         trialDays,
