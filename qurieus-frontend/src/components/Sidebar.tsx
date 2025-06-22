@@ -99,6 +99,7 @@ const Sidebar = () => {
                       <Link
                         key={item.href}
                         href={item.href}
+                        onClick={() => setSidebarOpen(false)}
                         className={`flex items-center px-2 py-1 text-sm rounded-md transition-colors
                           ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 dark:text-gray-300 hover:text-primary"}`}
                       >

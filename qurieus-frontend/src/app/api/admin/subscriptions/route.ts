@@ -1,47 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import prisma from "@/lib/prisma";
 import { authOptions } from "@/utils/auth";
-import axios from "@/lib/axios";
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
 
-// Helper to check SUPER_ADMIN
-async function requireSuperAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
-  return null;
-}
 
-// GET: List all subscriptions with user and plan info
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const search = searchParams.get("search") || "";
+    // Get all the subscriptions from the database
+    const subscriptions = await prisma.subscription.findMany({
+      include: {
+        user: true,
+        plan: true,
+      },
+    });
 
-    const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions`,
-      {
-        params: {
-          page,
-          limit,
-          search,
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
+    return NextResponse.json(subscriptions);
   } catch (error: any) {
     console.error("Error fetching subscriptions:", error);
     return NextResponse.json(
@@ -50,134 +32,3 @@ export async function GET(request: Request) {
     );
   }
 }
-
-// POST: Create a new subscription
-export async function POST(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { userId, planId } = body;
-
-    if (!userId || !planId) {
-      return NextResponse.json(
-        { error: "User ID and plan ID are required" },
-        { status: 400 }
-      );
-    }
-
-    const { data } = await axios.post(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions`,
-      {
-        userId,
-        planId,
-      },
-      {
-        params: {
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error creating subscription:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to create subscription" },
-      { status: error.response?.status || 500 }
-    );
-  }
-}
-
-// PUT: Update a subscription
-export async function PUT(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-    const { subscriptionId, planId, status } = body;
-
-    if (!subscriptionId) {
-      return NextResponse.json(
-        { error: "Subscription ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const { data } = await axios.put(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions/${subscriptionId}`,
-      {
-        planId,
-        status,
-      },
-      {
-        params: {
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error updating subscription:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to update subscription" },
-      { status: error.response?.status || 500 }
-    );
-  }
-}
-
-// DELETE: Remove a subscription
-export async function DELETE(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const subscriptionId = searchParams.get("subscriptionId");
-
-    if (!subscriptionId) {
-      return NextResponse.json(
-        { error: "Subscription ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const { data } = await axios.delete(
-      `${process.env.BACKEND_URL}/api/v1/admin/subscriptions/${subscriptionId}`,
-      {
-        params: {
-          userId: session.user.id,
-        },
-      }
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error deleting subscription:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to delete subscription" },
-      { status: error.response?.status || 500 }
-    );
-  }
-} 

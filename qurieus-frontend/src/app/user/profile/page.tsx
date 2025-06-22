@@ -24,8 +24,6 @@ export default function Profile() {
     confirmPassword: "",
   });
 
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
   // Load user data from API when session is available
   useEffect(() => {
     const fetchUserProfile = async () => {

@@ -6,6 +6,8 @@ import ModalDialog from "@/components/ui/ModalDialog";
 import { Plus, Search } from "lucide-react";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
+import Loader from "@/components/Common/LoadingOverlay";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 interface Subscription {
   id: string;
@@ -99,17 +101,9 @@ export default function AdminSubscriptionsPage() {
     fetchSubscriptions();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">Admin: Subscriptions</h1>
-        <p>Loading subscriptions...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 md:p-8">
+    <div>
+      <LoadingOverlay loading={loading} htmlText="Loading subscriptions..." />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Subscriptions</h1>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">

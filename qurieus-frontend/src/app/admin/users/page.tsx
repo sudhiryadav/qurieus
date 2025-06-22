@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
 import { Search, Plus, Filter } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
+import Loader from "@/components/Common/Loader";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 interface User {
   id: string;
@@ -75,6 +77,7 @@ export default function AdminUsersPage() {
   });
 
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const response = await fetch("/api/admin/users");
       if (!response.ok) throw new Error("Failed to fetch users");
@@ -211,17 +214,9 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
-  if (loading) {
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Admin: Users</h1>
-        <p>Loading users...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 md:p-8">
+    <div>
+      <LoadingOverlay loading={loading} htmlText="Loading users..." />
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Users List</h1>

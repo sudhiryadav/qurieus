@@ -1,20 +1,23 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { showToast } from "@/components/Common/Toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import axiosInstance from "@/lib/axios";
-import { showToast } from "@/components/Common/Toast";
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
 import SubscriptionPage from "./subscription/page";
-import { SubscriptionPlan } from "@prisma/client";
+import { useRouter } from "next/navigation";
 
 export default function UserLayoutContent({
   children,
+  isAdmin,
 }: {
   children: React.ReactNode;
+  isAdmin?: boolean;
 }) {
   const { data: session } = useSession();
   const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
+  const router = useRouter();
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -30,7 +33,7 @@ export default function UserLayoutContent({
     checkSubscription();
   }, [session, setSubscriptionPlan]);
 
-  if (!subscriptionPlan) {
+  if (!subscriptionPlan && !isAdmin) {
     return <SubscriptionPage />;
   }
 

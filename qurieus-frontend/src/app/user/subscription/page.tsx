@@ -1,5 +1,7 @@
 "use client";
 
+import Loader from "@/components/Common/Loader";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { showToast } from "@/components/Common/Toast";
 import Pricing from "@/components/Pricing";
 import FullScreenDialog from "@/components/ui/FullScreenDialog";
@@ -56,6 +58,7 @@ export default function SubscriptionPage() {
 
   const fetchSubscription = async (force: boolean = false) => {
     try {
+      setLoading(true);
       setRefreshing(true);
       const response = await axiosInstance.get("/api/user/subscription");
       setSubscription(response.data as SubscriptionAndPlan);
@@ -120,6 +123,7 @@ export default function SubscriptionPage() {
 
   return (
     <div className="container mx-auto">
+      <LoadingOverlay loading={loading} htmlText="Loading subscription details..." />
       <div className="mb-8 flex items-center justify-between">
         <h1 className="mb-4 text-3xl font-bold">Subscription Details</h1>
         <div className="flex items-center gap-2">

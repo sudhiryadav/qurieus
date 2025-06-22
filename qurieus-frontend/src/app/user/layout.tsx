@@ -11,8 +11,10 @@ import UserLayoutContent from "./UserLayoutContent";
 
 export default function UserLayout({
   children,
-}: {
+  isAdmin,
+  }: {
   children: React.ReactNode;
+  isAdmin?: boolean;
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -35,10 +37,10 @@ export default function UserLayout({
   return (
     <SubscriptionProvider>
       <div className="relative flex h-screen overflow-hidden">
-        <Sidebar />
+        <Sidebar/>
         <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
           <main className="flex-1 p-4 md:p-6 2xl:p-10">
-            <UserLayoutContent>
+            <UserLayoutContent isAdmin={isAdmin}>
               {children}
             </UserLayoutContent>
           </main>

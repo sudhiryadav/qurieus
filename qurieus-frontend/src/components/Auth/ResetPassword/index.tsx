@@ -1,5 +1,5 @@
 "use client";
-import Loader from "@/components/Common/Loader";
+import Loader from "@/components/Common/LoadingOverlay";
 import Logo from "@/components/Common/Logo";
 import axios from "@/lib/axios";
 import { useRouter } from "next/navigation";

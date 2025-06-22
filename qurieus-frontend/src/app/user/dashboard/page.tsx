@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -133,16 +134,9 @@ export default function Dashboard() {
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading dashboard data...</div>
-      </div>
-    );
-  }
-
   return (
     <div>
+      <LoadingOverlay loading={loading} htmlText="Loading dashboard data..." />
       <h1 className="mb-6 text-2xl font-bold text-dark dark:text-white">
         Welcome, {session?.user?.name}!
       </h1>

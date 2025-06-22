@@ -8,6 +8,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
+import Loader from "@/components/Common/Loader";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 interface Plan {
   id: string;
@@ -194,16 +196,10 @@ export default function AdminPlansPage() {
     plan.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (status === "loading" || loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center pt-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <LoadingOverlay loading={loading} htmlText="Loading plans..." />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Plans</h1>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">

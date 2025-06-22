@@ -3,7 +3,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { showToast } from "@/components/Common/Toast";
 import { validateEmail } from "@/utils/validateEmail";
-import Loader from "@/components/Common/Loader";
+import Loader from "@/components/Common/LoadingOverlay";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "@/lib/axios";
 
