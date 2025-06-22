@@ -4,6 +4,8 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import SignIn from "./SignIn/index";
 import SignUp from "./SignUp/index";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import axios from "axios";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,9 +20,21 @@ export default function AuthModal({
   onSuccess,
 }: AuthModalProps) {
   const [modalMode, setModalMode] = useState<"signin" | "signup">(mode);
+  const { setSubscriptionPlan } = useSubscription();
+  const handleSuccess = () => {
+    axios.get("/api/user/subscription").then((res) => {
+      setSubscriptionPlan(res.data || null);
+      onSuccess?.();
+      onClose();
+    });
+  };
+  
+  const handleClose = () => {
+    onClose();
+  };
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
+      <Dialog as="div" className="relative z-50" onClose={handleClose} open={isOpen} static>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -47,14 +61,14 @@ export default function AuthModal({
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-dark-2">
                 {modalMode === "signin" ? (
                   <SignIn
-                    onSuccess={onSuccess}
+                    onSuccess={handleSuccess}
                     handleOpenAuthModal={() => {
                       setModalMode("signup");
                     }}
                   />
                 ) : (
                   <SignUp
-                    onSuccess={onSuccess}
+                    onSuccess={handleSuccess}
                     handleOpenAuthModal={() => {
                       setModalMode("signin");
                     }}

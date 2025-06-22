@@ -5,10 +5,6 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/contexts/SidebarContext";
 
-interface SidebarProps {
-  // Props are no longer needed as state is managed by context
-}
-
 export const userNav = [
   { name: "Dashboard", href: "/user/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
   { name: "Profile", href: "/user/profile", icon: <User className="h-5 w-5" /> },
@@ -24,7 +20,7 @@ const adminNav = [
   { name: "Plans", href: "/admin/plans", icon: <Code className="h-4 w-4 mr-2" /> },
 ];
 
-const Sidebar: React.FC<SidebarProps> = () => {
+const Sidebar = () => {
   const { data: session } = useSession();
   const [adminOpen, setAdminOpen] = useState(false);
   const pathname = usePathname();
@@ -35,12 +31,12 @@ const Sidebar: React.FC<SidebarProps> = () => {
   useEffect(() => {
     const clickHandler = ({ target }: MouseEvent) => {
       if (!sidebarRef.current || !trigger.current) return;
-      // Close sidebar on mobile if clicked outside
       if (
-        window.innerWidth < 1024 &&
-        sidebarOpen &&
-        !sidebarRef.current.contains(target as Node) &&
-        !trigger.current.contains(target as Node)
+        window.innerWidth < 1024 
+        // &&
+        // sidebarOpen &&
+        // !sidebarRef.current.contains(target as Node) &&
+        // !trigger.current.contains(target as Node)
       ) {
         setSidebarOpen(false);
       }
@@ -103,7 +99,6 @@ const Sidebar: React.FC<SidebarProps> = () => {
                       <Link
                         key={item.href}
                         href={item.href}
-                        onClick={() => setSidebarOpen(false)}
                         className={`flex items-center px-2 py-1 text-sm rounded-md transition-colors
                           ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 dark:text-gray-300 hover:text-primary"}`}
                       >

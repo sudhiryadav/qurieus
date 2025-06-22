@@ -401,6 +401,7 @@ export async function POST(req: Request) {
         currency,
         created_at,
         custom_data,
+        customer_id: customerId,
       } = data;
 
       const amount = items[0].price.unit_price.amount;
@@ -416,23 +417,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
-      // Find the subscription in our database
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          userId: user.id,
-        },
-        include: {
-          plan: true,
-        },
-      });
-
-      if (!subscription) {
-        return NextResponse.json(
-          { error: "Subscription not found" },
-          { status: 404 },
-        );
-      }
-
       const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
         where: {
           paddleConfig: {
@@ -445,20 +429,37 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      // Update the subscription with new billing period and transaction details
-      await prisma.subscription.update({
+      // Use upsert instead of update and remove the 404 return
+      await prisma.subscription.upsert({
         where: {
           userId: user.id,
         },
-        data: {
+        create: {
+          userId: user.id,
+          paddleSubscriptionId: subscriptionId,
+          paddleCustomerId: customerId || custom_data.application_customer_id,
           status: status === "billed" ? "active" : "in-progress",
           planId: subscriptionPlan.id,
           paddlePaymentAmount: amount ? parseFloat(amount) : 0,
           paddlePaymentCurrency: currency,
-          nextBillingDate: new Date(billing_period.ends_at),
-          currentPeriodStart: new Date(billing_period.starts_at),
-          currentPeriodEnd: new Date(billing_period.ends_at),
-          startDate: new Date(created_at),
+          ...(billing_period?.ends_at && {
+            nextBillingDate: new Date(billing_period.ends_at),
+            currentPeriodEnd: new Date(billing_period.ends_at),
+          }),
+          currentPeriodStart: new Date(billing_period?.starts_at || created_at),
+          startDate: new Date(billing_period?.starts_at || created_at),
+        },
+        update: {
+          status: status === "billed" ? "active" : "in-progress",
+          planId: subscriptionPlan.id,
+          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+          paddlePaymentCurrency: currency,
+          ...(billing_period?.ends_at && {
+            nextBillingDate: new Date(billing_period.ends_at),
+            currentPeriodEnd: new Date(billing_period.ends_at),
+          }),
+          currentPeriodStart: new Date(billing_period?.starts_at || created_at),
+          startDate: new Date(billing_period?.starts_at || created_at),
         },
       });
 

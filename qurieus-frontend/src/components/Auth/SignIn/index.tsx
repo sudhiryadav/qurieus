@@ -52,7 +52,6 @@ export default function SignIn({
         showToast.error(result.error);
       } else {
         if (onSuccess) {
-          showToast.success("Signed in successfully!");
           onSuccess();
         } else {
           router.push("/user/knowledge-base");

@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import "../styles/index.css";
 import "../styles/prism-vsc-dark-plus.css";
 import { SidebarProvider } from "@/contexts/SidebarContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import Head from "./head";
 
 export default function RootLayout({
@@ -20,7 +21,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [loading, setLoading] = useState<boolean>(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
@@ -42,8 +42,10 @@ export default function RootLayout({
             >
               <Toast />
               <SidebarProvider>
-                <Header />
-                <main className="flex-1 pt-16">{children}</main>
+                <SubscriptionProvider>
+                  <Header />
+                  <main className="flex-1 pt-16">{children}</main>
+                </SubscriptionProvider>
               </SidebarProvider>
               <Footer />
               <ScrollToTop />

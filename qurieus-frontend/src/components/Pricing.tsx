@@ -11,6 +11,7 @@ import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
 import { Subscription } from "@prisma/client";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 export default function Pricing({
   onUpdatePlan,
@@ -22,7 +23,7 @@ export default function Pricing({
   const [loadingPricing, setLoadingPricing] = useState(false);
   const { data: session } = useSession();
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [selectedPlan, setSelectedPlan] =
     useState<SubscriptionPlanWithPaddle | null>(null);
   const paddleRef = useRef<PaddleCheckoutRef>(null);
@@ -33,6 +34,7 @@ export default function Pricing({
   >(null);
   const [currentSubscription, setCurrentSubscription] =
     useState<Subscription | null>(null);
+  const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
 
   useEffect(() => {
     // Get current subscription
@@ -73,15 +75,20 @@ export default function Pricing({
   }, [session]);
 
   const startSubscriptionProcess = () => {
-    if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
-      paddleRef.current.openCheckout(
-        selectedPlan.paddleConfig.priceId,
-        selectedPlan.id,
-      );
-    } else {
-      showToast.error(
-        "Paddle configuration is incomplete. Please contact support.",
-      );
+    if(subscriptionPlan){
+      router.push("/user/subscription");
+      return;
+    }else{
+      if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
+          paddleRef.current.openCheckout(
+          selectedPlan.paddleConfig.priceId,
+          selectedPlan.id,
+        );
+      } else {
+        showToast.error(
+          "Paddle configuration is incomplete. Please contact support.",
+        );
+      }
     }
   };
 
@@ -107,7 +114,7 @@ export default function Pricing({
     setSelectedPlan(plan);
     try {
       if (!session) {
-        setAuthMode("signup");
+        setAuthMode("signin");
         setAuthModalOpen(true);
         return;
       }
