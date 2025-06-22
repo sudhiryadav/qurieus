@@ -1,0 +1,152 @@
+# GitLab CI/CD Pipeline for Qurieus Monorepo
+# This pipeline builds and deploys all three applications: Frontend, Backend, and MSTeamsBot
+
+# Define variables available to all jobs
+variables:
+  # Container registry variables
+  CI_REGISTRY_IMAGE_FRONTEND: $CI_REGISTRY_IMAGE/frontend
+  CI_REGISTRY_IMAGE_BACKEND: $CI_REGISTRY_IMAGE/backend
+  CI_REGISTRY_IMAGE_BOT: $CI_REGISTRY_IMAGE/msteams-bot
+
+# Define the stages of the pipeline
+stages:
+  - build
+  - deploy_staging
+  - deploy_production
+
+# Job to build the frontend Docker image
+build_frontend:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd qurieus-frontend
+    - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG .
+    - docker push $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+
+# Job to build the backend Docker image
+build_backend:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd qurieus-backend
+    - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG .
+    - docker push $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+
+# Job to build the MSTeamsBot Docker image
+build_msteams_bot:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd qurieus-bot-teams
+    - docker build -t $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG .
+    - docker push $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+
+# Base configuration for deployment jobs to avoid repetition
+.deploy_template: &deploy_configuration
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client bash curl
+    - eval $(ssh-agent -s)
+    # Decode base64 SSH key and add to ssh-agent
+    - echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+# Job to deploy to the staging environment
+deploy_staging:
+  stage: deploy_staging
+  extends: .deploy_configuration
+  variables:
+    SSH_PRIVATE_KEY: $STAGING_SSH_PRIVATE_KEY
+    SSH_USER: $STAGING_SSH_USER
+    SERVER_IP: $STAGING_SERVER_IP
+  script:
+    - echo "🚀 Deploying to staging server..."
+    - ssh ${SSH_USER}@${SERVER_IP} "
+        set -e &&
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        
+        echo 'Deploying Frontend...' &&
+        cd /home/ubuntu/staging/qurieus-frontend &&
+        export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
+        docker-compose pull &&
+        docker-compose up -d --remove-orphans &&
+
+        echo 'Deploying Backend...' &&
+        cd /home/ubuntu/staging/qurieus-backend &&
+        export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
+        docker-compose pull &&
+        docker-compose up -d --remove-orphans &&
+        
+        echo 'Deploying MSTeamsBot...' &&
+        cd /home/ubuntu/staging/qurieus-bot-teams &&
+        export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
+        docker-compose pull &&
+        docker-compose up -d --remove-orphans &&
+        
+        echo '✅ Staging deployment successful!'"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: on_success
+
+# Job to deploy to the production environment
+deploy_production:
+  stage: deploy_production
+  extends: .deploy_configuration
+  variables:
+    SSH_PRIVATE_KEY: $PROD_SSH_PRIVATE_KEY
+    SSH_USER: $PROD_SSH_USER
+    SERVER_IP: $PROD_SERVER_IP
+  script:
+    - echo "🚀 Deploying to production server..."
+    - ssh ${SSH_USER}@${SERVER_IP} "
+        set -e &&
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        
+        echo 'Deploying Frontend...' &&
+        cd /home/ubuntu/prod/qurieus-frontend &&
+        export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
+        docker-compose pull &&
+        docker-compose up -d --remove-orphans &&
+
+        echo 'Deploying Backend...' &&
+        cd /home/ubuntu/prod/qurieus-backend &&
+        export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
+        docker-compose pull &&
+        docker-compose up -d --remove-orphans &&
+        
+        echo 'Deploying MSTeamsBot...' &&
+        cd /home/ubuntu/prod/qurieus-bot-teams &&
+        export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
+        docker-compose pull &&
+        docker-compose up -d --remove-orphans &&
+        
+        echo '✅ Production deployment successful!'"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "prod"'
+      when: on_success 

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  msteams-bot:
+    # The image will be specified by a variable in the CI/CD pipeline.
+    # A default is provided for local testing.
+    image: ${BOT_IMAGE:-qurieus/msteams-bot:latest}
+    container_name: qurieus-msteams-bot
+    restart: always
+    ports:
+      - "3978:3978"
+    # Environment variables from .env file
+    env_file:
+      - .env
+    # Health check to ensure the bot is running
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3978/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s 
