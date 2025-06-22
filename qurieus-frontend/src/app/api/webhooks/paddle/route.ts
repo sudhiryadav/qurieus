@@ -1,4 +1,4 @@
-import { sendEmail } from "@/lib/email";
+import { footerData, sendEmail } from "@/lib/email";
 import { prisma } from "@/utils/prismaDB";
 import { verifyPaddleWebhook } from "@/lib/paddle";
 import { headers } from "next/headers";
@@ -201,6 +201,7 @@ export async function POST(req: Request) {
             currency,
             billingCycle: billing_cycle.interval,
             nextBillingDate: new Date(next_billed_at).toLocaleDateString(),
+            ...footerData
           },
           attachments: [
             {
@@ -223,6 +224,7 @@ export async function POST(req: Request) {
             currency,
             billingCycle: billing_cycle.interval,
             nextBillingDate: new Date(next_billed_at).toLocaleDateString(),
+            ...footerData
           },
         });
       }

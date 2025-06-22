@@ -51,9 +51,16 @@ export default function Pricing({
         .then((res) => res.data);
     };
 
+    const promises: Promise<any>[] = [];
+
     if (session?.user?.id) {
-      setLoadingPricing(true);
-      Promise.all([fetchCurrentSubscription(), fetchPlans()])
+      promises.push(fetchCurrentSubscription());
+    }else{
+      promises.push(Promise.resolve(null));
+    }
+    promises.push(fetchPlans());
+    setLoadingPricing(true);
+    Promise.all(promises)
         .then(([currentSubscription, plans]) => {
           setCurrentPlanId(currentSubscription?.planId || null);
           setCurrentSubscriptionId(currentSubscription?.paddleSubscriptionId || null);
@@ -63,7 +70,6 @@ export default function Pricing({
         .finally(() => {
           setLoadingPricing(false);
         });
-    }
   }, [session]);
 
   const startSubscriptionProcess = () => {

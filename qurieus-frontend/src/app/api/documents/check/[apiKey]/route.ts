@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/utils/prismaDB";
-import { sendEmail } from "@/lib/email";
+import { footerData, sendEmail } from "@/lib/email";
 
 export async function GET(
   request: Request,
@@ -40,7 +40,8 @@ export async function GET(
             context: {
               userId: apiKey,
               timestamp: new Date().toISOString(),
-              dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`
+              dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`,
+              ...footerData
             }
           });
 
@@ -51,7 +52,8 @@ export async function GET(
             context: {
               userId: apiKey,
               timestamp: new Date().toISOString(),
-              dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`
+              dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`,
+              ...footerData
             }
           });
         }

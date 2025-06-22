@@ -13,6 +13,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+export const footerData = {
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
+  supportAddress: process.env.NEXT_PUBLIC_SUPPORT_ADDRESS,
+  supportPhone: process.env.NEXT_PUBLIC_SUPPORT_PHONE,
+  year: new Date().getFullYear(),
+}
+
 const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || "https://qurieus.com"}/images/logo/logo.svg`;
 const year = new Date().getFullYear();
 
@@ -54,7 +61,7 @@ export async function sendVerificationEmail(email: string, code: string) {
     to: email,
     subject: "Verify your email address",
     template: "verification",
-    context: { code },
+    context: { code, ...footerData },
   });
 }
 
@@ -63,7 +70,7 @@ export async function sendContactEmail(data: { fullName: string; email: string; 
     to: process.env.CONTACT_EMAIL,
     subject: `New Contact Form Submission from ${data.fullName}`,
     template: "contact",
-    context: data,
+    context: { ...data, ...footerData },
   });
 }
 
@@ -72,7 +79,7 @@ export async function sendResetPasswordEmail(email: string, resetUrl: string) {
     to: email,
     subject: "Reset your password",
     template: "reset-password",
-    context: { resetUrl },
+    context: { resetUrl, ...footerData },
   });
 }
 
@@ -90,7 +97,7 @@ export async function sendConfigurationNotificationEmail(data: {
     to: data.adminEmail,
     subject: "System Configuration Required - No Documents Found",
     template: "configuration-notification",
-    context: { ...data, dashboardUrl },
+    context: { ...data, dashboardUrl, ...footerData },
   });
 
   // Send to user
@@ -98,7 +105,7 @@ export async function sendConfigurationNotificationEmail(data: {
     to: data.userEmail,
     subject: "System Configuration Required - No Documents Found",
     template: "configuration-notification",
-    context: { ...data, dashboardUrl },
+    context: { ...data, dashboardUrl, ...footerData },
   });
 }
 

@@ -187,9 +187,9 @@ export default function TermsOfServicePage() {
                     If you have any questions about these Terms of Service, please contact us at:
                   </p>
                   <p className="text-gray-600 dark:text-gray-400 mt-4">
-                    Email: support@qurieus.com<br />
-                    Address: FrontSlash,  New Delhi<br />
-                    Phone: +919953633888
+                    Email: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL}<br />
+                    Address: {process.env.NEXT_PUBLIC_SUPPORT_ADDRESS}<br />
+                    Phone: {process.env.NEXT_PUBLIC_SUPPORT_PHONE}
                   </p>
                 </div>
               </div>
