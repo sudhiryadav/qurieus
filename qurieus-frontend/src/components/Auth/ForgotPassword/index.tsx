@@ -3,7 +3,7 @@ import React from "react";
 import { useState } from "react";
 import { showToast } from "@/components/Common/Toast";
 import axios from '@/lib/axios';
-import Loader from "@/components/Common/LoadingOverlay";
+import Loader from "@/components/Common/Loader";
 import Link from "next/link";
 import Image from "next/image";
 

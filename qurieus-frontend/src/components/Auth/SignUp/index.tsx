@@ -1,7 +1,7 @@
 "use client";
 import MagicLink from "@/components/Auth/MagicLink";
 import SwitchOption from "@/components/Auth/SwitchOption";
-import Loader from "@/components/Common/LoadingOverlay";
+import Loader from "@/components/Common/Loader";
 import Logo from "@/components/Common/Logo";
 import { showToast } from "@/components/Common/Toast";
 import { CountdownTimer } from "@/components/CountdownTimer";
