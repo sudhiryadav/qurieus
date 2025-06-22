@@ -66,7 +66,7 @@ build_msteams_bot:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
 
 # Base configuration for deployment jobs to avoid repetition
-.deploy_template: &deploy_configuration
+.deploy_configuration: &deploy_configuration  # Correct anchor name
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client bash curl
