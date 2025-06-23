@@ -127,10 +127,25 @@ build_msteams_bot:
   before_script:
     - apk add --no-cache openssh-client bash curl
     - eval $(ssh-agent -s)
-    # Decode base64 SSH key and add to ssh-agent
-    - echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' | ssh-add -
+    # Create SSH directory and set permissions
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
+    # Decode base64 SSH key and add to ssh-agent with better error handling
+    - |
+      if [ -n "$SSH_PRIVATE_KEY" ]; then
+        echo "Decoding SSH key..."
+        echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        echo "SSH key file created, checking format..."
+        head -1 ~/.ssh/id_rsa
+        echo "Adding SSH key to agent..."
+        ssh-add ~/.ssh/id_rsa
+        echo "SSH key added successfully"
+        ssh-add -l
+      else
+        echo "Error: SSH_PRIVATE_KEY is not set"
+        exit 1
+      fi
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
 
 # Job to deploy to the staging environment
