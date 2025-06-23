@@ -10,9 +10,9 @@ variables:
   # Set to "true" to skip build stage for faster testing
   SKIP_BUILD: "false"
   # Set to "true" to force build and deploy specific applications
-  FORCE_BUILD_FRONTEND: "false"
-  FORCE_BUILD_BACKEND: "false"
-  FORCE_BUILD_BOT: "false"
+  FORCE_BUILD_FRONTEND: "true"
+  FORCE_BUILD_BACKEND: "true"
+  FORCE_BUILD_BOT: "true"
 
 # Define the stages of the pipeline
 stages:
