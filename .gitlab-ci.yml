@@ -147,7 +147,19 @@ build_msteams_bot:
     # Create SSH directory and set permissions
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    # Decode base64 SSH key and add to ssh-agent with better error handling
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+# Job to deploy to the staging environment
+deploy_staging:
+  stage: deploy_staging
+  extends: .deploy_configuration
+  variables:
+    SSH_PRIVATE_KEY: $STAGING_SSH_PRIVATE_KEY
+    SSH_USER: $STAGING_SSH_USER
+    SERVER_IP: $STAGING_SERVER_IP
+  script:
+    - echo "🚀 Deploying to staging server..."
+    # Setup SSH key
     - |
       echo "Checking SSH key variables..."
       echo "SSH_PRIVATE_KEY is set: $([ -n "$SSH_PRIVATE_KEY" ] && echo "YES" || echo "NO")"
@@ -170,18 +182,6 @@ build_msteams_bot:
         echo "Available variables: SSH_PRIVATE_KEY, STAGING_SSH_PRIVATE_KEY, PROD_SSH_PRIVATE_KEY"
         exit 1
       fi
-    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-
-# Job to deploy to the staging environment
-deploy_staging:
-  stage: deploy_staging
-  extends: .deploy_configuration
-  variables:
-    SSH_PRIVATE_KEY: $STAGING_SSH_PRIVATE_KEY
-    SSH_USER: $STAGING_SSH_USER
-    SERVER_IP: $STAGING_SERVER_IP
-  script:
-    - echo "🚀 Deploying to staging server..."
     - |
       ssh ${SSH_USER}@${SERVER_IP} "
         set -e &&
@@ -238,6 +238,29 @@ deploy_production:
     SERVER_IP: $PROD_SERVER_IP
   script:
     - echo "🚀 Deploying to production server..."
+    # Setup SSH key
+    - |
+      echo "Checking SSH key variables..."
+      echo "SSH_PRIVATE_KEY is set: $([ -n "$SSH_PRIVATE_KEY" ] && echo "YES" || echo "NO")"
+      echo "STAGING_SSH_PRIVATE_KEY is set: $([ -n "$STAGING_SSH_PRIVATE_KEY" ] && echo "YES" || echo "NO")"
+      echo "PROD_SSH_PRIVATE_KEY is set: $([ -n "$PROD_SSH_PRIVATE_KEY" ] && echo "YES" || echo "NO")"
+      
+      if [ -n "$SSH_PRIVATE_KEY" ]; then
+        echo "Using SSH_PRIVATE_KEY variable..."
+        echo "Decoding SSH key..."
+        echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        echo "SSH key file created, checking format..."
+        head -1 ~/.ssh/id_rsa
+        echo "Adding SSH key to agent..."
+        ssh-add ~/.ssh/id_rsa
+        echo "SSH key added successfully"
+        ssh-add -l
+      else
+        echo "Error: SSH_PRIVATE_KEY is not set"
+        echo "Available variables: SSH_PRIVATE_KEY, STAGING_SSH_PRIVATE_KEY, PROD_SSH_PRIVATE_KEY"
+        exit 1
+      fi
     - |
       ssh ${SSH_USER}@${SERVER_IP} "
         set -e &&
