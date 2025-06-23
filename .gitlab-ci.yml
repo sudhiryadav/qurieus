@@ -10,9 +10,9 @@ variables:
   # Set to "true" to skip build stage for faster testing
   SKIP_BUILD: "false"
   # Set to "true" to force build and deploy specific applications
-  FORCE_BUILD_FRONTEND: "true"
-  FORCE_BUILD_BACKEND: "true"
-  FORCE_BUILD_BOT: "true"
+  FORCE_BUILD_FRONTEND: "false"
+  FORCE_BUILD_BACKEND: "false"
+  FORCE_BUILD_BOT: "false"
 
 # Define the stages of the pipeline
 stages:
@@ -185,8 +185,8 @@ deploy_staging:
         set -e &&
         docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
         
-        # Deploy Frontend only if changed
-        if [ \"$FRONTEND_CHANGED\" = \"true\" ]; then
+        # Deploy Frontend if changed or forced
+        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_FRONTEND\" = \"true\" ]; then
           echo 'Deploying Frontend...' &&
           cd /home/ubuntu/staging/qurieus-frontend &&
           export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
@@ -194,11 +194,11 @@ deploy_staging:
           docker-compose up -d --remove-orphans &&
           echo '✅ Frontend deployed successfully!'
         else
-          echo '⏭️ Skipping Frontend deployment (no changes)'
+          echo '⏭️ Skipping Frontend deployment (no changes and not forced)'
         fi &&
 
-        # Deploy Backend only if changed
-        if [ \"$BACKEND_CHANGED\" = \"true\" ]; then
+        # Deploy Backend if changed or forced
+        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BACKEND\" = \"true\" ]; then
           echo 'Deploying Backend...' &&
           cd /home/ubuntu/staging/qurieus-backend &&
           export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
@@ -206,11 +206,11 @@ deploy_staging:
           docker-compose up -d --remove-orphans &&
           echo '✅ Backend deployed successfully!'
         else
-          echo '⏭️ Skipping Backend deployment (no changes)'
+          echo '⏭️ Skipping Backend deployment (no changes and not forced)'
         fi &&
         
-        # Deploy MSTeamsBot only if changed
-        if [ \"$BOT_CHANGED\" = \"true\" ]; then
+        # Deploy MSTeamsBot if changed or forced
+        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BOT\" = \"true\" ]; then
           echo 'Deploying MSTeamsBot...' &&
           cd /home/ubuntu/staging/qurieus-bot-teams &&
           export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
@@ -218,7 +218,7 @@ deploy_staging:
           docker-compose up -d --remove-orphans &&
           echo '✅ MSTeamsBot deployed successfully!'
         else
-          echo '⏭️ Skipping MSTeamsBot deployment (no changes)'
+          echo '⏭️ Skipping MSTeamsBot deployment (no changes and not forced)'
         fi &&
         
         echo '✅ Staging deployment completed!'"
@@ -255,8 +255,8 @@ deploy_production:
         set -e &&
         docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
         
-        # Deploy Frontend only if changed
-        if [ \"$FRONTEND_CHANGED\" = \"true\" ]; then
+        # Deploy Frontend if changed or forced
+        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_FRONTEND\" = \"true\" ]; then
           echo 'Deploying Frontend...' &&
           cd /home/ubuntu/prod/qurieus-frontend &&
           export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
@@ -264,11 +264,11 @@ deploy_production:
           docker-compose up -d --remove-orphans &&
           echo '✅ Frontend deployed successfully!'
         else
-          echo '⏭️ Skipping Frontend deployment (no changes)'
+          echo '⏭️ Skipping Frontend deployment (no changes and not forced)'
         fi &&
 
-        # Deploy Backend only if changed
-        if [ \"$BACKEND_CHANGED\" = \"true\" ]; then
+        # Deploy Backend if changed or forced
+        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BACKEND\" = \"true\" ]; then
           echo 'Deploying Backend...' &&
           cd /home/ubuntu/prod/qurieus-backend &&
           export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
@@ -276,11 +276,11 @@ deploy_production:
           docker-compose up -d --remove-orphans &&
           echo '✅ Backend deployed successfully!'
         else
-          echo '⏭️ Skipping Backend deployment (no changes)'
+          echo '⏭️ Skipping Backend deployment (no changes and not forced)'
         fi &&
         
-        # Deploy MSTeamsBot only if changed
-        if [ \"$BOT_CHANGED\" = \"true\" ]; then
+        # Deploy MSTeamsBot if changed or forced
+        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BOT\" = \"true\" ]; then
           echo 'Deploying MSTeamsBot...' &&
           cd /home/ubuntu/prod/qurieus-bot-teams &&
           export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
@@ -288,7 +288,7 @@ deploy_production:
           docker-compose up -d --remove-orphans &&
           echo '✅ MSTeamsBot deployed successfully!'
         else
-          echo '⏭️ Skipping MSTeamsBot deployment (no changes)'
+          echo '⏭️ Skipping MSTeamsBot deployment (no changes and not forced)'
         fi &&
         
         echo '✅ Production deployment completed!'"
