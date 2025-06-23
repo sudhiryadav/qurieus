@@ -159,6 +159,7 @@ deploy_staging:
     SERVER_IP: $STAGING_SERVER_IP
   script:
     - echo "🚀 Deploying to staging server..."
+    - printenv | grep -i ssh
     # Setup SSH key
     - |
       echo "Checking SSH key variables..."
@@ -238,6 +239,7 @@ deploy_production:
     SERVER_IP: $PROD_SERVER_IP
   script:
     - echo "🚀 Deploying to production server..."
+    - printenv | grep -i ssh
     # Setup SSH key
     - |
       echo "Checking SSH key variables..."
