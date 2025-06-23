@@ -7,6 +7,8 @@ variables:
   CI_REGISTRY_IMAGE_FRONTEND: $CI_REGISTRY_IMAGE/frontend
   CI_REGISTRY_IMAGE_BACKEND: $CI_REGISTRY_IMAGE/backend
   CI_REGISTRY_IMAGE_BOT: $CI_REGISTRY_IMAGE/msteams-bot
+  # Set to "true" to skip build stage for faster testing
+  SKIP_BUILD: "true"
 
 # Define the stages of the pipeline
 stages:
@@ -82,6 +84,7 @@ build_frontend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         FRONTEND_CHANGED: "true"
+      when: '$SKIP_BUILD != "true"'
 
 # Job to build the backend Docker image (only if changed)
 build_backend:
@@ -101,6 +104,7 @@ build_backend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BACKEND_CHANGED: "true"
+      when: '$SKIP_BUILD != "true"'
 
 # Job to build the MSTeamsBot Docker image (only if changed)
 build_msteams_bot:
@@ -120,6 +124,7 @@ build_msteams_bot:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BOT_CHANGED: "true"
+      when: '$SKIP_BUILD != "true"'
 
 # Base configuration for deployment jobs to avoid repetition
 .deploy_configuration: &deploy_configuration
@@ -132,7 +137,13 @@ build_msteams_bot:
     - chmod 700 ~/.ssh
     # Decode base64 SSH key and add to ssh-agent with better error handling
     - |
+      echo "Checking SSH key variables..."
+      echo "SSH_PRIVATE_KEY is set: $([ -n "$SSH_PRIVATE_KEY" ] && echo "YES" || echo "NO")"
+      echo "STAGING_SSH_PRIVATE_KEY is set: $([ -n "$STAGING_SSH_PRIVATE_KEY" ] && echo "YES" || echo "NO")"
+      echo "PROD_SSH_PRIVATE_KEY is set: $([ -n "$PROD_SSH_PRIVATE_KEY" ] && echo "YES" || echo "NO")"
+      
       if [ -n "$SSH_PRIVATE_KEY" ]; then
+        echo "Using SSH_PRIVATE_KEY variable..."
         echo "Decoding SSH key..."
         echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
@@ -144,6 +155,7 @@ build_msteams_bot:
         ssh-add -l
       else
         echo "Error: SSH_PRIVATE_KEY is not set"
+        echo "Available variables: SSH_PRIVATE_KEY, STAGING_SSH_PRIVATE_KEY, PROD_SSH_PRIVATE_KEY"
         exit 1
       fi
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
