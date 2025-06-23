@@ -77,6 +77,11 @@ build_frontend:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
+    - |
+      if [ "$SKIP_BUILD" = "true" ]; then
+        echo "⏭️ Skipping build due to SKIP_BUILD=true"
+        exit 0
+      fi
     - cd qurieus-frontend
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG .
     - docker push $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG
@@ -84,7 +89,6 @@ build_frontend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         FRONTEND_CHANGED: "true"
-      when: '$SKIP_BUILD != "true"'
 
 # Job to build the backend Docker image (only if changed)
 build_backend:
@@ -97,6 +101,11 @@ build_backend:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
+    - |
+      if [ "$SKIP_BUILD" = "true" ]; then
+        echo "⏭️ Skipping build due to SKIP_BUILD=true"
+        exit 0
+      fi
     - cd qurieus-backend
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG .
     - docker push $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG
@@ -104,7 +113,6 @@ build_backend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BACKEND_CHANGED: "true"
-      when: '$SKIP_BUILD != "true"'
 
 # Job to build the MSTeamsBot Docker image (only if changed)
 build_msteams_bot:
@@ -117,6 +125,11 @@ build_msteams_bot:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
+    - |
+      if [ "$SKIP_BUILD" = "true" ]; then
+        echo "⏭️ Skipping build due to SKIP_BUILD=true"
+        exit 0
+      fi
     - cd qurieus-bot-teams
     - docker build -t $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG .
     - docker push $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG
@@ -124,7 +137,6 @@ build_msteams_bot:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BOT_CHANGED: "true"
-      when: '$SKIP_BUILD != "true"'
 
 # Base configuration for deployment jobs to avoid repetition
 .deploy_configuration: &deploy_configuration
