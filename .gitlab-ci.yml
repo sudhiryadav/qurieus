@@ -9,6 +9,10 @@ variables:
   CI_REGISTRY_IMAGE_BOT: $CI_REGISTRY_IMAGE/msteams-bot
   # Set to "true" to skip build stage for faster testing
   SKIP_BUILD: "false"
+  # Set to "true" to force build and deploy specific applications
+  FORCE_BUILD_FRONTEND: "true"
+  FORCE_BUILD_BACKEND: "true"
+  FORCE_BUILD_BOT: "true"
 
 # Define the stages of the pipeline
 stages:
@@ -66,7 +70,7 @@ check_changes:
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
 
-# Job to build the frontend Docker image (only if changed)
+# Job to build the frontend Docker image (only if changed or forced)
 build_frontend:
   stage: build
   image: docker:20.10.16
@@ -89,8 +93,9 @@ build_frontend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         FRONTEND_CHANGED: "true"
+    - if: '$FORCE_BUILD_FRONTEND == "true"'
 
-# Job to build the backend Docker image (only if changed)
+# Job to build the backend Docker image (only if changed or forced)
 build_backend:
   stage: build
   image: docker:20.10.16
@@ -113,8 +118,9 @@ build_backend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BACKEND_CHANGED: "true"
+    - if: '$FORCE_BUILD_BACKEND == "true"'
 
-# Job to build the MSTeamsBot Docker image (only if changed)
+# Job to build the MSTeamsBot Docker image (only if changed or forced)
 build_msteams_bot:
   stage: build
   image: docker:20.10.16
@@ -137,6 +143,7 @@ build_msteams_bot:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BOT_CHANGED: "true"
+    - if: '$FORCE_BUILD_BOT == "true"'
 
 # Base configuration for deployment jobs to avoid repetition
 .deploy_configuration: &deploy_configuration
