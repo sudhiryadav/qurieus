@@ -1,5 +1,5 @@
 # GitLab CI/CD Pipeline for Qurieus Monorepo
-# This pipeline builds and deploys all three applications: Frontend, Backend, and MSTeamsBot
+# This pipeline builds and deploys only the applications that have changed
 
 # Define variables available to all jobs
 variables:
@@ -10,11 +10,61 @@ variables:
 
 # Define the stages of the pipeline
 stages:
+  - check_changes
   - build
   - deploy_staging
   - deploy_production
 
-# Job to build the frontend Docker image
+# Job to check which applications have changed
+check_changes:
+  stage: check_changes
+  image: alpine:latest
+  script:
+    - apk add --no-cache git
+    # Check if frontend has changed
+    - |
+      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "^qurieus-frontend/"; then
+        echo "FRONTEND_CHANGED=true" >> changes.env
+        echo "Frontend changes detected"
+      else
+        echo "FRONTEND_CHANGED=false" >> changes.env
+        echo "No frontend changes"
+      fi
+    # Check if backend has changed
+    - |
+      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "^qurieus-backend/"; then
+        echo "BACKEND_CHANGED=true" >> changes.env
+        echo "Backend changes detected"
+      else
+        echo "BACKEND_CHANGED=false" >> changes.env
+        echo "No backend changes"
+      fi
+    # Check if MSTeamsBot has changed
+    - |
+      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "^qurieus-bot-teams/"; then
+        echo "BOT_CHANGED=true" >> changes.env
+        echo "MSTeamsBot changes detected"
+      else
+        echo "BOT_CHANGED=false" >> changes.env
+        echo "No MSTeamsBot changes"
+      fi
+    # Check if CI/CD configuration has changed
+    - |
+      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "\.gitlab-ci\.yml\|scripts/"; then
+        echo "CI_CHANGED=true" >> changes.env
+        echo "CI/CD configuration changes detected"
+      else
+        echo "CI_CHANGED=false" >> changes.env
+        echo "No CI/CD configuration changes"
+      fi
+    - cat changes.env
+  artifacts:
+    reports:
+      dotenv: changes.env
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+
+# Job to build the frontend Docker image (only if changed)
 build_frontend:
   stage: build
   image: docker:20.10.16
@@ -30,8 +80,10 @@ build_frontend:
     - docker push $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+      variables:
+        FRONTEND_CHANGED: "true"
 
-# Job to build the backend Docker image
+# Job to build the backend Docker image (only if changed)
 build_backend:
   stage: build
   image: docker:20.10.16
@@ -47,8 +99,10 @@ build_backend:
     - docker push $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+      variables:
+        BACKEND_CHANGED: "true"
 
-# Job to build the MSTeamsBot Docker image
+# Job to build the MSTeamsBot Docker image (only if changed)
 build_msteams_bot:
   stage: build
   image: docker:20.10.16
@@ -64,9 +118,11 @@ build_msteams_bot:
     - docker push $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+      variables:
+        BOT_CHANGED: "true"
 
 # Base configuration for deployment jobs to avoid repetition
-.deploy_configuration: &deploy_configuration  # Correct anchor name
+.deploy_configuration: &deploy_configuration
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client bash curl
@@ -87,29 +143,48 @@ deploy_staging:
     SERVER_IP: $STAGING_SERVER_IP
   script:
     - echo "🚀 Deploying to staging server..."
-    - ssh ${SSH_USER}@${SERVER_IP} "
+    - |
+      ssh ${SSH_USER}@${SERVER_IP} "
         set -e &&
         docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
         
-        echo 'Deploying Frontend...' &&
-        cd /home/ubuntu/staging/qurieus-frontend &&
-        export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
-        docker-compose pull &&
-        docker-compose up -d --remove-orphans &&
+        # Deploy Frontend only if changed
+        if [ \"$FRONTEND_CHANGED\" = \"true\" ]; then
+          echo 'Deploying Frontend...' &&
+          cd /home/ubuntu/staging/qurieus-frontend &&
+          export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
+          docker-compose pull &&
+          docker-compose up -d --remove-orphans &&
+          echo '✅ Frontend deployed successfully!'
+        else
+          echo '⏭️ Skipping Frontend deployment (no changes)'
+        fi &&
 
-        echo 'Deploying Backend...' &&
-        cd /home/ubuntu/staging/qurieus-backend &&
-        export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
-        docker-compose pull &&
-        docker-compose up -d --remove-orphans &&
+        # Deploy Backend only if changed
+        if [ \"$BACKEND_CHANGED\" = \"true\" ]; then
+          echo 'Deploying Backend...' &&
+          cd /home/ubuntu/staging/qurieus-backend &&
+          export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
+          docker-compose pull &&
+          docker-compose up -d --remove-orphans &&
+          echo '✅ Backend deployed successfully!'
+        else
+          echo '⏭️ Skipping Backend deployment (no changes)'
+        fi &&
         
-        echo 'Deploying MSTeamsBot...' &&
-        cd /home/ubuntu/staging/qurieus-bot-teams &&
-        export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
-        docker-compose pull &&
-        docker-compose up -d --remove-orphans &&
+        # Deploy MSTeamsBot only if changed
+        if [ \"$BOT_CHANGED\" = \"true\" ]; then
+          echo 'Deploying MSTeamsBot...' &&
+          cd /home/ubuntu/staging/qurieus-bot-teams &&
+          export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
+          docker-compose pull &&
+          docker-compose up -d --remove-orphans &&
+          echo '✅ MSTeamsBot deployed successfully!'
+        else
+          echo '⏭️ Skipping MSTeamsBot deployment (no changes)'
+        fi &&
         
-        echo '✅ Staging deployment successful!'"
+        echo '✅ Staging deployment completed!'"
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: on_success
@@ -124,29 +199,48 @@ deploy_production:
     SERVER_IP: $PROD_SERVER_IP
   script:
     - echo "🚀 Deploying to production server..."
-    - ssh ${SSH_USER}@${SERVER_IP} "
+    - |
+      ssh ${SSH_USER}@${SERVER_IP} "
         set -e &&
         docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
         
-        echo 'Deploying Frontend...' &&
-        cd /home/ubuntu/prod/qurieus-frontend &&
-        export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
-        docker-compose pull &&
-        docker-compose up -d --remove-orphans &&
+        # Deploy Frontend only if changed
+        if [ \"$FRONTEND_CHANGED\" = \"true\" ]; then
+          echo 'Deploying Frontend...' &&
+          cd /home/ubuntu/prod/qurieus-frontend &&
+          export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
+          docker-compose pull &&
+          docker-compose up -d --remove-orphans &&
+          echo '✅ Frontend deployed successfully!'
+        else
+          echo '⏭️ Skipping Frontend deployment (no changes)'
+        fi &&
 
-        echo 'Deploying Backend...' &&
-        cd /home/ubuntu/prod/qurieus-backend &&
-        export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
-        docker-compose pull &&
-        docker-compose up -d --remove-orphans &&
+        # Deploy Backend only if changed
+        if [ \"$BACKEND_CHANGED\" = \"true\" ]; then
+          echo 'Deploying Backend...' &&
+          cd /home/ubuntu/prod/qurieus-backend &&
+          export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
+          docker-compose pull &&
+          docker-compose up -d --remove-orphans &&
+          echo '✅ Backend deployed successfully!'
+        else
+          echo '⏭️ Skipping Backend deployment (no changes)'
+        fi &&
         
-        echo 'Deploying MSTeamsBot...' &&
-        cd /home/ubuntu/prod/qurieus-bot-teams &&
-        export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
-        docker-compose pull &&
-        docker-compose up -d --remove-orphans &&
+        # Deploy MSTeamsBot only if changed
+        if [ \"$BOT_CHANGED\" = \"true\" ]; then
+          echo 'Deploying MSTeamsBot...' &&
+          cd /home/ubuntu/prod/qurieus-bot-teams &&
+          export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
+          docker-compose pull &&
+          docker-compose up -d --remove-orphans &&
+          echo '✅ MSTeamsBot deployed successfully!'
+        else
+          echo '⏭️ Skipping MSTeamsBot deployment (no changes)'
+        fi &&
         
-        echo '✅ Production deployment successful!'"
+        echo '✅ Production deployment completed!'"
   rules:
     - if: '$CI_COMMIT_BRANCH == "prod"'
-      when: on_success 
+      when: on_success
