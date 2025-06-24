@@ -90,14 +90,23 @@ jobs:
           echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
           chmod 600 id_rsa
       - name: Deploy to Staging via SSH
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
+          BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
+          BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
         run: |
           ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_IP }} "
+            export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
+            export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
+            export BACKEND_IMAGE=$BACKEND_IMAGE &&
+            export BOT_IMAGE=$BOT_IMAGE &&
             cd /home/ubuntu/staging/qurieus-frontend &&
             docker-compose pull &&
-            docker-compose up -d --remove-orphans
+            docker-compose up -d --remove-orphans &&
             cd /home/ubuntu/staging/qurieus-backend &&
             docker-compose pull &&
-            docker-compose up -d --remove-orphans
+            docker-compose up -d --remove-orphans &&
             cd /home/ubuntu/staging/qurieus-bot-teams &&
             docker-compose pull &&
             docker-compose up -d --remove-orphans
@@ -121,14 +130,23 @@ jobs:
           echo "${{ secrets.PROD_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
           chmod 600 id_rsa
       - name: Deploy to Production via SSH
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
+          BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
+          BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
         run: |
           ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SERVER_IP }} "
+            export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
+            export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
+            export BACKEND_IMAGE=$BACKEND_IMAGE &&
+            export BOT_IMAGE=$BOT_IMAGE &&
             cd /home/ubuntu/prod/qurieus-frontend &&
             docker-compose pull &&
-            docker-compose up -d --remove-orphans
+            docker-compose up -d --remove-orphans &&
             cd /home/ubuntu/prod/qurieus-backend &&
             docker-compose pull &&
-            docker-compose up -d --remove-orphans
+            docker-compose up -d --remove-orphans &&
             cd /home/ubuntu/prod/qurieus-bot-teams &&
             docker-compose pull &&
             docker-compose up -d --remove-orphans
