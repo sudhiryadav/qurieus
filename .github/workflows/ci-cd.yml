@@ -65,6 +65,15 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Debug build conditions
+        run: |
+          echo "matrix.app: ${{ matrix.app }}"
+          echo "frontend_changed: ${{ needs.check_changes.outputs.frontend_changed }}"
+          echo "backend_changed: ${{ needs.check_changes.outputs.backend_changed }}"
+          echo "bot_changed: ${{ needs.check_changes.outputs.bot_changed }}"
+          echo "force_frontend: ${{ github.event.inputs.force_frontend }}"
+          echo "force_backend: ${{ github.event.inputs.force_backend }}"
+          echo "force_bot: ${{ github.event.inputs.force_bot }}"
       - name: Build and push ${{ matrix.app }} image
         if: |
           (matrix.app == 'frontend' && (needs.check_changes.outputs.frontend_changed == 'true' || github.event.inputs.force_frontend == 'true')) ||
@@ -81,7 +90,9 @@ jobs:
             APP_PATH="${{ env.BOT_PATH }}"
             IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}"
           fi
-          cd "$APP_PATH"
+          echo "Building for app: ${{ matrix.app }}"
+          echo "APP_PATH: $APP_PATH"
+          echo "IMAGE_NAME: $IMAGE_NAME"
           docker context create ci || echo "context exists"
           docker buildx create ci --use
           docker buildx inspect --bootstrap
