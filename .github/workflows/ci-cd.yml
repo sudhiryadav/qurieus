@@ -7,6 +7,18 @@ on:
         description: 'Run the pipeline?'
         required: false
         default: 'true'
+      force_frontend:
+        description: 'Force build and deploy frontend (ignore changes)'
+        required: false
+        default: 'false'
+      force_backend:
+        description: 'Force build and deploy backend (ignore changes)'
+        required: false
+        default: 'false'
+      force_bot:
+        description: 'Force build and deploy bot (ignore changes)'
+        required: false
+        default: 'true'
   push:
     branches:
       - dev
@@ -54,7 +66,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push ${{ matrix.app }} image
-        if: needs.check_changes.outputs[format('{0}_changed', matrix.app)] == 'true'
+        if: |
+          needs.check_changes.outputs[format('{0}_changed', matrix.app)] == 'true' ||
+          github.event.inputs[format('force_{0}', matrix.app)] == 'true'
         run: |
           if [ "${{ matrix.app }}" = "frontend" ]; then
             APP_PATH="${{ env.FRONTEND_PATH }}"
@@ -73,7 +87,7 @@ jobs:
           docker buildx build --platform linux/arm64 -t $IMAGE_NAME --push .
 
   deploy_staging:
-    needs: build_and_push
+    needs: [check_changes, build_and_push]
     runs-on: ubuntu-latest
     if: github.ref_name == 'dev' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
     steps:
@@ -103,20 +117,31 @@ jobs:
             export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
             export BACKEND_IMAGE=$BACKEND_IMAGE &&
             export BOT_IMAGE=$BOT_IMAGE &&
+            echo 'Logging into Docker Hub...' &&
             echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-            cd /home/ubuntu/staging/qurieus-frontend &&
-            docker-compose pull &&
-            docker-compose up -d --remove-orphans &&
-            cd /home/ubuntu/staging/qurieus-backend &&
-            docker-compose pull &&
-            docker-compose up -d --remove-orphans &&
-            cd /home/ubuntu/staging/qurieus-bot-teams &&
-            docker-compose pull &&
-            docker-compose up -d --remove-orphans
+            ${
+              needs.check_changes.outputs.frontend_changed == 'true' || 
+              github.event.inputs.force_frontend == 'true' 
+              ? "echo 'Pulling and deploying Frontend...' && cd /home/ubuntu/staging/qurieus-frontend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
+              : "echo 'Skipping Frontend deployment (no changes)' &&"
+            }
+            ${
+              needs.check_changes.outputs.backend_changed == 'true' || 
+              github.event.inputs.force_backend == 'true' 
+              ? "echo 'Pulling and deploying Backend...' && cd /home/ubuntu/staging/qurieus-backend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
+              : "echo 'Skipping Backend deployment (no changes)' &&"
+            }
+            ${
+              needs.check_changes.outputs.bot_changed == 'true' || 
+              github.event.inputs.force_bot == 'true' 
+              ? "echo 'Pulling and deploying Bot...' && cd /home/ubuntu/staging/qurieus-bot-teams && docker-compose pull && docker-compose up -d --remove-orphans &&" 
+              : "echo 'Skipping Bot deployment (no changes)' &&"
+            }
+            echo 'Deployment completed successfully!'
           "
 
   deploy_production:
-    needs: build_and_push
+    needs: [check_changes, build_and_push]
     runs-on: ubuntu-latest
     if: github.ref_name == 'prod' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
     steps:
@@ -146,14 +171,25 @@ jobs:
             export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
             export BACKEND_IMAGE=$BACKEND_IMAGE &&
             export BOT_IMAGE=$BOT_IMAGE &&
+            echo 'Logging into Docker Hub...' &&
             echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-            cd /home/ubuntu/prod/qurieus-frontend &&
-            docker-compose pull &&
-            docker-compose up -d --remove-orphans &&
-            cd /home/ubuntu/prod/qurieus-backend &&
-            docker-compose pull &&
-            docker-compose up -d --remove-orphans &&
-            cd /home/ubuntu/prod/qurieus-bot-teams &&
-            docker-compose pull &&
-            docker-compose up -d --remove-orphans
+            ${
+              needs.check_changes.outputs.frontend_changed == 'true' || 
+              github.event.inputs.force_frontend == 'true' 
+              ? "echo 'Pulling and deploying Frontend...' && cd /home/ubuntu/prod/qurieus-frontend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
+              : "echo 'Skipping Frontend deployment (no changes)' &&"
+            }
+            ${
+              needs.check_changes.outputs.backend_changed == 'true' || 
+              github.event.inputs.force_backend == 'true' 
+              ? "echo 'Pulling and deploying Backend...' && cd /home/ubuntu/prod/qurieus-backend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
+              : "echo 'Skipping Backend deployment (no changes)' &&"
+            }
+            ${
+              needs.check_changes.outputs.bot_changed == 'true' || 
+              github.event.inputs.force_bot == 'true' 
+              ? "echo 'Pulling and deploying Bot...' && cd /home/ubuntu/prod/qurieus-bot-teams && docker-compose pull && docker-compose up -d --remove-orphans &&" 
+              : "echo 'Skipping Bot deployment (no changes)' &&"
+            }
+            echo 'Deployment completed successfully!'
           "

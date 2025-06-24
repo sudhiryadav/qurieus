@@ -9,6 +9,10 @@ variables:
   CI_REGISTRY_IMAGE_BACKEND: $DOCKERHUB_USERNAME/qurieus-backend
   CI_REGISTRY_IMAGE_BOT: $DOCKERHUB_USERNAME/qurieus-msteams-bot
   RUN_PIPELINE: "false"
+  # Force variables for individual applications
+  FORCE_FRONTEND: "false"
+  FORCE_BACKEND: "false"
+  FORCE_BOT: "false"
 
 # Define the stages of the pipeline
 stages:
@@ -88,6 +92,7 @@ build_frontend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         FRONTEND_CHANGED: "true"
+    - if: '$FORCE_FRONTEND == "true"'
 
 # Job to build the backend Docker image (only if changed or forced)
 build_backend:
@@ -110,6 +115,7 @@ build_backend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BACKEND_CHANGED: "true"
+    - if: '$FORCE_BACKEND == "true"'
 
 # Job to build the MSTeamsBot Docker image (only if changed or forced)
 build_msteams_bot:
@@ -132,6 +138,7 @@ build_msteams_bot:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BOT_CHANGED: "true"
+    - if: '$FORCE_BOT == "true"'
 
 # Base configuration for deployment jobs to avoid repetition
 .deploy_configuration: &deploy_configuration
@@ -171,10 +178,10 @@ deploy_staging:
     - |
       ssh ${SSH_USER}@${SERVER_IP} "
         set -e &&
-        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
         
         # Deploy Frontend if changed or forced
-        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_FRONTEND\" = \"true\" ]; then
+        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_FRONTEND\" = \"true\" ]; then
           echo 'Deploying Frontend...' &&
           cd /home/ubuntu/staging/qurieus-frontend &&
           export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
@@ -186,7 +193,7 @@ deploy_staging:
         fi &&
 
         # Deploy Backend if changed or forced
-        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BACKEND\" = \"true\" ]; then
+        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BACKEND\" = \"true\" ]; then
           echo 'Deploying Backend...' &&
           cd /home/ubuntu/staging/qurieus-backend &&
           export BACKEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG &&
@@ -198,7 +205,7 @@ deploy_staging:
         fi &&
         
         # Deploy MSTeamsBot if changed or forced
-        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BOT\" = \"true\" ]; then
+        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BOT\" = \"true\" ]; then
           echo 'Deploying MSTeamsBot...' &&
           cd /home/ubuntu/staging/qurieus-bot-teams &&
           export BOT_IMAGE=$DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG &&
@@ -242,10 +249,10 @@ deploy_production:
     - |
       ssh ${SSH_USER}@${SERVER_IP} "
         set -e &&
-        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
         
         # Deploy Frontend if changed or forced
-        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_FRONTEND\" = \"true\" ]; then
+        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_FRONTEND\" = \"true\" ]; then
           echo 'Deploying Frontend...' &&
           cd /home/ubuntu/prod/qurieus-frontend &&
           export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
@@ -257,7 +264,7 @@ deploy_production:
         fi &&
 
         # Deploy Backend if changed or forced
-        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BACKEND\" = \"true\" ]; then
+        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BACKEND\" = \"true\" ]; then
           echo 'Deploying Backend...' &&
           cd /home/ubuntu/prod/qurieus-backend &&
           export BACKEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG &&
@@ -269,7 +276,7 @@ deploy_production:
         fi &&
         
         # Deploy MSTeamsBot if changed or forced
-        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BOT\" = \"true\" ]; then
+        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BOT\" = \"true\" ]; then
           echo 'Deploying MSTeamsBot...' &&
           cd /home/ubuntu/prod/qurieus-bot-teams &&
           export BOT_IMAGE=$DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG &&
