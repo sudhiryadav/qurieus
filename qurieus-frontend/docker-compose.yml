@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
   frontend:
     # The image will be specified by a variable in the CI/CD pipeline.
     # A default is provided for local testing.
     image: ${FRONTEND_IMAGE:-qurieus/frontend:latest}
+    platform: linux/amd64
     container_name: qurieus-frontend
     restart: always
     ports:

@@ -87,8 +87,8 @@ build_frontend:
         exit 0
       fi
     - cd qurieus-frontend
-    - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG .
-    - docker push $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG
+    - docker buildx create --use
+    - docker buildx build --platform linux/amd64,linux/arm64 -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
@@ -112,8 +112,8 @@ build_backend:
         exit 0
       fi
     - cd qurieus-backend
-    - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG .
-    - docker push $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG
+    - docker buildx create --use
+    - docker buildx build --platform linux/amd64,linux/arm64 -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
@@ -137,8 +137,8 @@ build_msteams_bot:
         exit 0
       fi
     - cd qurieus-bot-teams
-    - docker build -t $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG .
-    - docker push $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG
+    - docker buildx create --use
+    - docker buildx build --platform linux/amd64,linux/arm64 -t $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
