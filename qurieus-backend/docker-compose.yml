@@ -3,7 +3,7 @@ services:
     # The image will be specified by a variable in the CI/CD pipeline.
     # A default is provided for local testing.
     image: ${BACKEND_IMAGE:-qurieus/backend:latest}
-    platform: linux/amd64
+    platform: linux/arm64
     container_name: qurieus-backend
     restart: always
     ports:
