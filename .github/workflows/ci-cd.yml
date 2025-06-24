@@ -1,0 +1,106 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+      - prod
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository }}
+  FRONTEND_PATH: Frontend/qurieus-frontend
+  BACKEND_PATH: Frontend/qurieus-backend
+  BOT_PATH: Frontend/qurieus-bot-teams
+  RUN_PIPELINE: 'true'
+
+jobs:
+  check_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend_changed: ${{ steps.filter.outputs.frontend }}
+      backend_changed: ${{ steps.filter.outputs.backend }}
+      bot_changed: ${{ steps.filter.outputs.bot }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - ${{ env.FRONTEND_PATH }}/**
+            backend:
+              - ${{ env.BACKEND_PATH }}/**
+            bot:
+              - ${{ env.BOT_PATH }}/**
+    if: env.RUN_PIPELINE == 'true'
+
+  build_and_push:
+    needs: check_changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [frontend, backend, bot]
+    if: needs.check_changes.outputs[format('{0}_changed', matrix.app)] == 'true' && env.RUN_PIPELINE == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Build and push ${{ matrix.app }} image
+        run: |
+          cd ${{ env[format('{0}_PATH', matrix.app | upper)] }}
+          docker context create ci || echo "context exists"
+          docker buildx create ci --use
+          docker buildx inspect --bootstrap
+          docker buildx build --platform linux/arm64 -t ${{ env.REGISTRY }}/${{ matrix.app }}:${{ github.ref_name }} --push .
+
+  deploy_staging:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    if: env.RUN_PIPELINE == 'true' && github.ref_name == 'dev'
+    steps:
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
+          chmod 600 id_rsa
+      - name: Deploy to Staging via SSH
+        run: |
+          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_IP }} "
+            cd /home/ubuntu/staging/qurieus-frontend &&
+            docker-compose pull &&
+            docker-compose up -d --remove-orphans
+            cd /home/ubuntu/staging/qurieus-backend &&
+            docker-compose pull &&
+            docker-compose up -d --remove-orphans
+            cd /home/ubuntu/staging/qurieus-bot-teams &&
+            docker-compose pull &&
+            docker-compose up -d --remove-orphans
+          "
+
+  deploy_production:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    if: env.RUN_PIPELINE == 'true' && github.ref_name == 'prod'
+    steps:
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.PROD_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
+          chmod 600 id_rsa
+      - name: Deploy to Production via SSH
+        run: |
+          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SERVER_IP }} "
+            cd /home/ubuntu/prod/qurieus-frontend &&
+            docker-compose pull &&
+            docker-compose up -d --remove-orphans
+            cd /home/ubuntu/prod/qurieus-backend &&
+            docker-compose pull &&
+            docker-compose up -d --remove-orphans
+            cd /home/ubuntu/prod/qurieus-bot-teams &&
+            docker-compose pull &&
+            docker-compose up -d --remove-orphans
+          "

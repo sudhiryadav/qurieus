@@ -7,6 +7,7 @@ variables:
   CI_REGISTRY_IMAGE_FRONTEND: $CI_REGISTRY_IMAGE/frontend
   CI_REGISTRY_IMAGE_BACKEND: $CI_REGISTRY_IMAGE/backend
   CI_REGISTRY_IMAGE_BOT: $CI_REGISTRY_IMAGE/msteams-bot
+  RUN_PIPELINE: "false"
 
 # Define the stages of the pipeline
 stages:
@@ -62,6 +63,7 @@ check_changes:
     reports:
       dotenv: changes.env
   rules:
+    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
 
 # Job to build the frontend Docker image (only if changed or forced)
@@ -81,6 +83,7 @@ build_frontend:
     - docker buildx inspect --bootstrap
     - docker buildx build --platform linux/arm64 -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG --push .
   rules:
+    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         FRONTEND_CHANGED: "true"
@@ -102,6 +105,7 @@ build_backend:
     - docker buildx inspect --bootstrap
     - docker buildx build --platform linux/arm64 -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG --push .
   rules:
+    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BACKEND_CHANGED: "true"
@@ -123,6 +127,7 @@ build_msteams_bot:
     - docker buildx inspect --bootstrap
     - docker buildx build --platform linux/arm64 -t $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG --push .
   rules:
+    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BOT_CHANGED: "true"
@@ -205,6 +210,7 @@ deploy_staging:
         
         echo '✅ Staging deployment completed!'"
   rules:
+    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: on_success
 
@@ -275,5 +281,6 @@ deploy_production:
         
         echo '✅ Production deployment completed!'"
   rules:
+    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "prod"'
       when: on_success
