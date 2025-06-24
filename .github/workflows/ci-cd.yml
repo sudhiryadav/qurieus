@@ -26,9 +26,9 @@ on:
 
 env:
   REGISTRY: ghcr.io/${{ github.repository }}
-  FRONTEND_PATH: Frontend/qurieus-frontend
-  BACKEND_PATH: Frontend/qurieus-backend
-  BOT_PATH: Frontend/qurieus-bot-teams
+  FRONTEND_PATH: Frontend
+  BACKEND_PATH: Backend
+  BOT_PATH: MSTeamsBot
 
 jobs:
   check_changes:
