@@ -21,7 +21,7 @@ on:
         default: 'true'
   push:
     branches:
-      - dev
+      - devimage.png
       - prod
 
 env:
@@ -67,8 +67,9 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push ${{ matrix.app }} image
         if: |
-          needs.check_changes.outputs[format('{0}_changed', matrix.app)] == 'true' ||
-          github.event.inputs[format('force_{0}', matrix.app)] == 'true'
+          (matrix.app == 'frontend' && (needs.check_changes.outputs.frontend_changed == 'true' || github.event.inputs.force_frontend == 'true')) ||
+          (matrix.app == 'backend' && (needs.check_changes.outputs.backend_changed == 'true' || github.event.inputs.force_backend == 'true')) ||
+          (matrix.app == 'bot' && (needs.check_changes.outputs.bot_changed == 'true' || github.event.inputs.force_bot == 'true'))
         run: |
           if [ "${{ matrix.app }}" = "frontend" ]; then
             APP_PATH="${{ env.FRONTEND_PATH }}"
