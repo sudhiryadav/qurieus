@@ -74,6 +74,17 @@ jobs:
           echo "force_frontend: ${{ github.event.inputs.force_frontend }}"
           echo "force_backend: ${{ github.event.inputs.force_backend }}"
           echo "force_bot: ${{ github.event.inputs.force_bot }}"
+      - name: Debug build context
+        run: |
+          if [ "${{ matrix.app }}" = "frontend" ]; then
+            APP_PATH="${{ env.FRONTEND_PATH }}"
+          elif [ "${{ matrix.app }}" = "backend" ]; then
+            APP_PATH="${{ env.BACKEND_PATH }}"
+          else
+            APP_PATH="${{ env.BOT_PATH }}"
+          fi
+          echo "Listing files in $APP_PATH"
+          ls -al "$APP_PATH"
       - name: Build and push ${{ matrix.app }} image
         if: |
           (matrix.app == 'frontend' && (needs.check_changes.outputs.frontend_changed == 'true' || github.event.inputs.force_frontend == 'true')) ||
@@ -82,21 +93,26 @@ jobs:
         run: |
           if [ "${{ matrix.app }}" = "frontend" ]; then
             APP_PATH="${{ env.FRONTEND_PATH }}"
+            DOCKERFILE="$APP_PATH/Dockerfile"
             IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}"
           elif [ "${{ matrix.app }}" = "backend" ]; then
             APP_PATH="${{ env.BACKEND_PATH }}"
+            DOCKERFILE="$APP_PATH/Dockerfile"
             IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}"
           else
             APP_PATH="${{ env.BOT_PATH }}"
+            DOCKERFILE="$APP_PATH/Dockerfile"
             IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}"
           fi
           echo "Building for app: ${{ matrix.app }}"
           echo "APP_PATH: $APP_PATH"
+          echo "DOCKERFILE: $DOCKERFILE"
           echo "IMAGE_NAME: $IMAGE_NAME"
+          ls -al "$APP_PATH"
           docker context create ci || echo "context exists"
           docker buildx create ci --use
           docker buildx inspect --bootstrap
-          docker buildx build --platform linux/arm64 -t $IMAGE_NAME --push .
+          docker buildx build --platform linux/arm64 -f "$DOCKERFILE" -t $IMAGE_NAME "$APP_PATH" --push
 
   deploy_staging:
     needs: [check_changes, build_and_push]
