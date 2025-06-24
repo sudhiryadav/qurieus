@@ -1,6 +1,12 @@
 name: CI/CD Pipeline
 
 on:
+  workflow_dispatch:
+    inputs:
+      run_pipeline:
+        description: 'Run the pipeline?'
+        required: false
+        default: 'true'
   push:
     branches:
       - dev
@@ -11,7 +17,6 @@ env:
   FRONTEND_PATH: Frontend/qurieus-frontend
   BACKEND_PATH: Frontend/qurieus-backend
   BOT_PATH: Frontend/qurieus-bot-teams
-  RUN_PIPELINE: 'true'
 
 jobs:
   check_changes:
@@ -32,7 +37,6 @@ jobs:
               - ${{ env.BACKEND_PATH }}/**
             bot:
               - ${{ env.BOT_PATH }}/**
-    if: env.RUN_PIPELINE == 'true'
 
   build_and_push:
     needs: check_changes
@@ -40,7 +44,6 @@ jobs:
     strategy:
       matrix:
         app: [frontend, backend, bot]
-    if: needs.check_changes.outputs[format('{0}_changed', matrix.app)] == 'true' && env.RUN_PIPELINE == 'true'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -52,6 +55,7 @@ jobs:
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
       - name: Build and push ${{ matrix.app }} image
+        if: needs.check_changes.outputs[format('{0}_changed', matrix.app)] == 'true'
         run: |
           if [ "${{ matrix.app }}" = "frontend" ]; then
             APP_PATH="${{ env.FRONTEND_PATH }}"
@@ -69,7 +73,7 @@ jobs:
   deploy_staging:
     needs: build_and_push
     runs-on: ubuntu-latest
-    if: env.RUN_PIPELINE == 'true' && github.ref_name == 'dev'
+    if: github.ref_name == 'dev' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
     steps:
       - name: Set up SSH key
         run: |
@@ -92,7 +96,7 @@ jobs:
   deploy_production:
     needs: build_and_push
     runs-on: ubuntu-latest
-    if: env.RUN_PIPELINE == 'true' && github.ref_name == 'prod'
+    if: github.ref_name == 'prod' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
     steps:
       - name: Set up SSH key
         run: |
