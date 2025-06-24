@@ -92,15 +92,18 @@ jobs:
       - name: Deploy to Staging via SSH
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
           BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
           BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
         run: |
           ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_IP }} "
             export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
+            export DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN &&
             export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
             export BACKEND_IMAGE=$BACKEND_IMAGE &&
             export BOT_IMAGE=$BOT_IMAGE &&
+            echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
             cd /home/ubuntu/staging/qurieus-frontend &&
             docker-compose pull &&
             docker-compose up -d --remove-orphans &&
@@ -132,15 +135,18 @@ jobs:
       - name: Deploy to Production via SSH
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
           BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
           BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
         run: |
           ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SERVER_IP }} "
             export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
+            export DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN &&
             export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
             export BACKEND_IMAGE=$BACKEND_IMAGE &&
             export BOT_IMAGE=$BOT_IMAGE &&
+            echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
             cd /home/ubuntu/prod/qurieus-frontend &&
             docker-compose pull &&
             docker-compose up -d --remove-orphans &&
