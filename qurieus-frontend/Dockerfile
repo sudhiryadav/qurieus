@@ -8,6 +8,7 @@ COPY package.json yarn.lock ./
 
 # Install dependencies using Yarn
 COPY package.json yarn.lock ./
+RUN apk add --no-cache openssl1.1-compat
 RUN yarn config set network-timeout 600000 -g
 RUN yarn install --frozen-lockfile
 
