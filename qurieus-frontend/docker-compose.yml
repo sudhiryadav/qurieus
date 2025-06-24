@@ -2,7 +2,7 @@ services:
   frontend:
     # The image will be specified by a variable in the CI/CD pipeline.
     # A default is provided for local testing.
-    image: ${FRONTEND_IMAGE:-qurieus/frontend:latest}
+    image: ${FRONTEND_IMAGE:-${DOCKERHUB_USERNAME}/qurieus-frontend:latest}
     platform: linux/arm64
     container_name: qurieus-frontend
     restart: always

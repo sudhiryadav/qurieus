@@ -4,9 +4,10 @@
 # Define variables available to all jobs
 variables:
   # Container registry variables
-  CI_REGISTRY_IMAGE_FRONTEND: $CI_REGISTRY_IMAGE/frontend
-  CI_REGISTRY_IMAGE_BACKEND: $CI_REGISTRY_IMAGE/backend
-  CI_REGISTRY_IMAGE_BOT: $CI_REGISTRY_IMAGE/msteams-bot
+  DOCKERHUB_USERNAME: $DOCKERHUB_USERNAME
+  CI_REGISTRY_IMAGE_FRONTEND: $DOCKERHUB_USERNAME/qurieus-frontend
+  CI_REGISTRY_IMAGE_BACKEND: $DOCKERHUB_USERNAME/qurieus-backend
+  CI_REGISTRY_IMAGE_BOT: $DOCKERHUB_USERNAME/qurieus-msteams-bot
   RUN_PIPELINE: "false"
 
 # Define the stages of the pipeline
@@ -75,13 +76,13 @@ build_frontend:
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
   script:
     - cd qurieus-frontend
     - docker context create ci || echo "context exists"
     - docker buildx create ci --use
     - docker buildx inspect --bootstrap
-    - docker buildx build --platform linux/arm64 -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG --push .
+    - docker buildx build --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
@@ -97,13 +98,13 @@ build_backend:
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
   script:
     - cd qurieus-backend
     - docker context create ci || echo "context exists"
     - docker buildx create ci --use
     - docker buildx inspect --bootstrap
-    - docker buildx build --platform linux/arm64 -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG --push .
+    - docker buildx build --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
@@ -119,13 +120,13 @@ build_msteams_bot:
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
   script:
     - cd qurieus-bot-teams
     - docker context create ci || echo "context exists"
     - docker buildx create ci --use
     - docker buildx inspect --bootstrap
-    - docker buildx build --platform linux/arm64 -t $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG --push .
+    - docker buildx build --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
@@ -176,7 +177,7 @@ deploy_staging:
         if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_FRONTEND\" = \"true\" ]; then
           echo 'Deploying Frontend...' &&
           cd /home/ubuntu/staging/qurieus-frontend &&
-          export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
+          export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
           docker-compose up -d --remove-orphans &&
           echo '✅ Frontend deployed successfully!'
@@ -188,7 +189,7 @@ deploy_staging:
         if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BACKEND\" = \"true\" ]; then
           echo 'Deploying Backend...' &&
           cd /home/ubuntu/staging/qurieus-backend &&
-          export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
+          export BACKEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
           docker-compose up -d --remove-orphans &&
           echo '✅ Backend deployed successfully!'
@@ -200,7 +201,7 @@ deploy_staging:
         if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BOT\" = \"true\" ]; then
           echo 'Deploying MSTeamsBot...' &&
           cd /home/ubuntu/staging/qurieus-bot-teams &&
-          export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
+          export BOT_IMAGE=$DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
           docker-compose up -d --remove-orphans &&
           echo '✅ MSTeamsBot deployed successfully!'
@@ -247,7 +248,7 @@ deploy_production:
         if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_FRONTEND\" = \"true\" ]; then
           echo 'Deploying Frontend...' &&
           cd /home/ubuntu/prod/qurieus-frontend &&
-          export FRONTEND_IMAGE=$CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG &&
+          export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
           docker-compose up -d --remove-orphans &&
           echo '✅ Frontend deployed successfully!'
@@ -259,7 +260,7 @@ deploy_production:
         if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BACKEND\" = \"true\" ]; then
           echo 'Deploying Backend...' &&
           cd /home/ubuntu/prod/qurieus-backend &&
-          export BACKEND_IMAGE=$CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG &&
+          export BACKEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
           docker-compose up -d --remove-orphans &&
           echo '✅ Backend deployed successfully!'
@@ -271,7 +272,7 @@ deploy_production:
         if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BUILD_BOT\" = \"true\" ]; then
           echo 'Deploying MSTeamsBot...' &&
           cd /home/ubuntu/prod/qurieus-bot-teams &&
-          export BOT_IMAGE=$CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG &&
+          export BOT_IMAGE=$DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
           docker-compose up -d --remove-orphans &&
           echo '✅ MSTeamsBot deployed successfully!'
