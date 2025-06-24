@@ -110,6 +110,12 @@ jobs:
           FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
           BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
           BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
+          FRONTEND_CHANGED: ${{ needs.check_changes.outputs.frontend_changed }}
+          BACKEND_CHANGED: ${{ needs.check_changes.outputs.backend_changed }}
+          BOT_CHANGED: ${{ needs.check_changes.outputs.bot_changed }}
+          FORCE_FRONTEND: ${{ github.event.inputs.force_frontend }}
+          FORCE_BACKEND: ${{ github.event.inputs.force_backend }}
+          FORCE_BOT: ${{ github.event.inputs.force_bot }}
         run: |
           ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_IP }} "
             export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
@@ -117,26 +123,38 @@ jobs:
             export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
             export BACKEND_IMAGE=$BACKEND_IMAGE &&
             export BOT_IMAGE=$BOT_IMAGE &&
+            export FRONTEND_CHANGED=$FRONTEND_CHANGED &&
+            export BACKEND_CHANGED=$BACKEND_CHANGED &&
+            export BOT_CHANGED=$BOT_CHANGED &&
+            export FORCE_FRONTEND=$FORCE_FRONTEND &&
+            export FORCE_BACKEND=$FORCE_BACKEND &&
+            export FORCE_BOT=$FORCE_BOT &&
             echo 'Logging into Docker Hub...' &&
             echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-            ${
-              needs.check_changes.outputs.frontend_changed == 'true' || 
-              github.event.inputs.force_frontend == 'true' 
-              ? "echo 'Pulling and deploying Frontend...' && cd /home/ubuntu/staging/qurieus-frontend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
-              : "echo 'Skipping Frontend deployment (no changes)' &&"
-            }
-            ${
-              needs.check_changes.outputs.backend_changed == 'true' || 
-              github.event.inputs.force_backend == 'true' 
-              ? "echo 'Pulling and deploying Backend...' && cd /home/ubuntu/staging/qurieus-backend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
-              : "echo 'Skipping Backend deployment (no changes)' &&"
-            }
-            ${
-              needs.check_changes.outputs.bot_changed == 'true' || 
-              github.event.inputs.force_bot == 'true' 
-              ? "echo 'Pulling and deploying Bot...' && cd /home/ubuntu/staging/qurieus-bot-teams && docker-compose pull && docker-compose up -d --remove-orphans &&" 
-              : "echo 'Skipping Bot deployment (no changes)' &&"
-            }
+            if [ \"\$FRONTEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_FRONTEND\" = \"true\" ]; then
+              echo 'Pulling and deploying Frontend...' &&
+              cd /home/ubuntu/staging/qurieus-frontend &&
+              docker-compose pull &&
+              docker-compose up -d --remove-orphans
+            else
+              echo 'Skipping Frontend deployment (no changes)'
+            fi &&
+            if [ \"\$BACKEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_BACKEND\" = \"true\" ]; then
+              echo 'Pulling and deploying Backend...' &&
+              cd /home/ubuntu/staging/qurieus-backend &&
+              docker-compose pull &&
+              docker-compose up -d --remove-orphans
+            else
+              echo 'Skipping Backend deployment (no changes)'
+            fi &&
+            if [ \"\$BOT_CHANGED\" = \"true\" ] || [ \"\$FORCE_BOT\" = \"true\" ]; then
+              echo 'Pulling and deploying Bot...' &&
+              cd /home/ubuntu/staging/qurieus-bot-teams &&
+              docker-compose pull &&
+              docker-compose up -d --remove-orphans
+            else
+              echo 'Skipping Bot deployment (no changes)'
+            fi &&
             echo 'Deployment completed successfully!'
           "
 
@@ -164,6 +182,12 @@ jobs:
           FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
           BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
           BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
+          FRONTEND_CHANGED: ${{ needs.check_changes.outputs.frontend_changed }}
+          BACKEND_CHANGED: ${{ needs.check_changes.outputs.backend_changed }}
+          BOT_CHANGED: ${{ needs.check_changes.outputs.bot_changed }}
+          FORCE_FRONTEND: ${{ github.event.inputs.force_frontend }}
+          FORCE_BACKEND: ${{ github.event.inputs.force_backend }}
+          FORCE_BOT: ${{ github.event.inputs.force_bot }}
         run: |
           ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SERVER_IP }} "
             export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
@@ -171,25 +195,37 @@ jobs:
             export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
             export BACKEND_IMAGE=$BACKEND_IMAGE &&
             export BOT_IMAGE=$BOT_IMAGE &&
+            export FRONTEND_CHANGED=$FRONTEND_CHANGED &&
+            export BACKEND_CHANGED=$BACKEND_CHANGED &&
+            export BOT_CHANGED=$BOT_CHANGED &&
+            export FORCE_FRONTEND=$FORCE_FRONTEND &&
+            export FORCE_BACKEND=$FORCE_BACKEND &&
+            export FORCE_BOT=$FORCE_BOT &&
             echo 'Logging into Docker Hub...' &&
             echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-            ${
-              needs.check_changes.outputs.frontend_changed == 'true' || 
-              github.event.inputs.force_frontend == 'true' 
-              ? "echo 'Pulling and deploying Frontend...' && cd /home/ubuntu/prod/qurieus-frontend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
-              : "echo 'Skipping Frontend deployment (no changes)' &&"
-            }
-            ${
-              needs.check_changes.outputs.backend_changed == 'true' || 
-              github.event.inputs.force_backend == 'true' 
-              ? "echo 'Pulling and deploying Backend...' && cd /home/ubuntu/prod/qurieus-backend && docker-compose pull && docker-compose up -d --remove-orphans &&" 
-              : "echo 'Skipping Backend deployment (no changes)' &&"
-            }
-            ${
-              needs.check_changes.outputs.bot_changed == 'true' || 
-              github.event.inputs.force_bot == 'true' 
-              ? "echo 'Pulling and deploying Bot...' && cd /home/ubuntu/prod/qurieus-bot-teams && docker-compose pull && docker-compose up -d --remove-orphans &&" 
-              : "echo 'Skipping Bot deployment (no changes)' &&"
-            }
+            if [ \"\$FRONTEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_FRONTEND\" = \"true\" ]; then
+              echo 'Pulling and deploying Frontend...' &&
+              cd /home/ubuntu/prod/qurieus-frontend &&
+              docker-compose pull &&
+              docker-compose up -d --remove-orphans
+            else
+              echo 'Skipping Frontend deployment (no changes)'
+            fi &&
+            if [ \"\$BACKEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_BACKEND\" = \"true\" ]; then
+              echo 'Pulling and deploying Backend...' &&
+              cd /home/ubuntu/prod/qurieus-backend &&
+              docker-compose pull &&
+              docker-compose up -d --remove-orphans
+            else
+              echo 'Skipping Backend deployment (no changes)'
+            fi &&
+            if [ \"\$BOT_CHANGED\" = \"true\" ] || [ \"\$FORCE_BOT\" = \"true\" ]; then
+              echo 'Pulling and deploying Bot...' &&
+              cd /home/ubuntu/prod/qurieus-bot-teams &&
+              docker-compose pull &&
+              docker-compose up -d --remove-orphans
+            else
+              echo 'Skipping Bot deployment (no changes)'
+            fi &&
             echo 'Deployment completed successfully!'
           "
