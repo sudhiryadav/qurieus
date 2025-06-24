@@ -7,12 +7,6 @@ variables:
   CI_REGISTRY_IMAGE_FRONTEND: $CI_REGISTRY_IMAGE/frontend
   CI_REGISTRY_IMAGE_BACKEND: $CI_REGISTRY_IMAGE/backend
   CI_REGISTRY_IMAGE_BOT: $CI_REGISTRY_IMAGE/msteams-bot
-  # Set to "true" to skip build stage for faster testing
-  SKIP_BUILD: "false"
-  # Set to "true" to force build and deploy specific applications
-  FORCE_BUILD_FRONTEND: "true"
-  FORCE_BUILD_BACKEND: "true"
-  FORCE_BUILD_BOT: "true"
 
 # Define the stages of the pipeline
 stages:
@@ -81,19 +75,15 @@ build_frontend:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - |
-      if [ "$SKIP_BUILD" = "true" ]; then
-        echo "⏭️ Skipping build due to SKIP_BUILD=true"
-        exit 0
-      fi
     - cd qurieus-frontend
-    - docker buildx create --use
+    - docker context create ci || echo "context exists"
+    - docker buildx create ci --use
+    - docker buildx inspect --bootstrap
     - docker buildx build --platform linux/amd64,linux/arm64 -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         FRONTEND_CHANGED: "true"
-    - if: '$FORCE_BUILD_FRONTEND == "true"'
 
 # Job to build the backend Docker image (only if changed or forced)
 build_backend:
@@ -106,19 +96,15 @@ build_backend:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - |
-      if [ "$SKIP_BUILD" = "true" ]; then
-        echo "⏭️ Skipping build due to SKIP_BUILD=true"
-        exit 0
-      fi
     - cd qurieus-backend
-    - docker buildx create --use
+    - docker context create ci || echo "context exists"
+    - docker buildx create ci --use
+    - docker buildx inspect --bootstrap
     - docker buildx build --platform linux/amd64,linux/arm64 -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BACKEND_CHANGED: "true"
-    - if: '$FORCE_BUILD_BACKEND == "true"'
 
 # Job to build the MSTeamsBot Docker image (only if changed or forced)
 build_msteams_bot:
@@ -131,19 +117,15 @@ build_msteams_bot:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - |
-      if [ "$SKIP_BUILD" = "true" ]; then
-        echo "⏭️ Skipping build due to SKIP_BUILD=true"
-        exit 0
-      fi
     - cd qurieus-bot-teams
-    - docker buildx create --use
+    - docker context create ci || echo "context exists"
+    - docker buildx create ci --use
+    - docker buildx inspect --bootstrap
     - docker buildx build --platform linux/amd64,linux/arm64 -t $CI_REGISTRY_IMAGE_BOT:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
       variables:
         BOT_CHANGED: "true"
-    - if: '$FORCE_BUILD_BOT == "true"'
 
 # Base configuration for deployment jobs to avoid repetition
 .deploy_configuration: &deploy_configuration
