@@ -21,7 +21,7 @@ on:
         default: 'true'
   push:
     branches:
-      - devimage.png
+      - dev
       - prod
 
 env:
