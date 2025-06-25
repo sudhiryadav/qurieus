@@ -14,6 +14,12 @@
 ```
 qurieus/ (Root Repository)
 ├── .gitlab-ci.yml                       # ✅ GitLab CI/CD configuration
+├── ci-cd/
+│   ├── GITLAB_CI_CD_SUMMARY.md          # ✅ This summary
+│   ├── DEPLOYMENT_GUIDE.md              # ✅ Deployment guide
+│   ├── GITHUB_ACTIONS_CI_CD_SUMMARY.md  # ✅ GitHub Actions guide
+│   └── scripts/
+│       └── setup-ec2.sh                 # ✅ EC2 automation script
 ├── qurieus-frontend/
 │   ├── Dockerfile                       # ✅ Multi-stage Next.js build
 │   ├── docker-compose.yml               # ✅ Frontend orchestration
@@ -23,14 +29,11 @@ qurieus/ (Root Repository)
 │   ├── Dockerfile                       # ✅ Python FastAPI build
 │   ├── docker-compose.yml               # ✅ Backend orchestration
 │   └── ... (backend files)
-├── qurieus-bot-teams/
-│   ├── Dockerfile                       # ✅ Node.js MSTeamsBot build
-│   ├── docker-compose.yml               # ✅ Bot orchestration
-│   ├── .dockerignore                    # ✅ Bot excludes
-│   └── ... (bot files)
-├── scripts/
-│   └── setup-ec2.sh                     # ✅ EC2 automation script
-└── GITLAB_CI_CD_SUMMARY.md              # ✅ This summary
+└── qurieus-bot-teams/
+    ├── Dockerfile                       # ✅ Node.js MSTeamsBot build
+    ├── docker-compose.yml               # ✅ Bot orchestration
+    ├── .dockerignore                    # ✅ Bot excludes
+    └── ... (bot files)
 ```
 
 ## 🔄 Deployment Workflow
@@ -98,7 +101,7 @@ cat ~/.ssh/id_ed25519 | base64 -w 0
 - [ ] Launch staging EC2 instance (t3.medium)
 - [ ] Launch production EC2 instance (t3.large)
 - [ ] Configure security groups (ports 22, 80, 443, 8000, 8001, 3978)
-- [ ] Run `scripts/setup-ec2.sh` on both instances
+- [ ] Run `ci-cd/scripts/setup-ec2.sh` on both instances
 - [ ] Copy docker-compose files to EC2 instances
 
 ### **GitLab Repository Setup:**
@@ -117,7 +120,7 @@ cat ~/.ssh/id_ed25519 | base64 -w 0
 ```bash
 # 1. Set up EC2 instances
 ssh -i your-key.pem ubuntu@your-ec2-ip
-curl -fsSL https://raw.githubusercontent.com/your-repo/main/scripts/setup-ec2.sh | bash
+curl -fsSL https://raw.githubusercontent.com/your-repo/main/ci-cd/scripts/setup-ec2.sh | bash
 
 # 2. Copy docker-compose files
 scp -i your-key.pem qurieus-frontend/docker-compose.yml ubuntu@your-ec2-ip:/home/ubuntu/staging/qurieus-frontend/

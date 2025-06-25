@@ -9,12 +9,14 @@ This guide provides step-by-step instructions to deploy your Qurieus monorepo (F
 ```
 qurieus/ (Root Repository)
 ├── .gitlab-ci.yml                       # GitLab CI/CD configuration
+├── ci-cd/
+│   ├── DEPLOYMENT_GUIDE.md              # This guide
+│   ├── GITHUB_ACTIONS_DEPLOYMENT_GUIDE.md # GitHub Actions guide
+│   └── scripts/
+│       └── setup-ec2.sh                 # EC2 automation script
 ├── qurieus-frontend/                    # Next.js frontend
 ├── qurieus-backend/                     # Python FastAPI backend
-├── qurieus-bot-teams/                   # MSTeamsBot Node.js
-├── scripts/
-│   └── setup-ec2.sh                     # EC2 automation script
-└── GITLAB_CI_CD_SUMMARY.md              # Quick reference
+└── qurieus-bot-teams/                   # MSTeamsBot Node.js
 ```
 
 ## 🔧 Prerequisites

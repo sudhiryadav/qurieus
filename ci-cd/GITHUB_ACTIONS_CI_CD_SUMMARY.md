@@ -14,6 +14,12 @@
 ```
 qurieus/ (Root Repository)
 ├── .github/workflows/ci-cd.yml           # ✅ GitHub Actions CI/CD configuration
+├── ci-cd/
+│   ├── GITHUB_ACTIONS_CI_CD_SUMMARY.md   # ✅ This summary
+│   ├── GITHUB_ACTIONS_DEPLOYMENT_GUIDE.md # ✅ Deployment guide
+│   ├── DEPLOYMENT_GUIDE.md               # ✅ GitLab deployment guide
+│   └── scripts/
+│       └── setup-ec2.sh                  # ✅ EC2 automation script
 ├── qurieus-frontend/
 │   ├── Dockerfile                        # ✅ Multi-stage Next.js build
 │   ├── docker-compose.yml                # ✅ Frontend orchestration
@@ -22,11 +28,10 @@ qurieus/ (Root Repository)
 │   ├── Dockerfile                        # ✅ Python FastAPI build
 │   ├── docker-compose.yml                # ✅ Backend orchestration
 │   └── ... (backend files)
-├── qurieus-bot-teams/
-│   ├── Dockerfile                        # ✅ Node.js MSTeamsBot build
-│   ├── docker-compose.yml                # ✅ Bot orchestration
-│   └── ... (bot files)
-└── GITHUB_ACTIONS_CI_CD_SUMMARY.md       # ✅ This summary
+└── qurieus-bot-teams/
+    ├── Dockerfile                        # ✅ Node.js MSTeamsBot build
+    ├── docker-compose.yml                # ✅ Bot orchestration
+    └── ... (bot files)
 ```
 
 ## 🔄 Deployment Workflow
@@ -87,7 +92,7 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions:
 ```bash
 # 1. Set up EC2 instances
 ssh -i your-key.pem ubuntu@your-ec2-ip
-curl -fsSL https://raw.githubusercontent.com/your-repo/main/scripts/setup-ec2.sh | bash
+curl -fsSL https://raw.githubusercontent.com/your-repo/main/ci-cd/scripts/setup-ec2.sh | bash
 
 # 2. Copy docker-compose files
 scp -i your-key.pem qurieus-frontend/docker-compose.yml ubuntu@your-ec2-ip:/home/ubuntu/staging/qurieus-frontend/

@@ -5,20 +5,27 @@
 | File | Purpose |
 |------|---------|
 | `.gitlab-ci.yml` | GitLab CI/CD pipeline configuration |
-| `GITLAB_CI_CD_SUMMARY.md` | Complete setup summary |
-| `DEPLOYMENT_GUIDE.md` | Detailed step-by-step guide |
-| `scripts/setup-ec2.sh` | EC2 automation script |
+| `ci-cd/GITLAB_CI_CD_SUMMARY.md` | Complete setup summary |
+| `ci-cd/DEPLOYMENT_GUIDE.md` | Detailed step-by-step guide |
+| `ci-cd/scripts/setup-ec2.sh` | EC2 automation script |
 
 ## 🔑 GitLab Variables Required
 
-| Variable | Value | Protected | Masked |
-|----------|-------|-----------|--------|
-| `STAGING_SSH_PRIVATE_KEY` | Base64 encoded SSH key | ✅ | ✅ |
-| `STAGING_SSH_USER` | `ubuntu` | ✅ | ❌ |
-| `STAGING_SERVER_IP` | Staging EC2 IP | ✅ | ❌ |
-| `PROD_SSH_PRIVATE_KEY` | Base64 encoded SSH key | ✅ | ✅ |
-| `PROD_SSH_USER` | `ubuntu` | ✅ | ❌ |
-| `PROD_SERVER_IP` | Production EC2 IP | ✅ | ❌ |
+| Variable                | Value                   | Protected | Masked |
+|-------------------------|-------------------------|-----------|--------|
+| `DOCKERHUB_USERNAME`    | Docker Hub username     | ✅/❌     | ✅     |
+| `DOCKERHUB_TOKEN`       | Docker Hub access token | ✅/❌     | ✅     |
+| `STAGING_SSH_PRIVATE_KEY` | Base64 encoded SSH key | ✅       | ✅     |
+| `STAGING_SSH_USER`      | `ubuntu`                | ✅       | ❌     |
+| `STAGING_SERVER_IP`     | Staging EC2 IP          | ✅       | ❌     |
+| `PROD_SSH_PRIVATE_KEY`  | Base64 encoded SSH key  | ✅       | ✅     |
+| `PROD_SSH_USER`         | `ubuntu`                | ✅       | ❌     |
+| `PROD_SERVER_IP`        | Production EC2 IP       | ✅       | ❌     |
+
+**Important:**
+- If you set a variable as **Protected** in GitLab, it will **only be available to pipelines running on protected branches** (like `prod`).
+- If you want deployments to work on non-protected branches (like `dev`), **do not mark these variables as Protected**.
+- Masked variables are always recommended for secrets like tokens and private keys.
 
 ## 🔧 Quick Commands
 
@@ -32,7 +39,7 @@ cat ~/.ssh/id_rsa | base64 -w 0
 ```bash
 # SSH into EC2 and run setup
 ssh -i your-key.pem ubuntu@your-ec2-ip
-curl -fsSL https://raw.githubusercontent.com/your-repo/main/scripts/setup-ec2.sh | bash
+curl -fsSL https://raw.githubusercontent.com/your-repo/main/ci-cd/scripts/setup-ec2.sh | bash
 ```
 
 ### Copy Docker Compose Files

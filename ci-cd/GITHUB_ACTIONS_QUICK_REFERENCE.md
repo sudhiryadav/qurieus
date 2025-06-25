@@ -5,9 +5,9 @@
 | File | Purpose |
 |------|---------|
 | `.github/workflows/ci-cd.yml` | GitHub Actions pipeline configuration |
-| `GITHUB_ACTIONS_CI_CD_SUMMARY.md` | Complete setup summary |
-| `GITHUB_ACTIONS_DEPLOYMENT_GUIDE.md` | Detailed step-by-step guide |
-| `scripts/setup-ec2.sh` | EC2 automation script |
+| `ci-cd/GITHUB_ACTIONS_CI_CD_SUMMARY.md` | Complete setup summary |
+| `ci-cd/GITHUB_ACTIONS_DEPLOYMENT_GUIDE.md` | Detailed step-by-step guide |
+| `ci-cd/scripts/setup-ec2.sh` | EC2 automation script |
 
 ## 🔑 GitHub Actions Secrets Required
 
@@ -32,7 +32,7 @@ cat ~/.ssh/id_rsa | base64 -w 0
 ### EC2 Setup
 ```bash
 ssh -i your-key.pem ubuntu@your-ec2-ip
-curl -fsSL https://raw.githubusercontent.com/your-repo/main/scripts/setup-ec2.sh | bash
+curl -fsSL https://raw.githubusercontent.com/your-repo/main/ci-cd/scripts/setup-ec2.sh | bash
 ```
 
 ### Copy Docker Compose Files
