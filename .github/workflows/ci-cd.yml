@@ -163,6 +163,7 @@ jobs:
               echo 'Pulling and deploying Frontend...' &&
               cd /home/ubuntu/staging/qurieus-frontend &&
               docker-compose pull &&
+              docker-compose run --rm frontend yarn prisma migrate deploy &&
               docker-compose up -d --remove-orphans
             else
               echo 'Skipping Frontend deployment (no changes)'
@@ -235,6 +236,7 @@ jobs:
               echo 'Pulling and deploying Frontend...' &&
               cd /home/ubuntu/prod/qurieus-frontend &&
               docker-compose pull &&
+              docker-compose run --rm frontend yarn prisma migrate deploy &&
               docker-compose up -d --remove-orphans
             else
               echo 'Skipping Frontend deployment (no changes)'

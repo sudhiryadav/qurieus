@@ -186,6 +186,7 @@ deploy_staging:
           cd /home/ubuntu/staging/qurieus-frontend &&
           export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
+          docker-compose run --rm frontend yarn prisma migrate deploy &&
           docker-compose up -d --remove-orphans &&
           echo '✅ Frontend deployed successfully!'
         else
@@ -257,6 +258,7 @@ deploy_production:
           cd /home/ubuntu/prod/qurieus-frontend &&
           export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
           docker-compose pull &&
+          docker-compose run --rm frontend yarn prisma migrate deploy &&
           docker-compose up -d --remove-orphans &&
           echo '✅ Frontend deployed successfully!'
         else
