@@ -162,6 +162,22 @@ If you encounter issues:
 5. ✅ Add load balancing for high availability
 6. ✅ Configure MSTeamsBot webhook endpoints
 
+## Prisma Migrations
+Prisma migrations are run automatically during frontend deployment (staging and production) using:
+
+```
+docker-compose run --rm frontend yarn prisma migrate deploy
+```
+
+## Selective Build/Deploy
+Use the following force variables in your CI/CD pipeline to force build and deploy for individual apps:
+- `FORCE_FRONTEND`
+- `FORCE_BACKEND`
+- `FORCE_BOT`
+
+## GitHub Actions
+See `GITHUB_ACTIONS_QUICK_REFERENCE.md` for the equivalent GitHub Actions quick reference.
+
 ---
 
 **This quick reference provides essential commands and information for your GitLab CI/CD deployment.** 

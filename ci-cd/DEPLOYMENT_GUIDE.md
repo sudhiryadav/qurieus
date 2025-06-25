@@ -283,6 +283,24 @@ If you encounter issues:
 3. Verify environment variables
 4. Ensure SSH keys are properly encoded
 
+### Prisma Migrations
+Prisma migrations are now run automatically during frontend deployment (staging and production) using:
+
+```
+docker-compose run --rm frontend yarn prisma migrate deploy
+```
+
+This ensures your database schema is always up to date after each deployment.
+
+### Selective Build/Deploy
+You can use the following force variables in your CI/CD pipeline to trigger build and deploy for individual apps regardless of detected changes:
+- `FORCE_FRONTEND`
+- `FORCE_BACKEND`
+- `FORCE_BOT`
+
+### GitHub Actions
+See `GITHUB_ACTIONS_DEPLOYMENT_GUIDE.md` for the equivalent GitHub Actions deployment process.
+
 ---
 
 **This setup provides a complete CI/CD pipeline that automatically deploys your monorepo applications to AWS EC2 whenever you push to the `dev` or `prod` branches.** 

@@ -176,12 +176,13 @@ docker-compose logs -f
 
 ## 🔮 Future Enhancements
 
-1. **Database Migrations**: Add Prisma migrations to CI/CD
-2. **Testing**: Add automated tests before deployment
-3. **Monitoring**: Integrate with Prometheus/Grafana
-4. **Load Balancing**: Add Application Load Balancer
-5. **Auto-scaling**: Implement EC2 Auto Scaling Groups
-6. **Blue-Green Deployment**: Zero-downtime deployments
+1. **Database Migrations**: Prisma migrations are now run automatically during frontend deployment (staging and production) using `docker-compose run --rm frontend yarn prisma migrate deploy` in the pipeline.
+2. **Selective Build/Deploy**: You can use force variables (`FORCE_FRONTEND`, `FORCE_BACKEND`, `FORCE_BOT`) to trigger build and deploy for individual apps regardless of detected changes.
+3. **GitHub Actions**: See `GITHUB_ACTIONS_CI_CD_SUMMARY.md` for the equivalent GitHub Actions setup and reference.
+4. **Monitoring**: Integrate with Prometheus/Grafana
+5. **Load Balancing**: Add Application Load Balancer
+6. **Auto-scaling**: Implement EC2 Auto Scaling Groups
+7. **Blue-Green Deployment**: Zero-downtime deployments
 
 ## 📞 Support
 
