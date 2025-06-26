@@ -8,6 +8,11 @@ interface PricingProps {
 }
 
 const Pricing = ({ plans, user }: PricingProps) => {
+  // Filter out enterprise plans
+  const nonEnterprisePlans = plans?.filter(
+    (plan) => plan.name.toLowerCase() !== "enterprise",
+  );
+
   return (
     <section
       id="pricing"
@@ -24,7 +29,7 @@ const Pricing = ({ plans, user }: PricingProps) => {
         </div>
 
         <div className="-mx-4 flex flex-wrap justify-center">
-          {plans.map((plan, i) => (
+          {nonEnterprisePlans?.map((plan, i) => (
             <PricingBox key={plan.id} plan={plan} user={user} />
           ))}
         </div>

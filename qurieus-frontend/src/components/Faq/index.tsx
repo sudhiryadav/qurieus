@@ -32,7 +32,7 @@ const Faq = () => {
             />
             <SingleFaq
               question="How do subscriptions and plans work?"
-              answer="Qurieus offers multiple subscription plans (Free, Basic, Standard, Pro, Enterprise) with different features and usage limits. You can view and manage your subscription from your dashboard."
+              answer="Qurieus offers multiple subscription plans (Free, Basic, Standard, Pro) with different features and usage limits. You can view and manage your subscription from your dashboard."
             />
             <SingleFaq
               question="Can I upgrade or change my subscription plan?"

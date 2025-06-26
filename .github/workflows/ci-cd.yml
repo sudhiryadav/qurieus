@@ -6,19 +6,19 @@ on:
       run_pipeline:
         description: 'Run the pipeline?'
         required: false
-        default: 'true'
+        default: 'false'
       force_frontend:
         description: 'Force build and deploy frontend (ignore changes)'
         required: false
-        default: 'true'
+        default: 'false'
       force_backend:
         description: 'Force build and deploy backend (ignore changes)'
         required: false
-        default: 'true'
+        default: 'false'
       force_bot:
         description: 'Force build and deploy bot (ignore changes)'
         required: false
-        default: 'true'
+        default: 'false'
   push:
     branches:
       - dev

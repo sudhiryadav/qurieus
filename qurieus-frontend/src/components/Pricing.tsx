@@ -145,9 +145,9 @@ export default function Pricing({
   const nonEnterprisePlans = plans?.filter(
     (plan) => plan.name.toLowerCase() !== "enterprise",
   );
-  const enterprisePlan = plans?.find(
-    (plan) => plan.name.toLowerCase() === "enterprise",
-  );
+  // const enterprisePlan = plans?.find(
+  //   (plan) => plan.name.toLowerCase() === "enterprise",
+  // );
 
   const getButtonText = (plan: SubscriptionPlanWithPaddle) => {
     if (!session) return "Sign in to subscribe";
@@ -316,8 +316,8 @@ export default function Pricing({
             </div>
           ))}
         </div>
-        {/* Enterprise Plan Section */}
-        {enterprisePlan && (
+        {/* Enterprise Plan Section - Temporarily Hidden */}
+        {/* {enterprisePlan && (
           <div className="mt-16 flex flex-col items-center rounded-3xl bg-gradient-to-r from-indigo-600 to-indigo-800 p-8 text-white shadow-lg">
             <h3 className="mb-2 text-2xl font-bold">{enterprisePlan.name}</h3>
             <p className="mb-4 text-lg">
@@ -364,7 +364,7 @@ export default function Pricing({
               Contact Us
             </button>
           </div>
-        )}
+        )} */}
       </div>
     </section>
   );
