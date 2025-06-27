@@ -17,6 +17,4 @@ COPY . .
 EXPOSE 8001
 
 # Command to run the application
-# I am assuming your application is started with uvicorn.
-# If 'main:app' is incorrect, please adjust it to match your application's entrypoint.
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"] 
