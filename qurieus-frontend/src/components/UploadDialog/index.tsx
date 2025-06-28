@@ -214,7 +214,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
 
   return (
     <ModalDialog isOpen={isOpen} onClose={onClose} header={header} footer={footer}>
-      <form id="upload-form" onSubmit={handleSubmit} className="space-y-5">
+      <form id="upload-form" onSubmit={handleSubmit} className="space-y-5 p-5">
         {/* Guidelines */}
         <div className="mb-6 rounded-lg bg-[#2d3543] p-5 text-white">
           <h3 className="mb-2 text-lg font-semibold">Guidelines</h3>

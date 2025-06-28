@@ -62,7 +62,7 @@ async function generateInvoicePDF({
     currency,
     date,
     status,
-    logoUrl: `${process.env.NEXT_PUBLIC_APP_URL}/images/logo.svg`,
+    logoUrl: `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.svg`,
   });
 
   await page.setContent(html);

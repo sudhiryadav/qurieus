@@ -154,7 +154,7 @@ export async function POST(request: Request) {
       return errorResponse({ error: "Number of requests exceeded", status: 403, errorCode: "QUERY_LIMIT_EXCEEDED" });
 
     // (DEV) Test Response
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" && false) {
       await trackAnalytics({
         apiKey,
         message,
