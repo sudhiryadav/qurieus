@@ -49,13 +49,6 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = "noreply@qurieus.com"
     
-    # File upload settings
-    MAX_FILE_SIZE_MB: int = 10  # default is 10MB
-
-    @property
-    def MAX_FILE_SIZE_BYTES(self) -> int:
-        return self.MAX_FILE_SIZE_MB * 1024 * 1024
-    
     # Ollama settings
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral:latest").strip()  # Default to mistral:latest
