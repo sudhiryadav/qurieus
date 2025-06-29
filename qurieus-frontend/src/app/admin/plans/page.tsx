@@ -27,6 +27,7 @@ interface Plan {
   maxQueriesPerDay: number | null;
   paddleProductId?: string;
   paddlePriceId?: string;
+  paddleConfig?: PaddleConfig;
 }
 
 interface PaddleConfig {
@@ -60,6 +61,8 @@ export default function AdminPlansPage() {
   const [paddleConfig, setPaddleConfig] = useState<PaddleConfig | null>(null);
   const [paddleSyncLoading, setPaddleSyncLoading] = useState(false);
   const [paddleSyncError, setPaddleSyncError] = useState<string | null>(null);
+  const [paddleSyncSuccess, setPaddleSyncSuccess] = useState<string | null>(null);
+  const [syncIdsLoading, setSyncIdsLoading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -191,6 +194,27 @@ export default function AdminPlansPage() {
     }
   };
 
+  const handleSyncPaddleIds = async () => {
+    setSyncIdsLoading(true);
+    try {
+      const response = await axios.post('/api/admin/subscription-plans/sync-paddle-ids');
+      const result = response.data;
+      
+      console.log('Sync Paddle IDs result:', result);
+      
+      // Refresh the plans to show updated Paddle configs
+      const { data: updatedPlans } = await axios.get("/api/admin/subscription-plans");
+      setPlans(updatedPlans);
+      
+      showToast.success(result.message);
+    } catch (error: any) {
+      console.error('Error syncing Paddle IDs:', error);
+      showToast.error(error?.response?.data?.error || 'Failed to sync Paddle IDs');
+    } finally {
+      setSyncIdsLoading(false);
+    }
+  };
+
   const filteredPlans = plans.filter(plan =>
     plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     plan.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -200,6 +224,29 @@ export default function AdminPlansPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <LoadingOverlay loading={loading} htmlText="Loading plans..." />
+      
+      {/* Workflow Note */}
+      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+              Paddle Integration Workflow
+            </h3>
+            <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
+              <p>• Create plans in Paddle first (via Paddle dashboard)</p>
+              <p>• Use &quot;Sync Paddle IDs&quot; to fetch existing product/price IDs from Paddle</p>
+              <p>• Use &quot;Sync to Paddle&quot; to update existing products with database changes</p>
+              <p>• Paddle IDs are stored in the database for exact synchronization</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Plans</h1>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
@@ -213,6 +260,14 @@ export default function AdminPlansPage() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
           </div>
+          <Button 
+            onClick={handleSyncPaddleIds} 
+            disabled={syncIdsLoading}
+            variant="outline"
+            className="flex items-center space-x-2 whitespace-nowrap"
+          >
+            {syncIdsLoading ? "Syncing..." : "Sync Paddle IDs"}
+          </Button>
           <Button onClick={() => { setIsAddModalOpen(true); setEditForm({ name: "", description: "", price: 0, currency: "INR", features: "", isActive: true, idealFor: "", keyLimits: "", maxDocs: undefined, maxStorageMB: undefined, maxQueriesPerDay: undefined }); }} className="flex items-center space-x-2 whitespace-nowrap">
             <Plus className="h-4 w-4" />
             <span>Add Plan</span>
@@ -226,15 +281,14 @@ export default function AdminPlansPage() {
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Name</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Description</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Price</th>
-              {/* <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Currency</th> */}
-              {/* <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Features</th> */}
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Created</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Ideal For</th>
-              {/* <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Key Limits</th> */}
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Max Docs</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Max Storage (MB)</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Max Queries/Day</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Paddle Product ID</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Paddle Price ID</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Actions</th>
             </tr>
           </thead>
@@ -244,19 +298,14 @@ export default function AdminPlansPage() {
                 <td className="px-4 py-3 text-sm font-medium text-dark dark:text-white">{plan.name}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.description}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.price === 0 ? '-' : `${plan.currency} ${plan.price}`}</td>
-                {/* <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.currency}</td> */}
-                {/* <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                  <ul className="list-disc pl-4">
-                    {plan.features.map((f, i) => <li key={i}>{f}</li>)}
-                  </ul>
-                </td> */}
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.isActive ? "Active" : "Inactive"}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(plan.createdAt).toLocaleDateString()}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.idealFor}</td>
-                {/* <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.keyLimits}</td> */}
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxDocs ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxStorageMB ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxQueriesPerDay ?? 'Custom'}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.paddleConfig?.productId || <span className="text-gray-500">Not synced</span>}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.paddleConfig?.priceId || <span className="text-gray-500">Not synced</span>}</td>
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(plan)}>Edit</Button>

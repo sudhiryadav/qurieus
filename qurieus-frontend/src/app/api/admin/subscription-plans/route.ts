@@ -33,6 +33,9 @@ export async function GET() {
       return new NextResponse("Forbidden", { status: 403 });
     }
     const plans = await prisma.subscriptionPlan?.findMany({
+      include: {
+        paddleConfig: true,
+      },
       orderBy: { price: "asc" }
     });
 
