@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     // Verify the subscription belongs to the current user
-    const subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.userSubscription.findFirst({
       where: {
         paddleSubscriptionId: subscriptionId,
         userId: session.user.id,
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     }
 
     // Update the subscription in our database to set that status as in progress    
-    await prisma.subscription.update({
+    await prisma.userSubscription.update({
       where: {
         id: subscription.id
       },

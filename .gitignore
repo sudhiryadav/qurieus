@@ -86,6 +86,3 @@ yarn-error.log*
 next-env.d.ts 
 .env.prod
 .env
-
-# Prisma
-qurieus-frontend/prisma/generated/client

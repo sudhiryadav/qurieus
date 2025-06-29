@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       return errorResponse({ error: "IP not allowed", status: 403, errorCode: "IP_NOT_ALLOWED" });
 
     // Check if user has a subscription
-    const subscription = await prisma.subscription.findUnique({
+    const subscription = await prisma.userSubscription.findUnique({
       where: { userId: apiKey },
     });
     if (!subscription)
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
         message,
         response: "This is a test response",
         responseTime: 0,
-        visitorId: session.user.id,
+        visitorId: session?.user.id || "",
         success: true,
         error: null,
         request: request,

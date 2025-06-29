@@ -114,7 +114,7 @@ CREATE TABLE "PaddleConfig" (
 );
 
 -- CreateTable
-CREATE TABLE "Subscription" (
+CREATE TABLE "UserSubscription" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "planId" TEXT NOT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE "Subscription" (
     "billingCycle" TEXT NOT NULL DEFAULT 'monthly',
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "UserSubscription_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -278,6 +278,16 @@ CREATE TABLE "VisitorSession" (
     CONSTRAINT "VisitorSession_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "PendingSubscription" (
+    "id" TEXT NOT NULL,
+    "transactionId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PendingSubscription_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");
 
@@ -306,10 +316,10 @@ CREATE UNIQUE INDEX "SubscriptionPlan_name_key" ON "SubscriptionPlan"("name");
 CREATE UNIQUE INDEX "PaddleConfig_subscriptionPlanId_key" ON "PaddleConfig"("subscriptionPlanId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
+CREATE UNIQUE INDEX "UserSubscription_userId_key" ON "UserSubscription"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subscription_paddleSubscriptionId_key" ON "Subscription"("paddleSubscriptionId");
+CREATE UNIQUE INDEX "UserSubscription_paddleSubscriptionId_key" ON "UserSubscription"("paddleSubscriptionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ChatConversation_visitorId_userId_key" ON "ChatConversation"("visitorId", "userId");
@@ -350,6 +360,9 @@ CREATE INDEX "VisitorSession_visitorId_idx" ON "VisitorSession"("visitorId");
 -- CreateIndex
 CREATE INDEX "VisitorSession_startTime_idx" ON "VisitorSession"("startTime");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "PendingSubscription_transactionId_key" ON "PendingSubscription"("transactionId");
+
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -360,10 +373,10 @@ ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId"
 ALTER TABLE "PaddleConfig" ADD CONSTRAINT "PaddleConfig_subscriptionPlanId_fkey" FOREIGN KEY ("subscriptionPlanId") REFERENCES "SubscriptionPlan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserSubscription" ADD CONSTRAINT "UserSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserSubscription" ADD CONSTRAINT "UserSubscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

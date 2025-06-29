@@ -1,35 +1,36 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import { showToast } from "@/components/Common/Toast";
 import { Button } from "@/components/ui/button";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { Plus, Search } from "lucide-react";
 import axios from "@/lib/axios";
-import { showToast } from "@/components/Common/Toast";
-import Loader from "@/components/Common/LoadingOverlay";
-import LoadingOverlay from "@/components/Common/LoadingOverlay";
+// import { UserSubscription } from "@prisma/client";
+import { UserSubscriptionWithUserAndPlan } from "@/types/subscription";
+import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
-interface Subscription {
-  id: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  plan: {
-    id: string;
-    name: string;
-  };
-  status: string;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  createdAt: string;
-}
+// interface UserSubscriptionWithUserAndPlan {
+//   id: string;
+//   user: {
+//     id: string;
+//     name: string;
+//     email: string;
+//   };
+//   plan: {
+//     id: string;
+//     name: string;
+//   };
+//   status: string;
+//   currentPeriodStart: string;
+//   currentPeriodEnd: string;
+//   createdAt: string;
+// }
 
 export default function AdminSubscriptionsPage() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subscriptions, setSubscriptions] = useState<UserSubscriptionWithUserAndPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [editingSubscription, setEditingSubscription] = useState<UserSubscriptionWithUserAndPlan | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [editForm, setEditForm] = useState({
     status: "",
@@ -49,12 +50,12 @@ export default function AdminSubscriptionsPage() {
     }
   };
 
-  const handleEditClick = (subscription: Subscription) => {
+  const handleEditClick = (subscription: UserSubscriptionWithUserAndPlan) => {
     setEditingSubscription(subscription);
     setEditForm({
       status: subscription.status,
-      currentPeriodStart: subscription.currentPeriodStart.slice(0, 10),
-      currentPeriodEnd: subscription.currentPeriodEnd.slice(0, 10),
+      currentPeriodStart: subscription.currentPeriodStart.toISOString().slice(0, 10),
+      currentPeriodEnd: subscription.currentPeriodEnd.toISOString().slice(0, 10),
     });
   };
 

@@ -6,7 +6,7 @@ import { showToast } from "@/components/Common/Toast";
 import Pricing from "@/components/Pricing";
 import FullScreenDialog from "@/components/ui/FullScreenDialog";
 import axiosInstance from "@/lib/axios";
-import { Subscription, SubscriptionPlan } from "@prisma/client";
+import { UserSubscription, SubscriptionPlan } from "@prisma/client";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -44,7 +44,7 @@ export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<SubscriptionAndPlan | null>(
     null,
   );
-  interface SubscriptionAndPlan extends Subscription {
+  interface SubscriptionAndPlan extends UserSubscription {
     plan: SubscriptionPlan;
   }
   const [loading, setLoading] = useState(true);

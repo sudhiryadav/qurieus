@@ -14,7 +14,7 @@ export async function GET() {
       );
     }
 
-    const subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.userSubscription.findFirst({
       where: {
         userId: session.user.id,
       },

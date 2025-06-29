@@ -148,7 +148,7 @@ export async function POST(req: Request) {
       }
 
       // if the subscription already exists, update it
-      await prisma.subscription.upsert({
+      await prisma.userSubscription.upsert({
         where: {
           paddleSubscriptionId: subscriptionId,
         },
@@ -268,7 +268,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      await prisma.subscription.update({
+      await prisma.userSubscription.update({
         where: {
           userId: user.id,
         },
@@ -290,7 +290,7 @@ export async function POST(req: Request) {
     if (event_type === "subscription.cancelled") {
       const { id: subscriptionId, status } = data;
 
-      await prisma.subscription.update({
+      await prisma.userSubscription.update({
         where: {
           paddleSubscriptionId: subscriptionId,
         },
@@ -339,7 +339,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      await prisma.subscription.update({
+      await prisma.userSubscription.update({
         where: {
           userId: user.id,
         },
@@ -356,7 +356,7 @@ export async function POST(req: Request) {
         },
       });
 
-      // await prisma.subscription.upsert({
+      // await prisma.userSubscriptionupsert({
       //   where: {
       //     paddleSubscriptionId: subscriptionId,
       //   },
@@ -430,7 +430,7 @@ export async function POST(req: Request) {
       }
 
       // Use upsert instead of update and remove the 404 return
-      await prisma.subscription.upsert({
+      await prisma.userSubscription.upsert({
         where: {
           userId: user.id,
         },
@@ -471,7 +471,7 @@ export async function POST(req: Request) {
     if (event_type === "subscription.paused") {
       const { id: subscriptionId, status, custom_data } = data;
 
-      await prisma.subscription.update({
+      await prisma.userSubscription.update({
         where: {
           paddleSubscriptionId: subscriptionId,
         },
@@ -488,7 +488,7 @@ export async function POST(req: Request) {
     if (event_type === "subscription.unpaused") {
       const { id: subscriptionId, status, custom_data } = data;
 
-      await prisma.subscription.update({
+      await prisma.userSubscription.update({
         where: {
           paddleSubscriptionId: subscriptionId,
         },
@@ -505,7 +505,7 @@ export async function POST(req: Request) {
     if (event_type === "subscription.unpaused") {
       const { id: subscriptionId, status, custom_data } = data;
 
-      await prisma.subscription.update({
+      await prisma.userSubscription.update({
         where: {
           paddleSubscriptionId: subscriptionId,
         },
@@ -520,7 +520,7 @@ export async function POST(req: Request) {
     if (event_type === "subscription.expired") {
       const { id: subscriptionId, status, custom_data } = data;
 
-      await prisma.subscription.update({
+      await prisma.userSubscription.update({
         where: {
           paddleSubscriptionId: subscriptionId,
         },

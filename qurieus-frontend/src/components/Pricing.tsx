@@ -10,7 +10,7 @@ import { SubscriptionPlanWithPaddle } from "@/types/subscription";
 import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
-import { Subscription } from "@prisma/client";
+import { UserSubscription } from "@prisma/client";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
 export default function Pricing({
@@ -33,14 +33,14 @@ export default function Pricing({
     string | null
   >(null);
   const [currentSubscription, setCurrentSubscription] =
-    useState<Subscription | null>(null);
+    useState<UserSubscription | null>(null);
   const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
 
   useEffect(() => {
     // Get current subscription
     const fetchCurrentSubscription = async () => {
       return axios
-        .get<Subscription>(`/api/user/subscription/${session?.user?.id}`)
+        .get<UserSubscription>(`/api/user/subscription/${session?.user?.id}`)
         .then((res) => res.data);
     };
 
@@ -96,8 +96,22 @@ export default function Pricing({
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
     paddleRef.current?.closeCheckout();
+    // Log the data to inspect its structure
+    console.log("Paddle checkout complete event data:", data);
+    // Try to extract the subscription ID from possible fields
+    const subscriptionId = (data as any)?.subscription_id || (data as any)?.checkout?.id;
+    if (subscriptionId) {
+      try {
+        await axios.post("/api/paddle/sync-subscription", {
+          subscriptionId,
+        });
+      } catch (err) {
+        showToast.error("Failed to sync subscription. Please contact support if you do not see your plan.");
+      }
+    }
     router.push("/user/subscription");
   };
+  
   const handlePaddleClose = (data: CheckoutEventsData | undefined) => {
     console.log("User Closed Checkout");
   };

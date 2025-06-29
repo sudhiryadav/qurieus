@@ -93,7 +93,7 @@ model User {
   
   accounts              Account[]
   sessions              Session[]
-  subscription          Subscription?
+  subscription          UserSubscription?
   messages              Message[]
   documents             Document[]
   embeddings            Embedding[]
@@ -126,7 +126,7 @@ model SubscriptionPlan {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  subscriptions Subscription[]
+  subscriptions UserSubscription[]
   paddleConfig PaddleConfig?
   idealFor    String   // NEW: e.g. "Individuals", "Small Teams"
   keyLimits   String   // NEW: e.g. "5 docs · 10 MB · 25 queries/day"
@@ -147,7 +147,7 @@ model PaddleConfig {
   subscriptionPlan  SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id], onDelete: Cascade)
 }
 
-model Subscription {
+model UserSubscription {
   id                    String   @id @default(cuid())
   userId                String   @unique
   user                  User    @relation(fields: [userId], references: [id])
@@ -312,4 +312,12 @@ model VisitorSession {
   @@index([userId])
   @@index([visitorId])
   @@index([startTime])
+}
+
+model PendingSubscription {
+  id            String   @id @default(cuid())
+  transactionId String   @unique
+  userId        String
+  createdAt     DateTime @default(now())
+  // Optionally, add more fields as needed (e.g., planId, status)
 }

@@ -22,7 +22,7 @@ const ALLOWED_FILE_TYPES = [
 ];
 
 async function validateMaxDocs(userId: string, filesCount: number) {
-  const subscription = await prisma.subscription.findUnique({
+  const subscription = await prisma.userSubscription.findUnique({
     where: { userId },
     include: { plan: true },
   });
@@ -38,7 +38,7 @@ async function validateMaxDocs(userId: string, filesCount: number) {
 }
 
 async function validateMaxStorage(userId: string, files: File[]) {
-  const subscription = await prisma.subscription.findUnique({
+  const subscription = await prisma.userSubscription.findUnique({
     where: { userId },
     include: { plan: true },
   });

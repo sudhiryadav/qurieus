@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     // Get all the subscriptions from the database
-    const subscriptions = await prisma.subscription.findMany({
+    const subscriptions = await prisma.userSubscription.findMany({
       include: {
         user: true,
         plan: true,

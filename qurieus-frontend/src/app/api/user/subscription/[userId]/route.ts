@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
       );
     }
 
-    const subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.userSubscription.findFirst({
       where: {
         userId: userId,
       },
