@@ -18,8 +18,7 @@ export default function ModalDialog({
   footer,
   children,
   maxHeight = "80vh",
-  width = "max-w-2xl",
-  padding = "p-4",
+  width = "50%",
 }: ModalDialogProps) {
   if (!isOpen) return null;
 
@@ -30,9 +29,7 @@ export default function ModalDialog({
         style={{
           maxHeight,
           minHeight: 0,
-          width: width.includes("%") ? width : undefined,
-          maxWidth: !width.includes("%") ? width : undefined,
-          ...(padding && { padding: padding }),
+          width,
         }}
       >
         {/* Header */}
@@ -57,7 +54,7 @@ export default function ModalDialog({
           </button>
         </div>
         {/* Content (scrollable) */}
-        <div className={`min-h-0 flex-1 overflow-y-auto`}>{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto p-5`}>{children}</div>
         {/* Footer (sticky) */}
         {footer && (
           <div className="flex justify-end border-t border-gray-700 bg-[#232a36] p-2">

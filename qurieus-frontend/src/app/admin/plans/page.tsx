@@ -273,6 +273,7 @@ export default function AdminPlansPage() {
         isOpen={!!editingPlan}
         onClose={() => setEditingPlan(null)}
         header="Edit Plan"
+        width="600px"
         footer={
           <div className="flex space-x-2">
             <Button variant="outline" onClick={() => setEditingPlan(null)}>Cancel</Button>
