@@ -325,18 +325,6 @@ async def upload_files(
         userId = current_user.get("id")
         log_to_frontend("info", f"Processing upload for user: {userId}", user=current_user)
         
-        # Validate file sizes
-        for file in files:
-            content = await file.read()
-            if len(content) > settings.MAX_FILE_SIZE_BYTES:
-                log_to_frontend("error", f"File {file.filename} exceeds size limit", user=current_user)
-                raise HTTPException(
-                    status_code=400,
-                    detail="File size exceeds the maximum limit"
-                )
-            # Reset file pointer for later reading
-            await file.seek(0)
-        
         total_chunks = 0
         for file in files:
             log_to_frontend("info", f"Processing file: {file.filename}")

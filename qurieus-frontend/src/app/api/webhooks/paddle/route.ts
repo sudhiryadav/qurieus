@@ -391,7 +391,7 @@ export async function POST(req: Request) {
     //#endregion
 
     //#region Transaction Completed
-    if (event_type === "transaction.created") {
+    if (event_type === "transaction.completed") {
       const {
         id: transactionId,
         subscription_id: subscriptionId,
@@ -438,7 +438,7 @@ export async function POST(req: Request) {
           userId: user.id,
           paddleSubscriptionId: subscriptionId,
           paddleCustomerId: customerId || custom_data.application_customer_id,
-          status: status === "billed" ? "active" : "in-progress",
+          status: status === "completed" ? "active" : "in-progress",
           planId: subscriptionPlan.id,
           paddlePaymentAmount: amount ? parseFloat(amount) : 0,
           paddlePaymentCurrency: currency,
