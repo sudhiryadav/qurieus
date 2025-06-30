@@ -1,12 +1,12 @@
 import { footerData, sendEmail } from "@/lib/email";
+import { EventName } from "@/lib/paddle";
 import { prisma } from "@/utils/prismaDB";
-import { verifyPaddleWebhook } from "@/lib/paddle";
+import fs from "fs/promises";
+import handlebars from "handlebars";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
-import handlebars from "handlebars";
-import fs from "fs/promises";
 import path from "path";
+import puppeteer from "puppeteer";
 
 // Register Handlebars helpers
 handlebars.registerHelper("formatDate", (date: Date) =>
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
     //   );
     // }
 
-    if (event_type === "subscription.created") {
+    if (event_type === EventName.SubscriptionCreated) {
       const {
         id: subscriptionId,
         status,
@@ -233,7 +233,7 @@ export async function POST(req: Request) {
     }
 
     //#region Subscription Updated
-    if (event_type === "subscription.updated") {
+    if (event_type === EventName.SubscriptionUpdated) {
       const {
         id: subscriptionId,
         status,
@@ -287,7 +287,7 @@ export async function POST(req: Request) {
     //#endregion
 
     //#region Subscription Cancelled
-    if (event_type === "subscription.cancelled") {
+    if (event_type === EventName.SubscriptionCanceled) {
       const { id: subscriptionId, status } = data;
 
       await prisma.userSubscription.update({
@@ -304,7 +304,7 @@ export async function POST(req: Request) {
     //#endregion
 
     //#region Subscription Activated
-    if (event_type === "subscription.activated") {
+    if (event_type === EventName.SubscriptionActivated) {
       const {
         id: subscriptionId,
         status,
@@ -391,7 +391,7 @@ export async function POST(req: Request) {
     //#endregion
 
     //#region Transaction Completed
-    if (event_type === "transaction.completed") {
+    if (event_type === EventName.TransactionCompleted) {
       const {
         id: transactionId,
         subscription_id: subscriptionId,
@@ -468,7 +468,7 @@ export async function POST(req: Request) {
     //#endregion
 
     //#region Subscription Paused
-    if (event_type === "subscription.paused") {
+    if (event_type === EventName.SubscriptionPaused) {
       const { id: subscriptionId, status, custom_data } = data;
 
       await prisma.userSubscription.update({
@@ -485,7 +485,7 @@ export async function POST(req: Request) {
     //#endregion
 
     //#region Subscription Unpaused
-    if (event_type === "subscription.unpaused") {
+    if (event_type === EventName.SubscriptionResumed) {
       const { id: subscriptionId, status, custom_data } = data;
 
       await prisma.userSubscription.update({
@@ -501,37 +501,6 @@ export async function POST(req: Request) {
     }
     //#endregion
 
-    //#region Subscription Unpaused
-    if (event_type === "subscription.unpaused") {
-      const { id: subscriptionId, status, custom_data } = data;
-
-      await prisma.userSubscription.update({
-        where: {
-          paddleSubscriptionId: subscriptionId,
-        },
-        data: {
-          status,
-        },
-      });
-    }
-    //#endregion
-
-    //#region Subscription Expired
-    if (event_type === "subscription.expired") {
-      const { id: subscriptionId, status, custom_data } = data;
-
-      await prisma.userSubscription.update({
-        where: {
-          paddleSubscriptionId: subscriptionId,
-        },
-        data: {
-          status,
-        },
-      });
-
-      return NextResponse.json({ success: true });
-    }
-    //#endregion
     return NextResponse.json(
       { error: "Unhandled event type" },
       { status: 400 },

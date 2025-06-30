@@ -1,6 +1,10 @@
 import crypto from "crypto";
 import axios from "axios";
 import { prisma } from "@/utils/prismaDB";
+import { EventName } from '@paddle/paddle-node-sdk';
+
+// Re-export EventName for easier imports
+export { EventName };
 
 export function verifyPaddleWebhook(
   body: any,
