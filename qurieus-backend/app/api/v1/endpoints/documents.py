@@ -25,6 +25,7 @@ import hashlib
 import datetime
 import pandas as pd
 import io
+from langdetect import detect
 
 # Add the root directory to Python path
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -403,69 +404,44 @@ async def query_documents(
         """)
         result = db.execute(query, {"userId": request.document_owner_id}).fetchone()
 
+        # Detect the language of the user's question
+        try:
+            question_language = detect(request.query)
+        except Exception:
+            question_language = "en"
+        language_instructions = {
+            "hi": "उत्तर हिंदी में दें।",
+            "fr": "Veuillez répondre en français.",
+            "es": "Por favor, responda en español.",
+            "de": "Bitte antworten Sie auf Deutsch.",
+            "en": "Please answer in English.",
+        }
+        supported_languages = set(language_instructions.keys())
+        if question_language in supported_languages:
+            language_instruction = language_instructions[question_language]
+        else:
+            language_instruction = (
+                f"The detected language ('{question_language}') is not supported. Please answer in English."
+            )
+
         if result:
             content, metadata, filename = result
             prompt = None
             if metadata:
                 try:
                     structured_data = json.loads(metadata)
-                    # Clean and encode the text properly
                     clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
                     clean_structured_data = json.dumps(structured_data, ensure_ascii=False)
-                    prompt = f"""You are an intelligent assistant. Answer the following question using all available data, including any structured tables or text.
-
-Structured Data (if any):
-{clean_structured_data}
-
-Text Content:
-{clean_content}
-
-Question: {request.query}
-
-Instructions:
-- Provide a comprehensive answer based on the provided content
-- If the content is small, extract as much relevant information as possible
-- Be specific and detailed in your response
-- If the question cannot be answered from the content, clearly state this
-
-Answer:"""
+                    prompt = f"{language_instruction}\n\nYou are an intelligent assistant. Answer the following question using all available data, including any structured tables or text.\n\nStructured Data (if any):\n{clean_structured_data}\n\nText Content:\n{clean_content}\n\nQuestion: {request.query}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
                 except json.JSONDecodeError:
-                    # Clean and encode the text properly
                     clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
-                    prompt = f"""You are an intelligent assistant. Answer the following question using the provided context.
-
-Context:
-{clean_content}
-
-Question: {request.query}
-
-Instructions:
-- Provide a comprehensive answer based on the provided content
-- If the content is small, extract as much relevant information as possible
-- Be specific and detailed in your response
-- If the question cannot be answered from the content, clearly state this
-
-Answer:"""
+                    prompt = f"{language_instruction}\n\nYou are an intelligent assistant. Answer the following question using the provided context.\n\nContext:\n{clean_content}\n\nQuestion: {request.query}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
             else:
-                # Clean and encode the text properly
                 clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
-                prompt = f"""You are an intelligent assistant. Answer the following question using the provided context.
-
-Context:
-{clean_content}
-
-Question: {request.query}
-
-Instructions:
-- Provide a comprehensive answer based on the provided content
-- If the content is small, extract as much relevant information as possible
-- Be specific and detailed in your response
-- If the question cannot be answered from the content, clearly state this
-
-Answer:"""
+                prompt = f"{language_instruction}\n\nYou are an intelligent assistant. Answer the following question using the provided context.\n\nContext:\n{clean_content}\n\nQuestion: {request.query}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
         else:
             # Fall back to semantic search if no document found
-            return await semantic_search_query(request, db)
+            return await semantic_search_query(request, db, language_instruction)
 
         # Continue with Ollama API call...
         return await generate_ollama_response(prompt, [])
@@ -479,7 +455,7 @@ Answer:"""
             detail="An unexpected error occurred"
         )
 
-async def semantic_search_query(request: QueryRequest, db: Session):
+async def semantic_search_query(request: QueryRequest, db: Session, language_instruction: str = ""):
     """Handle semantic search queries."""
     try:
         if not embedding_model:
@@ -544,20 +520,7 @@ async def semantic_search_query(request: QueryRequest, db: Session):
         # Clean and encode the text properly
         context = "\n".join([chunk.encode('utf-8', errors='ignore').decode('utf-8') for chunk in chunks])
 
-        prompt = f"""Answer the following question based on the provided context. If the answer isn't in the context, say so.
-
-Question: {request.query}
-
-Context:
-{context}
-
-Instructions:
-- Provide a comprehensive answer based on the provided content
-- If the content is small, extract as much relevant information as possible
-- Be specific and detailed in your response
-- If the question cannot be answered from the content, clearly state this
-
-Answer:"""
+        prompt = f"{language_instruction}\n\nAnswer the following question based on the provided context. If the answer isn't in the context, say so.\n\nQuestion: {request.query}\n\nContext:\n{context}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
 
         # Continue with Ollama API call...
         return await generate_ollama_response(prompt, sources)
