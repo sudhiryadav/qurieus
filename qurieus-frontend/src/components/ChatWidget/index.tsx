@@ -91,6 +91,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   const [hasDocuments, setHasDocuments] = useState<boolean | null>(false);
 
+  // Auto-resize textarea function
+  const autoResizeTextarea = (element: HTMLTextAreaElement) => {
+    element.style.height = 'auto';
+    element.style.height = Math.min(element.scrollHeight, 120) + 'px';
+  };
+
   // Add useEffect for document check
   useEffect(() => {
     const checkDocuments = async () => {
@@ -172,11 +178,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     setSources(null);
     setShowSourcesUI(false);
     setShowThinking(true);
-    let previousLength = 0;
+    
     try {
       const visitorId = getVisitorId();
       let gotFirstChunk = false;
-      let fullResponse = "";
+      let accumulatedResponse = "";
+      let processedLines = new Set<string>();
 
       await axiosInstance.post(
         "/api/query",
@@ -192,48 +199,43 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
           responseType: "stream",
           onDownloadProgress: (progressEvent: AxiosProgressEvent) => {
             const responseText = progressEvent.event.target?.responseText || "";
-            const newChunk = responseText.slice(previousLength);
-            previousLength = responseText.length;
-
-            if (!newChunk.trim()) return;
+            
+            if (!responseText.trim()) return;
 
             try {
-              // Split by newlines in case we get multiple JSON objects
-              const lines = newChunk
-                .split("\n")
-                .filter((line: string) => line.trim());
+              // Split by newlines and process each line
+              const lines = responseText.split("\n").filter((line: string) => line.trim());
+              
               for (const line of lines) {
-                const data = JSON.parse(line);
-                if (data.response) {
-                  if (!gotFirstChunk) {
-                    setShowThinking(false);
-                    gotFirstChunk = true;
-                    fullResponse = data.response;
-
-                    setMessages((prev) => [
-                      ...prev,
-                      { role: "assistant", content: fullResponse },
-                    ]);
-                    setTimeout(() => {
-                      messagesEndRef.current?.scrollTo({
-                        top: messagesEndRef.current.scrollHeight,
-                        behavior: "smooth",
+                // Skip if we've already processed this line
+                if (processedLines.has(line)) continue;
+                processedLines.add(line);
+                
+                try {
+                  const data = JSON.parse(line);
+                  if (data.response) {
+                    if (!gotFirstChunk) {
+                      setShowThinking(false);
+                      gotFirstChunk = true;
+                      accumulatedResponse = data.response;
+                      
+                      setMessages((prev) => [
+                        ...prev,
+                        { role: "assistant", content: accumulatedResponse },
+                      ]);
+                    } else {
+                      accumulatedResponse += data.response;
+                      setMessages((prev) => {
+                        const updated = [...prev];
+                        const lastMessage = updated[updated.length - 1];
+                        if (lastMessage && lastMessage.role === "assistant") {
+                          lastMessage.content = accumulatedResponse;
+                        }
+                        return updated;
                       });
-                    }, 0);
-                  } else {
-                    setMessages((prev) => {
-                      const lastAssistantIdx = [...prev]
-                        .reverse()
-                        .findIndex((m) => m.role === "assistant");
-                      if (lastAssistantIdx === -1) return prev;
-                      const idx = prev.length - 1 - lastAssistantIdx;
-                      const updated = [...prev];
-                      updated[idx] = {
-                        role: "assistant",
-                        content: (updated[idx].content || "") + data.response,
-                      };
-                      return updated;
-                    });
+                    }
+                    
+                    // Scroll to bottom
                     setTimeout(() => {
                       messagesEndRef.current?.scrollTo({
                         top: messagesEndRef.current.scrollHeight,
@@ -241,13 +243,16 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                       });
                     }, 0);
                   }
-                }
-                if (data.done) {
-                  setSources(data.sources);
+                  
+                  if (data.done) {
+                    setSources(data.sources);
+                  }
+                } catch (parseError) {
+                  console.error("JSON parse error for line:", line, parseError);
                 }
               }
             } catch (e) {
-              console.error("JSON parse error:", e, "Chunk:", newChunk);
+              console.error("Error processing response:", e);
             }
           },
         },
@@ -368,19 +373,32 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 className="border-t bg-transparent p-4"
               >
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="text"
+                  <div className="flex items-end space-x-2">
+                    <textarea
                       value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyDown={handleKeyDown}
+                      onChange={(e) => {
+                        setInputMessage(e.target.value);
+                        autoResizeTextarea(e.target);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSubmit(e as any);
+                        }
+                      }}
                       placeholder="Type your message..."
-                      className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
+                      rows={1}
+                      className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[40px] max-h-[120px]`}
+                      style={{
+                        minHeight: '40px',
+                        maxHeight: '120px',
+                        overflowY: 'auto'
+                      }}
                     />
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className={`${themeClasses[theme].button} rounded-lg p-2`}
+                      className={`${themeClasses[theme].button} rounded-lg p-2 h-10`}
                     >
                       <Send className="h-5 w-5" />
                     </button>
@@ -497,19 +515,32 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                       {hasDocuments && (
                         <form onSubmit={handleSubmit} className="border-t p-2">
                           <div>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="text"
+                            <div className="flex items-end space-x-2">
+                              <textarea
                                 value={inputMessage}
-                                onChange={(e) => setInputMessage(e.target.value)}
-                                onKeyDown={handleKeyDown}
+                                onChange={(e) => {
+                                  setInputMessage(e.target.value);
+                                  autoResizeTextarea(e.target);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSubmit(e as any);
+                                  }
+                                }}
                                 placeholder="Type your message..."
-                                className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
+                                rows={1}
+                                className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[40px] max-h-[120px]`}
+                                style={{
+                                  minHeight: '40px',
+                                  maxHeight: '120px',
+                                  overflowY: 'auto'
+                                }}
                               />
                               <button
                                 type="submit"
                                 disabled={isLoading}
-                                className={`${themeClasses[theme].button} rounded-lg p-2`}
+                                className={`${themeClasses[theme].button} rounded-lg p-2 h-10`}
                               >
                                 <Send className="h-5 w-5" />
                               </button>

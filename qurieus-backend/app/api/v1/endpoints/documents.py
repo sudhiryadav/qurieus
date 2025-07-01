@@ -408,6 +408,12 @@ Text Content:
 
 Question: {request.query}
 
+Instructions:
+- Provide a comprehensive answer based on the provided content
+- If the content is small, extract as much relevant information as possible
+- Be specific and detailed in your response
+- If the question cannot be answered from the content, clearly state this
+
 Answer:"""
                 except json.JSONDecodeError:
                     # Clean and encode the text properly
@@ -419,6 +425,12 @@ Context:
 
 Question: {request.query}
 
+Instructions:
+- Provide a comprehensive answer based on the provided content
+- If the content is small, extract as much relevant information as possible
+- Be specific and detailed in your response
+- If the question cannot be answered from the content, clearly state this
+
 Answer:"""
             else:
                 # Clean and encode the text properly
@@ -429,6 +441,12 @@ Context:
 {clean_content}
 
 Question: {request.query}
+
+Instructions:
+- Provide a comprehensive answer based on the provided content
+- If the content is small, extract as much relevant information as possible
+- Be specific and detailed in your response
+- If the question cannot be answered from the content, clearly state this
 
 Answer:"""
         else:
@@ -510,7 +528,7 @@ async def semantic_search_query(request: QueryRequest, db: Session):
                     })
 
         # Clean and encode the text properly
-        context = "\n".join([chunk.encode('utf-8', errors='ignore').decode('utf-8')[:1000] for chunk in chunks])
+        context = "\n".join([chunk.encode('utf-8', errors='ignore').decode('utf-8') for chunk in chunks])
 
         prompt = f"""Answer the following question based on the provided context. If the answer isn't in the context, say so.
 
@@ -518,6 +536,12 @@ Question: {request.query}
 
 Context:
 {context}
+
+Instructions:
+- Provide a comprehensive answer based on the provided content
+- If the content is small, extract as much relevant information as possible
+- Be specific and detailed in your response
+- If the question cannot be answered from the content, clearly state this
 
 Answer:"""
 

@@ -243,39 +243,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const documentId = searchParams.get("documentId");
-
-    if (!documentId) {
-      return NextResponse.json(
-        { error: "Document ID is required" },
-        { status: 400 },
-      );
-    }
-
-    const { data } = await axiosInstance.delete(
-      `${process.env.BACKEND_URL}/api/v1/admin/documents/${documentId}`,
-      {
-        params: {
-          userId: session.user.id,
-        },
-      },
-    );
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Error deleting document:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to delete document" },
-      { status: error.response?.status || 500 },
-    );
-  }
-}
