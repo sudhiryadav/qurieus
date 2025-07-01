@@ -110,6 +110,14 @@ def analyze_financial_data(df: pd.DataFrame) -> Dict[str, Any]:
     
     return analysis
 
+def df_to_markdown(df: pd.DataFrame) -> str:
+    """Convert a DataFrame to a markdown table string."""
+    try:
+        return df.to_markdown(index=False)
+    except Exception:
+        # Fallback to CSV if markdown fails
+        return df.to_csv(index=False)
+
 def process_file(
     file_content: bytes,
     file_extension: str,
@@ -133,16 +141,22 @@ def process_file(
             for para in doc.paragraphs:
                 text_content += para.text + "\n"
         elif file_extension.lower() in ['.xlsx', '.xls', '.csv']:
-            # Create a BytesIO object from the file content
             file_stream = io.BytesIO(file_content)
             try:
                 if file_extension.lower() == '.csv':
                     df = pd.read_csv(file_stream)
+                    text_content = df_to_markdown(df)
                 else:
-                    df = pd.read_excel(file_stream)
-                # Convert DataFrame to text for embedding
-                text_content = df.to_string()
-                # Perform financial analysis
+                    xls = pd.ExcelFile(file_stream)
+                    sheet_names = xls.sheet_names
+                    sheet_tables = []
+                    for idx, sheet in enumerate(sheet_names):
+                        df_sheet = pd.read_excel(xls, sheet_name=sheet)
+                        sheet_tables.append(f"Sheet: {sheet}\n\n{df_to_markdown(df_sheet)}\n")
+                        if idx == 0:
+                            df = df_sheet  # Use first sheet for financial analysis
+                    text_content = "\n\n".join(sheet_tables)
+                # Perform financial analysis on the first sheet only
                 financial_analysis = analyze_financial_data(df)
             except Exception as e:
                 print(f"Error processing file: {str(e)}")
