@@ -9,7 +9,7 @@ import os
 import pickle
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 import hashlib
 
@@ -17,24 +17,35 @@ import hashlib
 app = modal.App("qurieus-app")
 
 # Define the image with all necessary dependencies
-image = modal.Image.debian_slim().pip_install([
-    "sentence-transformers",
-    "PyMuPDF",
-    "python-docx",
-    "pandas",
-    "fastapi",
-    "uvicorn",
-    "langdetect",
-    "openpyxl",
-    "tabulate",
-    "xlrd"
-])
+image = (
+    modal.Image.debian_slim()
+    .apt_install("git", "build-essential", "cmake")
+    .pip_install([
+        "sentence-transformers",
+        "PyMuPDF",
+        "python-docx",
+        "pandas",
+        "fastapi",
+        "uvicorn",
+        "langdetect",
+        "openpyxl",
+        "tabulate",
+        "xlrd",
+        "llama-cpp-python"
+    ])
+)
 
 # Create persistent volume for storing documents and embeddings
 volume = modal.Volume.from_name("qurieus-documents", create_if_missing=True)
 
 # Create the FastAPI app
 web_app = FastAPI(title="Qurieus GPU Service with Persistent Storage", version="1.0.0")
+
+API_KEY = os.environ.get("API")
+
+def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
 
 class DocumentRequest(BaseModel):
     file_content: str  # base64 encoded
@@ -96,123 +107,63 @@ def get_document_hash(file_content: str, filename: str) -> str:
     content_hash = hashlib.md5(file_content.encode()).hexdigest()
     return f"{filename}_{content_hash}"
 
+# Model download logic (at container start)
+MODEL_URL = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+MODEL_PATH = "/data/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+
+def download_model():
+    import requests
+    import os
+    if not os.path.exists(MODEL_PATH):
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        print("Downloading Mistral GGUF model...")
+        r = requests.get(MODEL_URL, stream=True)
+        with open(MODEL_PATH, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print("Model downloaded.")
+
+# Download model at container start
+@app.local_entrypoint()
+def _download_model_on_start():
+    download_model()
+
+# Global Llama model loader
+llm = None
+
+def get_llama_model():
+    global llm
+    if llm is None:
+        from llama_cpp import Llama
+        llm = Llama(
+            model_path=MODEL_PATH,
+            n_ctx=4096,
+            n_threads=8,
+            n_gpu_layers=35
+        )
+    return llm
+
 @app.function(
     image=image,
-    gpu="T4",
+    # gpu="T4",
     timeout=300,
     memory=4096,
-    volumes={"/data": volume}
+    volumes={"/data": volume},
+    secrets=[modal.Secret.from_name("QURIEUS_KEY")]
 )
-def process_and_store_document(file_content: str, file_extension: str, original_filename: str, user_id: str) -> Dict[str, Any]:
-    """Process document and store it in Modal's persistent volume."""
+@modal.fastapi_endpoint(docs=True,label="upload-document",method="POST")
+async def upload_document_endpoint(request: DocumentRequest, x_api_key: str = Header(...)):
+    verify_api_key(x_api_key)
     try:
-        # Decode base64 content
-        content_bytes = base64.b64decode(file_content)
-        
-        text_content = ""
-        financial_analysis = {}
-        
-        if file_extension.lower() == '.pdf':
-            doc = fitz.open(stream=content_bytes, filetype="pdf")
-            for page in doc:
-                text_content += page.get_text()
-        elif file_extension.lower() in ['.docx', '.doc']:
-            doc_stream = io.BytesIO(content_bytes)
-            doc = docx.Document(doc_stream)
-            for para in doc.paragraphs:
-                text_content += para.text + "\n"
-        elif file_extension.lower() in ['.xlsx', '.xls', '.csv']:
-            file_stream = io.BytesIO(content_bytes)
-            try:
-                if file_extension.lower() == '.csv':
-                    df = pd.read_csv(file_stream)
-                    text_content = df.to_markdown(index=False)
-                else:
-                    xls = pd.ExcelFile(file_stream)
-                    sheet_names = xls.sheet_names
-                    sheet_tables = []
-                    for idx, sheet in enumerate(sheet_names):
-                        df_sheet = pd.read_excel(xls, sheet_name=sheet)
-                        sheet_tables.append(f"Sheet: {sheet}\n\n{df_sheet.to_markdown(index=False)}\n")
-                        if idx == 0:
-                            df = df_sheet  # Use first sheet for financial analysis
-                    text_content = "\n\n".join(sheet_tables)
-                
-                # Perform financial analysis
-                financial_analysis = analyze_financial_data(df)
-            except Exception as e:
-                raise ValueError(f"Error processing file: {str(e)}")
-        else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
-        
-        # Create document record
-        document_hash = get_document_hash(file_content, original_filename)
-        document_record = {
-            "id": document_hash,
-            "filename": original_filename,
-            "content": text_content,
-            "financial_analysis": financial_analysis,
-            "user_id": user_id,
-            "uploaded_at": str(pd.Timestamp.now()),
-            "file_extension": file_extension
-        }
-        
-        # Load existing documents for this user
-        user_docs_path = get_user_documents_path(user_id)
-        os.makedirs(os.path.dirname(user_docs_path), exist_ok=True)
-        
-        existing_docs = []
-        if os.path.exists(user_docs_path):
-            with open(user_docs_path, 'r') as f:
-                existing_docs = json.load(f)
-        
-        # Add new document
-        existing_docs.append(document_record)
-        
-        # Save updated documents
-        with open(user_docs_path, 'w') as f:
-            json.dump(existing_docs, f, indent=2)
-        
-        # Generate embeddings for the document
-        embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
-        
-        # Split content into chunks (similar to your existing logic)
-        chunks = text_content.split('. ')
-        chunks = [chunk.strip() + '. ' for chunk in chunks if chunk.strip()]
-        
-        # Generate embeddings for chunks
-        embeddings = embedding_model.encode(chunks)
-        
-        # Store embeddings
-        embeddings_data = {
-            "document_id": document_hash,
-            "chunks": chunks,
-            "embeddings": embeddings.tolist(),
-            "user_id": user_id
-        }
-        
-        user_embeddings_path = get_user_embeddings_path(user_id)
-        os.makedirs(os.path.dirname(user_embeddings_path), exist_ok=True)
-        
-        existing_embeddings = []
-        if os.path.exists(user_embeddings_path):
-            with open(user_embeddings_path, 'rb') as f:
-                existing_embeddings = pickle.load(f)
-        
-        existing_embeddings.append(embeddings_data)
-        
-        with open(user_embeddings_path, 'wb') as f:
-            pickle.dump(existing_embeddings, f)
-        
-        return {
-            "success": True,
-            "document_id": document_hash,
-            "chunks_processed": len(chunks),
-            "filename": original_filename
-        }
-        
+        result = process_and_store_document.remote(
+            request.file_content,
+            request.file_extension,
+            request.original_filename,
+            request.user_id
+        )
+        return result
     except Exception as e:
-        raise Exception(f"Error processing and storing document: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.function(
     image=image,
@@ -222,7 +173,7 @@ def process_and_store_document(file_content: str, file_extension: str, original_
     volumes={"/data": volume}
 )
 def query_user_documents(query: str, user_id: str) -> Dict[str, Any]:
-    """Query user's documents using stored embeddings."""
+    """Query user's documents using stored embeddings and generate an answer with Mistral LLM."""
     try:
         # Load user's documents and embeddings
         user_docs_path = get_user_documents_path(user_id)
@@ -256,8 +207,6 @@ def query_user_documents(query: str, user_id: str) -> Dict[str, Any]:
             if doc_embeddings["user_id"] == user_id:
                 all_chunks.extend(doc_embeddings["chunks"])
                 all_embeddings.extend(doc_embeddings["embeddings"])
-                
-                # Find the document for this embedding
                 doc = next((d for d in documents if d["id"] == doc_embeddings["document_id"]), None)
                 if doc:
                     all_sources.extend([doc["filename"]] * len(doc_embeddings["chunks"]))
@@ -272,29 +221,38 @@ def query_user_documents(query: str, user_id: str) -> Dict[str, Any]:
         # Calculate similarities
         similarities = []
         for i, chunk_embedding in enumerate(all_embeddings):
-            # Calculate cosine similarity
             dot_product = sum(a * b for a, b in zip(query_embedding[0], chunk_embedding))
             norm_a = sum(a * a for a in query_embedding[0]) ** 0.5
             norm_b = sum(b * b for b in chunk_embedding) ** 0.5
             similarity = dot_product / (norm_a * norm_b) if norm_a * norm_b != 0 else 0
             similarities.append((i, similarity))
         
-        # Sort by similarity and get top 3
+        # Sort by similarity and get top 10
         similarities.sort(key=lambda x: x[1], reverse=True)
-        top_indices = [idx for idx, _ in similarities[:3]]
+        top_indices = [idx for idx, _ in similarities[:10]]
         
         # Get relevant chunks and sources
         relevant_chunks = [all_chunks[i] for i in top_indices]
         relevant_sources = [all_sources[i] for i in top_indices]
         
-        # Create context
+        # Create a larger context window (up to 4096 chars)
         context = "\n".join(relevant_chunks)
+        context = context[:4000]
         
-        # Generate response (placeholder - you can integrate with your preferred LLM)
-        response = f"Based on your documents, here's what I found:\n\n{context[:500]}"
+        # Generate answer using quantized Mistral LLM
+        llm = get_llama_model()
+        prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+        output = llm(
+            prompt,
+            max_tokens=512,
+            temperature=0.7,
+            top_p=0.95,
+            stop=["</s>"]
+        )
+        answer = output["choices"][0]["text"].strip()
         
         return {
-            "response": response,
+            "response": answer,
             "sources": relevant_sources,
             "done": True
         }
@@ -304,7 +262,7 @@ def query_user_documents(query: str, user_id: str) -> Dict[str, Any]:
 
 @app.function(
     image=image,
-    gpu="T4",
+    # gpu="T4",
     timeout=120,
     memory=2048,
     volumes={"/data": volume}
@@ -361,7 +319,7 @@ def delete_user_document(user_id: str, document_id: str) -> Dict[str, Any]:
 
 @app.function(
     image=image,
-    gpu="T4",
+    # gpu="T4",
     timeout=120,
     memory=2048,
     volumes={"/data": volume}
@@ -399,39 +357,64 @@ def delete_all_user_documents(user_id: str) -> Dict[str, Any]:
     except Exception as e:
         raise Exception(f"Error deleting all documents: {str(e)}")
 
-
-# FastAPI Web Endpoints (needed for frontend HTTP calls)
 @app.function(
     image=image,
+    # gpu="T4",
     timeout=300,
     memory=4096,
-    gpu="T4",
-    volumes={"/data": volume}
+    volumes={"/data": volume},
+    secrets=[modal.Secret.from_name("QURIEUS_KEY")]
 )
-@modal.fastapi_endpoint(docs=True,label="upload-document",method="POST")
-async def upload_document_endpoint(request: DocumentRequest):
-    """Upload and process document using Modal.com GPU service with persistent storage."""
+@modal.fastapi_endpoint(docs=True,label="health-check")
+async def health_check(x_api_key: str = Header(...)):
+    verify_api_key(x_api_key)
+    return {"status": "healthy", "service": "active"}
+
+@app.function(
+    image=image,
+    # gpu="T4",
+    timeout=300,
+    memory=4096,
+    volumes={"/data": volume},
+    secrets=[modal.Secret.from_name("QURIEUS_KEY")]
+)
+@modal.fastapi_endpoint(docs=True,label="delete-document",method="DELETE")
+async def delete_document_endpoint(user_id: str, document_id: str, x_api_key: str = Header(...)):
+    verify_api_key(x_api_key)
     try:
-        result = process_and_store_document.remote(
-            request.file_content,
-            request.file_extension,
-            request.original_filename,
-            request.user_id
-        )
+        result = delete_user_document.remote(user_id, document_id)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.function(
     image=image,
+    # gpu="T4",
     timeout=300,
-    gpu="T4",
     memory=4096,
-    volumes={"/data": volume}
+    volumes={"/data": volume},
+    secrets=[modal.Secret.from_name("QURIEUS_KEY")]
 )
-@modal.fastapi_endpoint(docs=True,label="query-documents",method="POST")
-async def query_documents_endpoint(request: QueryRequest):
-    """Query user's documents using Modal.com GPU service."""
+@modal.fastapi_endpoint(docs=True,label="delete-all-documents",method="DELETE")
+async def delete_all_documents_endpoint(user_id: str, x_api_key: str = Header(...)):
+    verify_api_key(x_api_key)
+    try:
+        result = delete_all_user_documents.remote(user_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.function(
+    image=image,
+    gpu="T4",
+    timeout=300,
+    memory=4096,
+    volumes={"/data": volume},
+    secrets=[modal.Secret.from_name("QURIEUS_KEY")]
+)
+@modal.fastapi_endpoint(docs=True, label="query-documents", method="POST")
+async def query_documents_endpoint(request: QueryRequest, x_api_key: str = Header(...)):
+    verify_api_key(x_api_key)
     try:
         result = query_user_documents.remote(
             request.query,
@@ -441,55 +424,10 @@ async def query_documents_endpoint(request: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.function(
-    image=image,
-    timeout=300,
-    gpu="T4",
-    memory=4096,
-    volumes={"/data": volume}
-)
-@modal.fastapi_endpoint(docs=True,label="health-check")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "service": "active"}
-
-@app.function(
-    image=image,
-    timeout=300,
-    gpu="T4",
-    memory=4096,
-    volumes={"/data": volume}
-)
-@modal.fastapi_endpoint(docs=True,label="delete-document",method="DELETE")
-async def delete_document_endpoint(user_id: str, document_id: str):
-    """Delete a specific document from Modal.com persistent storage."""
-    try:
-        result = delete_user_document.remote(user_id, document_id)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.function(
-    image=image,
-    timeout=300,
-    gpu="T4",
-    memory=4096,
-    volumes={"/data": volume}
-)
-@modal.fastapi_endpoint(docs=True,label="delete-all-documents",method="DELETE")
-async def delete_all_documents_endpoint(user_id: str):
-    """Delete all documents for a user from Modal.com persistent storage."""
-    try:
-        result = delete_all_user_documents.remote(user_id)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # Deploy the FastAPI app using Modal's fastapi endpoint
 @app.function(
     image=image,
-    gpu="T4",
+    # gpu="T4",
     timeout=300,
     memory=4096,
     volumes={"/data": volume}

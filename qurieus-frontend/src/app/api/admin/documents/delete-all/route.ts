@@ -13,6 +13,7 @@ async function deleteAllWithModal(userId: string) {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
+      'x-api-key': process.env.QURIEUS_API_KEY || '',
     },
     body: JSON.stringify({
       user_id: userId,
