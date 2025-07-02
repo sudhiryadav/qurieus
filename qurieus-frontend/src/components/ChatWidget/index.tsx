@@ -212,27 +212,27 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 processedLines.add(line);
                 
                 try {
-                  const data = JSON.parse(line);
-                  if (data.response) {
-                    if (!gotFirstChunk) {
-                      setShowThinking(false);
-                      gotFirstChunk = true;
+                const data = JSON.parse(line);
+                if (data.response) {
+                  if (!gotFirstChunk) {
+                    setShowThinking(false);
+                    gotFirstChunk = true;
                       accumulatedResponse = data.response;
-                      
-                      setMessages((prev) => [
-                        ...prev,
+
+                    setMessages((prev) => [
+                      ...prev,
                         { role: "assistant", content: accumulatedResponse },
-                      ]);
-                    } else {
+                    ]);
+                  } else {
                       accumulatedResponse += data.response;
-                      setMessages((prev) => {
-                        const updated = [...prev];
+                    setMessages((prev) => {
+                      const updated = [...prev];
                         const lastMessage = updated[updated.length - 1];
                         if (lastMessage && lastMessage.role === "assistant") {
                           lastMessage.content = accumulatedResponse;
                         }
-                        return updated;
-                      });
+                      return updated;
+                    });
                     }
                     
                     // Scroll to bottom
@@ -244,8 +244,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                     }, 0);
                   }
                   
-                  if (data.done) {
-                    setSources(data.sources);
+                if (data.done) {
+                  setSources(data.sources);
                   }
                 } catch (parseError) {
                   console.error("JSON parse error for line:", line, parseError);
@@ -328,7 +328,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                   className={`mb-4 max-w-[80%] rounded-lg p-3 ${message.role === "user"
                       ? `${themeClasses[theme].message.user} ml-auto`
                       : `${themeClasses[theme].message.assistant}`
-                    }`}
+                  }`}
                 >
                   {message.role === "assistant"
                     ? formatMessage(message.content)
@@ -375,7 +375,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 <div>
                   <div className="flex items-end space-x-2">
                     <textarea
-                      value={inputMessage}
+                    value={inputMessage}
                       onChange={(e) => {
                         setInputMessage(e.target.value);
                         autoResizeTextarea(e.target);
@@ -386,7 +386,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                           handleSubmit(e as any);
                         }
                       }}
-                      placeholder="Type your message..."
+                    placeholder="Type your message..."
                       rows={1}
                       className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[40px] max-h-[120px]`}
                       style={{
@@ -394,14 +394,14 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                         maxHeight: '120px',
                         overflowY: 'auto'
                       }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={isLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading}
                       className={`${themeClasses[theme].button} rounded-lg p-2 h-10`}
-                    >
-                      <Send className="h-5 w-5" />
-                    </button>
+                  >
+                    <Send className="h-5 w-5" />
+                  </button>
                   </div>
                   <div className="text-xs text-gray-500 text-left">
                     <Image src="/images/logo/logo.svg" alt="qurieus" width={16} height={16} className="inline-block mr-1" />
@@ -437,87 +437,87 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 className={`${themeClasses[theme].container} w-96 rounded-lg shadow-xl transition-all duration-300 ${isMinimized ? "h-16" : "h-[600px]"}`}
               >
                 <div className="flex flex-col h-full">
-                  <div className="flex items-center justify-between border-b p-4">
+                <div className="flex items-center justify-between border-b p-4">
                     {/* Add qurieus logo besides chat with us */}
                     <span className="flex items-center space-x-2">
                       <Image src="/images/logo/logo.svg" alt="qurieus" width={32} height={32} />
-                      <h3 className="text-lg font-semibold">Chat with us</h3>
+                  <h3 className="text-lg font-semibold">Chat with us</h3>
                     </span>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setIsMinimized(!isMinimized)}
-                        className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        {isMinimized ? (
-                          <Maximize2 className="h-4 w-4" />
-                        ) : (
-                          <Minimize2 className="h-4 w-4" />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => setIsOpen(false)}
-                        className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setIsMinimized(!isMinimized)}
+                      className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      {isMinimized ? (
+                        <Maximize2 className="h-4 w-4" />
+                      ) : (
+                        <Minimize2 className="h-4 w-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setIsOpen(false)}
+                      className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                  {!isMinimized && (
-                    <>
-                      <div
-                        ref={messagesEndRef}
+                </div>
+                {!isMinimized && (
+                  <>
+                    <div
+                      ref={messagesEndRef}
                         className="flex-1 overflow-y-auto p-4"
-                      >
-                        {messages.map((message, index) => (
-                          <div
-                            key={index}
+                    >
+                      {messages.map((message, index) => (
+                        <div
+                          key={index}
                             className={`mb-4 max-w-[80%] rounded-lg p-3 ${message.role === "user"
-                                ? `${themeClasses[theme].message.user} ml-auto`
-                                : `${themeClasses[theme].message.assistant}`
-                              }`}
-                          >
+                              ? `${themeClasses[theme].message.user} ml-auto`
+                              : `${themeClasses[theme].message.assistant}`
+                          }`}
+                        >
                             {message.role === "assistant"
                               ? formatMessage(message.content)
                               : message.content}
-                          </div>
-                        ))}
-                        {showThinking && (
-                          <div
-                            className={`mb-4 max-w-[80%] rounded-lg p-3 ${themeClasses[theme].message.assistant}`}
+                        </div>
+                      ))}
+                      {showThinking && (
+                        <div
+                          className={`mb-4 max-w-[80%] rounded-lg p-3 ${themeClasses[theme].message.assistant}`}
+                        >
+                          <span className="shimmer">Thinking...</span>
+                        </div>
+                      )}
+                      {showSources && sources && (
+                        <div className="mt-4">
+                          <button
+                            className="mb-2 text-xs text-primary underline"
+                            onClick={() => setShowSourcesUI((v) => !v)}
                           >
-                            <span className="shimmer">Thinking...</span>
-                          </div>
-                        )}
-                        {showSources && sources && (
-                          <div className="mt-4">
-                            <button
-                              className="mb-2 text-xs text-primary underline"
-                              onClick={() => setShowSourcesUI((v) => !v)}
-                            >
-                              {showSourcesUI ? "Hide Sources" : "Show Sources"}
-                            </button>
-                            {showSourcesUI && (
-                              <div className="rounded bg-gray-100 p-2 text-xs dark:bg-gray-800">
-                                <p className="mb-1 font-semibold">Sources:</p>
-                                <ul className="ml-4 list-disc">
-                                  {sources.map((source, i) => (
-                                    <li key={i}>
-                                      {source.document} (Similarity:{" "}
-                                      {(source.similarity * 100).toFixed(1)}%)
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {hasDocuments && (
+                            {showSourcesUI ? "Hide Sources" : "Show Sources"}
+                          </button>
+                          {showSourcesUI && (
+                            <div className="rounded bg-gray-100 p-2 text-xs dark:bg-gray-800">
+                              <p className="mb-1 font-semibold">Sources:</p>
+                              <ul className="ml-4 list-disc">
+                                {sources.map((source, i) => (
+                                  <li key={i}>
+                                    {source.document} (Similarity:{" "}
+                                    {(source.similarity * 100).toFixed(1)}%)
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {hasDocuments && (
                         <form onSubmit={handleSubmit} className="border-t p-2">
                           <div>
                             <div className="flex items-end space-x-2">
                               <textarea
-                                value={inputMessage}
+                            value={inputMessage}
                                 onChange={(e) => {
                                   setInputMessage(e.target.value);
                                   autoResizeTextarea(e.target);
@@ -528,7 +528,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                                     handleSubmit(e as any);
                                   }
                                 }}
-                                placeholder="Type your message..."
+                            placeholder="Type your message..."
                                 rows={1}
                                 className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[40px] max-h-[120px]`}
                                 style={{
@@ -536,24 +536,24 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                                   maxHeight: '120px',
                                   overflowY: 'auto'
                                 }}
-                              />
-                              <button
-                                type="submit"
-                                disabled={isLoading}
+                          />
+                          <button
+                            type="submit"
+                            disabled={isLoading}
                                 className={`${themeClasses[theme].button} rounded-lg p-2 h-10`}
-                              >
-                                <Send className="h-5 w-5" />
-                              </button>
+                          >
+                            <Send className="h-5 w-5" />
+                          </button>
                             </div>
-                          </div>
-                        </form>
-                      )}
+                        </div>
+                      </form>
+                    )}
                       <div className="text-xs text-gray-500 text-left p-1">
                         <Image src="/images/logo/logo.svg" alt="qurieus" width={16} height={16} className="inline-block mr-1" />
                         © {new Date().getFullYear()} <a href="https://qurieus.com" className="underline text-color-purple" target="_blank" rel="noopener noreferrer">Qurieus</a>. All rights reserved.
                       </div>
-                    </>
-                  )}
+                  </>
+                )}
                 </div>
               </div>
             )}

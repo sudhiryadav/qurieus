@@ -153,24 +153,50 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       formData.append("description", description);
       formData.append("category", category);
       formData.append("userId", session?.user?.id || "");
-
-      const { data } = await axiosInstance.post("/api/admin/documents", formData, {
+      const { data } = await axiosInstance.post('/api/admin/documents', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      if (data.message === "Files uploaded successfully" && data.files) {
+      if(process.env.USE_MODAL_PERSISTENT_STORAGE === 'true'){
+        const successCount = data.results.filter((result: any) => result.success).length;
+        const errorResults = data.results.filter((result: any) => !result.success);
+        const errorCount = errorResults.length;
+
+        if (successCount > 0 && errorCount === 0) {
+          showToast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`);
+          onUploadSuccess();
+          onClose();
+          handleReset();
+        } else if (successCount > 0 && errorCount > 0) {
+          showToast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}, ${errorCount} failed`);
+          showToast.error(
+            `Failed to upload: ${errorResults.map((r: any) => `${r.filename}: ${r.error || 'Unknown error'}`).join('; ')}`
+          );
+          onUploadSuccess();
+          onClose();
+          handleReset();
+        } else if (errorCount > 0) {
+          showToast.error(
+            `Failed to upload ${errorCount} file${errorCount !== 1 ? 's' : ''}: ${errorResults.map((r: any) => `${r.filename}: ${r.error || 'Unknown error'}`).join('; ')}`
+          );
+          handleReset();
+        }
+      } 
+      else if (data.results?.[0]?.success) {
         showToast.success("All files uploaded successfully");
         onUploadSuccess();
         onClose();
         handleReset();
       } else {
-        throw new Error(data.error || "Upload completed with unclear results");
+        showToast.error(data.error || "Upload completed with unclear results");
+        handleReset();
       }
     } catch (error: any) {
       console.error("Upload error details:", error);
       showToast.error(error.response?.data?.error || error.message || "Failed to upload files");
+      handleReset();
     } finally {
       setLoading(false);
     }
@@ -233,7 +259,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
               </>
             )}
             <li>Files will be processed and made available for searching</li>
-            <li>Provide clear descriptions to improve searchability</li>
           </ul>
         </div>
         {/* Upload Files */}
@@ -303,7 +328,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         )}
 
         {/* Description */}
-        <div>
+        <div className="hidden">
           <label htmlFor="description" className="mb-2 block text-base font-semibold text-white">
             Description
           </label>
@@ -318,7 +343,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         </div>
 
         {/* Category */}
-        <div>
+        <div className="hidden">
           <label htmlFor="category" className="mb-2 block text-base font-semibold text-white">
             Category
           </label>

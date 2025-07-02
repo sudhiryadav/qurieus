@@ -73,6 +73,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Only fetch documents from the local database
     const documents = await prisma.document.findMany({
       where: {
         userId: userId,
@@ -129,19 +130,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-      raw: true, // Important: get the raw token string
-    });
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "Authentication token not found" },
-        { status: 401 },
-      );
-    }
-
+    // File validation
     for (const file of files) {
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
@@ -160,72 +149,47 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const backendFormData = new FormData();
-    files.forEach((file) => {
-      // Create a new File object to ensure proper handling
-      const fileBlob = new Blob([file], { type: file.type });
-      const newFile = new File([fileBlob], file.name, { type: file.type });
-      backendFormData.append("files", newFile);
-    });
-    backendFormData.append("userId", session.user.id);
-    backendFormData.append("description", description || "");
-    backendFormData.append("category", category || "");
+    // Check if using Modal.com persistent storage
+    const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
+    const modalApiUrl = process.env.MODAL_UPLOAD_DOCUMENT_URL;
 
-    const backendResponse = await axiosInstance.post(
-      `${process.env.BACKEND_URL}/api/v1/admin/documents/upload`,
-      backendFormData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-        withCredentials: true,
-      },
-    );
-
-    if (backendResponse.status !== 200 || !backendResponse.data) {
-      const errorText = backendResponse.data.text();
-      let errorDetail;
-
-      try {
-        const errorData = JSON.parse(errorText);
-        errorDetail =
-          errorData.detail || errorData.message || backendResponse.statusText;
-      } catch (e) {
-        errorDetail = errorText || backendResponse.statusText;
+    if (useModalPersistent && modalApiUrl) {
+      // Process with Modal.com
+      const modalResponse = await processWithModal(files, description, category, session.user);
+      const data = await modalResponse.json();
+      const errorResults = data.results.filter((result: any) => !result.success);
+      if (errorResults.length > 0) {
+        // Log errors in DB for each failed file
+        for (const errorResult of errorResults) {
+          await prisma.document.create({
+            data: {
+              modalDocumentId: errorResult.document_id,
+              title: errorResult.filename.replace(/\.[^/.]+$/, ""),
+              fileName: errorResult.filename.replace(/\.[^/.]+$/, ""),
+              originalName: errorResult.filename,
+              fileType: errorResult.filename.split('.').pop()?.toLowerCase() || '',
+              fileSize: files.find(f => f.name === errorResult.filename)?.size || 0,
+              userId: session.user.id,
+              content: `Upload failed: ${errorResult.error}`,
+              description: description || "",
+              category: category || "",
+              uploadedAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+        }
+        // Return generic error to frontend
+        return NextResponse.json(
+          { error: "One or more files failed to upload. Please try again or contact support." },
+          { status: 500 }
+        );
       }
-
-      console.error("Upload error details:", {
-        status: backendResponse.status,
-        statusText: backendResponse.statusText,
-        errorDetail,
-        headers: Object.fromEntries(backendResponse.headers.entries()),
-      });
-
-      return NextResponse.json(
-        {
-          error: "Error processing document",
-          details: errorDetail,
-          status: backendResponse.status,
-        },
-        { status: backendResponse.status },
-      );
+      // All files succeeded
+      return NextResponse.json(data);
+    } else {
+      // Process with backend FastAPI
+      return await processWithBackend(files, description, category, session.user, req);
     }
-
-    const data = backendResponse.data;
-
-    const processedFiles = files.map((file) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      uploadedAt: new Date().toISOString(),
-    }));
-
-    return NextResponse.json({
-      message: "Files uploaded successfully",
-      files: processedFiles,
-      backendResponse: data,
-    });
   } catch (error: any) {
     console.error("Error uploading files:", {
       error: error.message,
@@ -241,6 +205,182 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+async function processWithModal(files: File[], description: string, category: string, user: any) {
+  const modalApiUrl = process.env.MODAL_UPLOAD_DOCUMENT_URL!;
+  let totalChunks = 0;
+  const results = [];
+
+  // Process each file
+  for (const file of files) {
+    try {
+      // Convert file to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64Content = buffer.toString('base64');
+
+      // Get file extension
+      const fileName = file.name;
+      const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
+
+      // Send to Modal.com persistent service
+      const response = await fetch(modalApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file_content: base64Content,
+          file_extension: fileExtension,
+          original_filename: fileName,
+          user_id: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      totalChunks += result.chunks_processed || 0;
+
+      // Store file metadata in database for validation and tracking
+      await prisma.document.create({
+        data: {
+          modalDocumentId: result.document_id,
+          title: fileName.replace(fileExtension, ""),
+          fileName: fileName.replace(fileExtension, ""),
+          originalName: fileName,
+          fileType: fileExtension.toLowerCase().replace('.', ''),
+          fileSize: file.size,
+          userId: user.id,
+          content: `Processed by Modal.com - ${result.chunks_processed} chunks`,
+          description: description || "",
+          category: category || "",
+          uploadedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      results.push({
+        filename: fileName,
+        success: true,
+        chunks_processed: result.chunks_processed,
+        document_id: result.document_id,
+      });
+
+    } catch (error) {
+      console.error(`Error processing file ${file.name}:`, error);
+      results.push({
+        filename: file.name,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  const processedFiles = files.map((file) => ({
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString(),
+  }));
+
+  return NextResponse.json({
+    message: `Successfully processed ${files.length} files using Modal.com persistent storage`,
+    files: processedFiles,
+    total_chunks: totalChunks,
+    results,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    },
+  });
+}
+
+async function processWithBackend(files: File[], description: string, category: string, user: any, req: NextRequest) {
+  const token = await getToken({
+    req: req as any,
+    secret: process.env.NEXTAUTH_SECRET,
+    raw: true,
+  });
+
+  if (!token) {
+    return NextResponse.json(
+      { error: "Authentication token not found" },
+      { status: 401 },
+    );
+  }
+
+  const backendFormData = new FormData();
+  files.forEach((file) => {
+    // Create a new File object to ensure proper handling
+    const fileBlob = new Blob([file], { type: file.type });
+    const newFile = new File([fileBlob], file.name, { type: file.type });
+    backendFormData.append("files", newFile);
+  });
+  backendFormData.append("userId", user.id);
+  backendFormData.append("description", description || "");
+  backendFormData.append("category", category || "");
+
+  const backendResponse = await axiosInstance.post(
+    `${process.env.BACKEND_URL}/api/v1/admin/documents/upload`,
+    backendFormData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+      withCredentials: true,
+    },
+  );
+
+  if (backendResponse.status !== 200 || !backendResponse.data) {
+    const errorText = backendResponse.data.text();
+    let errorDetail;
+
+    try {
+      const errorData = JSON.parse(errorText);
+      errorDetail =
+        errorData.detail || errorData.message || backendResponse.statusText;
+    } catch (e) {
+      errorDetail = errorText || backendResponse.statusText;
+    }
+
+    console.error("Upload error details:", {
+      status: backendResponse.status,
+      statusText: backendResponse.statusText,
+      errorDetail,
+      headers: Object.fromEntries(backendResponse.headers.entries()),
+    });
+
+    return NextResponse.json(
+      {
+        error: "Error processing document",
+        details: errorDetail,
+        status: backendResponse.status,
+      },
+      { status: backendResponse.status },
+    );
+  }
+
+  const data = backendResponse.data;
+
+  const processedFiles = files.map((file) => ({
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    uploadedAt: new Date().toISOString(),
+  }));
+
+  return NextResponse.json({
+    message: "Files uploaded successfully",
+    files: processedFiles,
+    backendResponse: data,
+  });
 }
 
 

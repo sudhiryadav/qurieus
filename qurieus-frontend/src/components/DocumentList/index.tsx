@@ -10,7 +10,6 @@ import { showToast } from "@/components/Common/Toast";
 import { Document } from "@prisma/client";
 import { formatFileSize } from "@/lib/utils";
 
-
 export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (documents: Document[]) => void }) {
   const { data: session } = useSession();
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -48,7 +47,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   const confirmDelete = async () => {
     try {
-      const response = await axiosInstance.delete(`/api/admin/documents/${documentToDelete}`);
+      const response = await axiosInstance.delete(`/api/admin/documents/delete/${documentToDelete}`);
       if (response.status === 200) {
         setDocuments(documents.filter(doc => doc.id !== documentToDelete));
         showToast.success("Document deleted successfully");

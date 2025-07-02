@@ -87,6 +87,53 @@ async function trackAnalytics({
   }
 }
 
+async function queryWithModal(message: string, userId: string, history: any[]) {
+  const modalApiUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
+  if (!modalApiUrl) {
+    throw new Error('Modal.com API URL not configured');
+  }
+
+  const response = await fetch(modalApiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: message,
+      user_id: userId,
+      history: history || [],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
+  }
+
+  return response;
+}
+
+async function queryWithBackend(message: string, userId: string, history: any[]) {
+  const response = await fetch(`${process.env.BACKEND_URL}/api/v1/admin/documents/query`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: message,
+      document_owner_id: userId,
+      history: history || [],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Backend service error: ${response.status} - ${errorText}`);
+  }
+
+  return response;
+}
+
 export async function POST(request: Request) {
   try {
     // Extract headers for restriction checks
@@ -191,22 +238,19 @@ export async function POST(request: Request) {
     );
     const startTime = Date.now();
 
-    // Query the backend
-    const response = await fetch(
-      `${process.env.BACKEND_URL}/api/v1/admin/documents/query`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.id}`,
-        },
-        body: JSON.stringify({
-          query: message,
-          document_owner_id: session.user.id,
-          history: history || [],
-        }),
-      },
-    );
+    // Query based on environment configuration
+    const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
+    const modalApiUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
+
+    let response;
+    if (useModalPersistent && modalApiUrl) {
+      // Query with Modal.com
+      response = await queryWithModal(message, session.user.id, history);
+    } else {
+      // Query with backend
+      response = await queryWithBackend(message, session.user.id, history);
+    }
+
     if (!response.ok || !response.body)
       throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -214,65 +258,51 @@ export async function POST(request: Request) {
     let responseBuffer = "";
     let success = true;
     let errorMessage: string | null = null;
+
     const transformStream = new TransformStream({
       async transform(chunk, controller) {
-        try {
-          const text = new TextDecoder().decode(chunk);
-          responseBuffer += text;
-          const lines = text.split("\n").filter((line) => line.trim());
-          for (const line of lines) {
-            const data = JSON.parse(line);
-            if (data.response === "No relevant documents found.") {
-              // Optionally notify user/admin here
-              data.response =
-                "The system needs to be configured before using it.";
-              responseBuffer = "";
-            }
-            controller.enqueue(
-              new TextEncoder().encode(JSON.stringify(data) + "\n"),
-            );
-          }
-        } catch (e) {
-          console.error("Error transforming stream:", e);
-          success = false;
-          errorMessage = e instanceof Error ? e.message : "Unknown error";
-          controller.enqueue(chunk);
-        }
+        const text = new TextDecoder().decode(chunk);
+        responseBuffer += text;
+        controller.enqueue(chunk);
       },
       async flush(controller) {
-        // Only cache if we have a response and it's not a "no documents" case
-        if (
-          responseBuffer &&
-          !responseBuffer.includes('"response":"No relevant documents found."')
-        ) {
-          cacheSet(cacheKey, responseBuffer, 3600); // Cache for 1 hour
+        try {
+          // Cache the response
+          await cacheSet(cacheKey, responseBuffer, 3600); // Cache for 1 hour
+
+          // Track analytics
+          const responseTime = Date.now() - startTime;
+          await trackAnalytics({
+            apiKey,
+            message,
+            response: responseBuffer,
+            responseTime,
+            visitorId: effectiveVisitorId,
+            success,
+            error: errorMessage,
+            request: request,
+            startTime,
+          });
+        } catch (err) {
+          console.error("Error in transform stream flush:", err);
         }
-        // Track analytics
-        const responseTime = Date.now() - startTime;
-        await trackAnalytics({
-          apiKey,
-          message,
-          response: responseBuffer,
-          responseTime,
-          visitorId: effectiveVisitorId,
-          success,
-          error: errorMessage,
-          request,
-          startTime,
-        });
       },
     });
 
-    // Return the transformed response as a stream
-    return new Response(response.body.pipeThrough(transformStream), {
+    return new Response(response.body?.pipeThrough(transformStream), {
       headers: {
-        "Content-Type": "text/event-stream",
+        "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache",
-        Connection: "keep-alive",
+        "Connection": "keep-alive",
       },
     });
+
   } catch (error: any) {
-    console.error("Error in document query:", error);
-    return errorResponse({ error: error.response?.data?.error || "Failed to process query", status: error.response?.status || 500 });
+    console.error("Query error:", error);
+    return errorResponse({ 
+      error: "An error occurred while processing your query", 
+      status: 500,
+      errorCode: "QUERY_ERROR"
+    });
   }
 }

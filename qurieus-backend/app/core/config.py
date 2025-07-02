@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral:latest").strip()  # Default to mistral:latest
     
+    
     class Config:
         case_sensitive = True
         env_file = ".env"

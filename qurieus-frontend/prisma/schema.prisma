@@ -237,6 +237,7 @@ model Document {
   uploadedAt   DateTime @default(now())
   metadata     String?
   chunks       DocumentChunk[]
+  modalDocumentId String?
   
   @@index([userId])
   @@index([category])
