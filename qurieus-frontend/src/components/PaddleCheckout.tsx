@@ -63,7 +63,7 @@ export const PaddleCheckout = forwardRef<
       initializePaddle({
         environment:
           process.env.NODE_ENV === "production" ? "production" : "sandbox",
-        token: process.env.NEXT_PUBLIC_PADDLE_VENDOR_ID || "",
+        token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
         eventCallback: (event: PaddleEventData) => {
           if (event.name === CheckoutEventNames.CHECKOUT_COMPLETED) {
             onComplete?.(event.data);

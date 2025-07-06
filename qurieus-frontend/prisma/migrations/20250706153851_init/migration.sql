@@ -208,6 +208,7 @@ CREATE TABLE "Document" (
     "keywords" TEXT,
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "metadata" TEXT,
+    "modalDocumentId" TEXT,
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
 );
