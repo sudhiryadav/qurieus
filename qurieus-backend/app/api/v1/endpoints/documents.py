@@ -19,9 +19,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 from sentence_transformers import SentenceTransformer
 from app.utils.logger import log_to_frontend
-import time
 from functools import lru_cache
-import hashlib
 import datetime
 import pandas as pd
 import io
