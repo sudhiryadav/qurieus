@@ -67,9 +67,6 @@ MODAL_DELETE_ALL_DOCUMENTS_URL=https://your-username--delete-all-documents.modal
 MODAL_HEALTH_CHECK_URL=https://your-username--health-check.modal.run
 USE_MODAL_PERSISTENT_STORAGE=true
 ```
-
-> **Note:** There is no longer a single `MODAL_API_URL`. Each endpoint has its own URL and should be used directly in your code.
-
 ### 4. Update Backend and Frontend Configuration
 
 Update your backend and frontend to use the new environment variables for each operation. For example:
