@@ -229,7 +229,7 @@ async function processWithModal(files: File[], description: string, category: st
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.QURIEUS_API_KEY || '',
+          'x-api-key': process.env.MODAL_DOT_COM_X_API_KEY || '',
         },
         body: JSON.stringify({
           file_content: base64Content,

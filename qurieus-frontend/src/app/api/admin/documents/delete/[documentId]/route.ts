@@ -23,7 +23,7 @@ async function deleteWithModal(userId: string, documentId: string) {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.QURIEUS_API_KEY || '',
+      'x-api-key': process.env.MODAL_DOT_COM_X_API_KEY || '',
     }
   });
 

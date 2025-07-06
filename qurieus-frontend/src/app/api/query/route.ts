@@ -97,7 +97,7 @@ async function queryWithModal(message: string, userId: string, history: any[]) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.QURIEUS_API_KEY || '',
+      'x-api-key': process.env.MODAL_DOT_COM_X_API_KEY || '',
     },
     body: JSON.stringify({
       query: message,
