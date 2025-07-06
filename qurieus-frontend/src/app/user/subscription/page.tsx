@@ -9,7 +9,7 @@ import axiosInstance from "@/lib/axios";
 import { UserSubscription, SubscriptionPlan } from "@prisma/client";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const FullScreenPricing = ({
   showPricingModal,
@@ -56,7 +56,7 @@ export default function SubscriptionPage() {
     fetchSubscription(true);
   };
 
-  const fetchSubscription = async (force: boolean = false) => {
+  const fetchSubscription = useCallback(async (force: boolean = false) => {
     try {
       setLoading(true);
       setRefreshing(true);
@@ -72,13 +72,13 @@ export default function SubscriptionPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (session?.user) {
       fetchSubscription(false);
     }
-  }, [session]);
+  }, [session, fetchSubscription]);
 
   if (loading) {
     return (

@@ -56,8 +56,9 @@ async function deleteWithBackend(userId: string, documentId: string) {
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
+  const { documentId } = await params;
   try {
     // Get user session
     const session = await getServerSession(authOptions);
@@ -66,7 +67,6 @@ export async function DELETE(
     }
 
     const userId = session.user.id;
-    const documentId = params.documentId;
 
     if (!documentId) {
       return NextResponse.json(

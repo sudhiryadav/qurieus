@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import { Download, Trash2 } from "lucide-react";
@@ -23,7 +23,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
   const [deleteSelectedModalOpen, setDeleteSelectedModalOpen] = useState(false);
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get('/api/admin/documents');
@@ -35,13 +35,13 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
     } finally {
       setLoading(false);
     }
-  };
+  }, [onFetchDocuments]);
 
   useEffect(() => {
     if (session?.user?.id) {
       fetchDocuments();
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, fetchDocuments]);
 
   const handleDelete = async (documentToDelete: string) => {
     setDocumentToDelete(documentToDelete);

@@ -88,7 +88,7 @@ export const PaddleCheckout = forwardRef<
           setPaddle(paddleInstance);
         }
       });
-    }, []);
+    }, [onComplete, onClose, onError, onFailed, paddle]);
 
     useImperativeHandle(ref, () => ({
       openCheckout,
