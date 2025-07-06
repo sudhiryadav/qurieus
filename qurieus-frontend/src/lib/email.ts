@@ -20,7 +20,7 @@ export const footerData = {
   year: new Date().getFullYear(),
 }
 
-const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || "https://qurieus.com"}/images/logo/logo.svg`;
+const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.svg`;
 const year = new Date().getFullYear();
 
 // Register partials
@@ -66,8 +66,8 @@ export async function sendVerificationEmail(email: string, code: string) {
 }
 
 export async function sendContactEmail(data: { fullName: string; email: string; phone: string; message: string }) {
-  return process.env.CONTACT_EMAIL && await sendEmail({
-    to: process.env.CONTACT_EMAIL,
+  return process.env.NEXT_PUBLIC_CONTACT_EMAIL && await sendEmail({
+    to: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
     subject: `New Contact Form Submission from ${data.fullName}`,
     template: "contact",
     context: { ...data, ...footerData },
@@ -90,7 +90,7 @@ export async function sendConfigurationNotificationEmail(data: {
   adminEmail: string;
   userEmail: string;
 }) {
-  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || "https://qurieus.com"}/user/dashboard`;
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`;
   
   // Send to admin
   await sendEmail({

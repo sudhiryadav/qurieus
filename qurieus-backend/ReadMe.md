@@ -169,19 +169,18 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
    - Creating and configuring your `.env` file for the EC2 environment.
        - **Crucially for `.env` on EC2:**
            - `DATABASE_URL` must point to your production database.
-           - `API_HOST` should be set to `"0.0.0.0"` to allow Uvicorn to be accessed by Nginx.
-           - `API_PORT` should be set (e.g., `"8001"`). This is the internal port Nginx will proxy to.
-           - `SECRET_KEY` must be a strong, unique secret.
+           - `FAST_API_HOST` should be set to `"0.0.0.0"` to allow Uvicorn to be accessed by Nginx.
+           - `FAST_API_PORT` should be set (e.g., `"8001"`). This is the internal port Nginx will proxy to.
            - Configure `OLLAMA_API_URL`, `FRONTEND_URL` and any other production-specific settings.
    - Running database migrations (`alembic upgrade head`) against your production database.
 
 4. **Test Uvicorn manually (optional but recommended):**
    From the `qurieus-backend` directory (with `.venv` activated):
    ```bash
-   uvicorn main:app --host $(grep API_HOST .env | cut -d '=' -f2) --port $(grep API_PORT .env | cut -d '=' -f2)
+   uvicorn main:app --host $(grep FAST_API_HOST .env | cut -d '=' -f2) --port $(grep FAST_API_PORT .env | cut -d '=' -f2)
    ```
-   Or explicitly: `uvicorn main:app --host 0.0.0.0 --port 8001` (if API_PORT=8001).
-   Access `http://your-ec2-ip:<API_PORT>/docs` in your browser. Press `Ctrl+C` to stop.
+   Or explicitly: `uvicorn main:app --host 0.0.0.0 --port 8001` (if FAST_API_PORT=8001).
+   Access `http://your-ec2-ip:<FAST_API_PORT>/docs` in your browser. Press `Ctrl+C` to stop.
 
 5. **Start the application with PM2:**
    PM2 will manage the Uvicorn process. Ensure you are in the `qurieus-backend` directory.
@@ -195,7 +194,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
    # deactivate 
    # Example path: /home/ubuntu/qurieus-backend/.venv/bin/python
    ```
-   Then start with PM2 (replace with your actual API_PORT and Python path):
+   Then start with PM2 (replace with your actual FAST_API_PORT and Python path):
    ```bash
    pm2 start "uvicorn main:app --host 0.0.0.0 --port 8001" --name "qurieus-backend" --interpreter /home/ubuntu/qurieus-backend/.venv/bin/python
    ```

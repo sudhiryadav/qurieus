@@ -5,8 +5,8 @@ import traceback
 from models import Document, DocumentChunk, Embedding, Users
 from app.core.config import settings
 from sentence_transformers import SentenceTransformer
-import fitz  # PyMuPDF for PDF
-import docx   # python-docx for DOCX
+import fitz
+import docx
 from app.services.model_health_service import model_health_monitor
 
 try:

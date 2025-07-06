@@ -46,7 +46,7 @@ export async function GET(
           });
 
           await sendEmail({
-            to: process.env.ADMIN_EMAIL || 'admin@qurieus.com',
+            to: process.env.ADMIN_EMAIL || '',
             subject: "System Configuration Required - No Documents Found",
             template: "configuration-notification",
             context: {

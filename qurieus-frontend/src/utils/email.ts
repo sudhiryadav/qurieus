@@ -19,8 +19,8 @@ export async function sendContactEmail(data: {
   `;
 
   try {
-    process.env.CONTACT_EMAIL && await sendEmail({
-      to: process.env.CONTACT_EMAIL,
+    process.env.NEXT_PUBLIC_CONTACT_EMAIL && await sendEmail({
+      to: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
       subject: `New Contact Form Submission from ${fullName}`,
       html,
     });

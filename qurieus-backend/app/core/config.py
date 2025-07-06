@@ -15,14 +15,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Qurieus API"
     VERSION: str = "1.0.0"
-    API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
-    API_PORT: int = int(os.getenv("API_PORT", "8000"))
+    FAST_API_HOST: str = os.getenv("FAST_API_HOST", "0.0.0.0")
+    FAST_API_PORT: int = int(os.getenv("FAST_API_PORT", "8000"))
     
     # Database Settings
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/qurieus")
-    
-    # Security Settings
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key")
     
     # Frontend URL for CORS
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:8000")
