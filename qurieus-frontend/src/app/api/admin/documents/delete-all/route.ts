@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
+import axiosInstance from '@/lib/axios';
 
 async function deleteAllWithModal(userId: string) {
   const modalApiUrl = process.env.MODAL_DELETE_ALL_DOCUMENTS_URL;
@@ -9,23 +10,24 @@ async function deleteAllWithModal(userId: string) {
     throw new Error('Modal.com API URL not configured');
   }
 
-  const response = await fetch(modalApiUrl, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.QURIEUS_API_KEY || '',
-    },
-    body: JSON.stringify({
-      user_id: userId,
-    }),
-  });
+  try {
+    const response = await axiosInstance.delete(modalApiUrl, {
+      params: {
+        user_id: userId,
+      },
+      headers: {
+        'x-api-key': process.env.QURIEUS_API_KEY || '',
+      },
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(`Modal.com service error: ${error.response.status} - ${error.response.data}`);
+    } else {
+      throw new Error(`Modal.com service error: ${error.message}`);
+    }
   }
-
-  return response.json();
 }
 
 async function deleteAllWithBackend(userId: string) {

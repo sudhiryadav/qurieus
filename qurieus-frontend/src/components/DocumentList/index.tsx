@@ -7,6 +7,8 @@ import { Download, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import axiosInstance from '@/lib/axios';
 import { showToast } from "@/components/Common/Toast";
+import LoadingButton from "@/components/Common/LoadingButton";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { Document } from "@prisma/client";
 import { formatFileSize } from "@/lib/utils";
 
@@ -19,6 +21,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
   const [deleteSelectedModalOpen, setDeleteSelectedModalOpen] = useState(false);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
 
   const fetchDocuments = async () => {
     try {
@@ -62,7 +65,11 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
   };
 
   const handleDeleteAll = async () => {
+    // Close modal immediately when action is triggered
+    setDeleteAllModalOpen(false);
+    
     try {
+      setDeleteAllLoading(true);
       const response = await axiosInstance.delete('/api/admin/documents/delete-all');
       if (response.status === 200) {
         setDocuments([]);
@@ -73,7 +80,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
       console.error("Error deleting all documents:", error);
       showToast.error("Failed to delete all documents");
     } finally {
-      setDeleteAllModalOpen(false);
+      setDeleteAllLoading(false);
     }
   };
 
@@ -147,6 +154,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   return (
     <>
+      <LoadingOverlay loading={deleteAllLoading} htmlText="Deleting all documents..." />
       <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
         {documents.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400">
@@ -157,12 +165,14 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
           <>
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <button
+                <LoadingButton
                   onClick={() => setDeleteAllModalOpen(true)}
+                  loading={deleteAllLoading}
+                  loadingText="Deleting..."
                   className="rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
                 >
                   Delete All
-                </button>
+                </LoadingButton>
                 {selectedDocuments.size > 0 && (
                   <button
                     onClick={() => setDeleteSelectedModalOpen(true)}

@@ -14,6 +14,7 @@ import "../styles/prism-vsc-dark-plus.css";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import Head from "./head";
+import { usePathname } from "next/navigation";
 
 export default function RootLayout({
   children,
@@ -21,10 +22,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [loading, setLoading] = useState<boolean>(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
   }, []);
+
+  // Don't show footer on user layout pages
+  const shouldShowFooter = !pathname?.startsWith('/user') && !pathname?.startsWith('/admin');
 
   return (
     <html suppressHydrationWarning={true} className="!scroll-smooth" lang="en">
@@ -47,7 +52,7 @@ export default function RootLayout({
                   <main className="flex-1 pt-16">{children}</main>
                 </SubscriptionProvider>
               </SidebarProvider>
-              <Footer />
+              {shouldShowFooter && <Footer />}
               <ScrollToTop />
             </ThemeProvider>
           )}

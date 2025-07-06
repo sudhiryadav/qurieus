@@ -7,7 +7,7 @@ import json
 import base64
 import os
 import pickle
-import requests # Added for downloading the test model within health_check
+
 import time # Added for timing download if needed later
 
 # Fix NumPy compatibility issue
@@ -22,8 +22,7 @@ from pydantic import BaseModel
 import hashlib
 
 # Initialize Modal app with unique identifier to force rebuild
-# *** IMPORTANT: Change this to force a new image build. E.g., "qurieus-app-v44"
-app = modal.App("qurieus-app-v44") # <-- INCREMENTED APP VERSION
+app = modal.App("qurieus-app-v45")
 
 API_KEY = os.environ.get("API_KEY")
 
@@ -241,6 +240,7 @@ def get_llama_model():
 # Upload endpoint
 @app.function(
     image=image,
+    gpu="T4",
     timeout=300,
     memory=4096,
     volumes={"/data": volume},

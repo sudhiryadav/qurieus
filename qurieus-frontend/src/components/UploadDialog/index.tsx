@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRef, useState } from "react";
 import ModalDialog from "../ui/ModalDialog";
 import { showToast } from "@/components/Common/Toast";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -239,7 +240,9 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
   if (!isOpen) return null;
 
   return (
-    <ModalDialog isOpen={isOpen} onClose={onClose} header={header} footer={footer}>
+    <>
+      <LoadingOverlay loading={loading} htmlText="Uploading files..." />
+      <ModalDialog isOpen={isOpen} onClose={onClose} header={header} footer={footer}>
       <form id="upload-form" onSubmit={handleSubmit} className="space-y-5 p-5">
         {/* Guidelines */}
         <div className="mb-6 rounded-lg bg-[#2d3543] p-5 text-white">
@@ -362,6 +365,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
           </select>
         </div>
       </form>
-    </ModalDialog>
+      </ModalDialog>
+    </>
   );
 } 

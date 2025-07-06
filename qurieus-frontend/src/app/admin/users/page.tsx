@@ -8,6 +8,7 @@ import { Search, Plus, Filter } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import axiosInstance from "@/lib/axios";
 
 interface User {
   id: string;
@@ -79,10 +80,8 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
-      setUsers(data);
+      const response = await axiosInstance.get("/api/admin/users");
+      setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
       showToast.error("Failed to fetch users");
@@ -93,16 +92,10 @@ export default function AdminUsersPage() {
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await fetch("/api/admin/users",   {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: userId,
-          is_active: !currentStatus,
-        }),
+      await axiosInstance.patch("/api/admin/users", {
+        id: userId,
+        is_active: !currentStatus,
       });
-
-      if (!response.ok) throw new Error("Failed to update user status");
       
       setUsers(users.map(user => 
         user.id === userId 
@@ -137,16 +130,10 @@ export default function AdminUsersPage() {
     if (!editingUser) return;
 
     try {
-      const response = await fetch("/api/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingUser.id,
-          ...editForm,
-        }),
+      await axiosInstance.patch("/api/admin/users", {
+        id: editingUser.id,
+        ...editForm,
       });
-
-      if (!response.ok) throw new Error("Failed to update user");
       
       setUsers(users.map(user => 
         user.id === editingUser.id 
@@ -164,16 +151,9 @@ export default function AdminUsersPage() {
 
   const handleAddUser = async () => {
     try {
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
-      });
-
-      if (!response.ok) throw new Error("Failed to create user");
+      const response = await axiosInstance.post("/api/admin/users", editForm);
       
-      const newUser = await response.json();
-      setUsers([newUser, ...users]);
+      setUsers([response.data, ...users]);
       setIsAddModalOpen(false);
       setEditForm({
         name: "",
