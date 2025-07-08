@@ -239,8 +239,12 @@ export default function AdminPlansPage() {
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxDocs ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxStorageMB ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxQueriesPerDay ?? 'Custom'}</td>
-                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.paddleConfig?.productId || <span className="text-gray-500">Not synced</span>}</td>
-                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.paddleConfig?.priceId || <span className="text-gray-500">Not synced</span>}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{
+                  plan.name === "Free Trial" || plan.price === 0 ? '-' : (plan.paddleConfig?.productId || <span className="text-gray-500">Not synced</span>)
+                }</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{
+                  plan.name === "Free Trial" || plan.price === 0 ? '-' : (plan.paddleConfig?.priceId || <span className="text-gray-500">Not synced</span>)
+                }</td>
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(plan)}>Edit</Button>

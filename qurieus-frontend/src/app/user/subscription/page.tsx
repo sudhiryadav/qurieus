@@ -7,7 +7,7 @@ import Pricing from "@/components/Pricing";
 import FullScreenDialog from "@/components/ui/FullScreenDialog";
 import axiosInstance from "@/lib/axios";
 import { UserSubscription, SubscriptionPlan } from "@prisma/client";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 
@@ -211,6 +211,19 @@ export default function SubscriptionPage() {
               <p className="text-lg font-medium">
                 {format(new Date(subscription.currentPeriodStart), "PPP")} -{" "}
                 {format(new Date(subscription.currentPeriodEnd), "PPP")}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Remaining Days
+              </p>
+              <p className="text-lg font-medium">
+              {(() => {
+                  const daysLeft = differenceInDays(new Date(subscription.nextBillingDate), new Date());
+                  return daysLeft >= 0 ? (
+                    <>{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</>
+                  ) : null;
+                })()}
               </p>
             </div>
           </div>

@@ -7,6 +7,12 @@ import axiosInstance from "@/lib/axios";
 // Helper to sync a plan to Paddle (product + price)
 async function syncPlanToPaddle(planId: string) {
   try {
+    // Fetch the plan to check if it is a free trial or free tier
+    const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    if (!plan || plan.name === "Free Trial" || plan.price === 0) {
+      // Skip Paddle sync for free trial or free tier plans
+      return;
+    }
     // Call product sync endpoint
     await axiosInstance.get(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/subscription-plans/${planId}/paddle/product`);
     // Call price sync endpoint
