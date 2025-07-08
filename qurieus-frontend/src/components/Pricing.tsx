@@ -12,6 +12,7 @@ import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
 import { UserSubscription } from "@prisma/client";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 export default function Pricing({
   onUpdatePlan,
@@ -35,6 +36,7 @@ export default function Pricing({
   const [currentSubscription, setCurrentSubscription] =
     useState<UserSubscription | null>(null);
   const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
+  const [overlayLoading, setOverlayLoading] = useState(false);
 
   useEffect(() => {
     // Get current subscription
@@ -74,13 +76,39 @@ export default function Pricing({
         });
   }, [session]);
 
-  const startSubscriptionProcess = () => {
+  const startSubscriptionProcess = async () => {
     if(subscriptionPlan){
       router.push("/user/subscription");
       return;
     }else{
+      // Handle free plans by creating subscription directly
+      if (selectedPlan?.name === "Free Trial" || selectedPlan?.price === 0) {
+        setOverlayLoading(true);
+        try {
+          const response = await axios.post("/api/user/trial");
+          if (response.data.success) {
+            showToast.success("Free plan applied successfully!");
+            // Refresh the page to update subscription state
+            router.push("/user/knowledge-base");
+          }else{
+            showToast.error("Failed to apply free plan. Please try again.");
+          }
+        } catch (error: any) {
+          if (error.response?.data?.error === "User already has a subscription") {
+            showToast.error("You already have an active subscription");
+            router.push("/user/subscription");
+          } else {
+            showToast.error("Failed to apply free plan. Please try again.");
+          }
+        } finally {
+          setOverlayLoading(false);
+        }
+        return;
+      }
+      
+      // Handle paid plans with Paddle
       if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
-          paddleRef.current.openCheckout(
+        paddleRef.current.openCheckout(
           selectedPlan.paddleConfig.priceId,
           selectedPlan.id,
         );
@@ -132,6 +160,30 @@ export default function Pricing({
         setAuthModalOpen(true);
         return;
       }
+
+      // Handle Free Trial plans differently
+      if (plan.name === "Free Trial") {
+        setOverlayLoading(true);
+        try {
+          const response = await axios.post("/api/user/trial");
+          if (response.data.success) {
+            showToast.success("Free trial started successfully!");
+            // Refresh the page or update state
+            window.location.reload();
+          }
+        } catch (error: any) {
+          if (error.response?.data?.error === "User already has a subscription") {
+            showToast.error("You already have an active subscription");
+          } else {
+            showToast.error("Failed to start free trial. Please try again.");
+          }
+        } finally {
+          setOverlayLoading(false);
+        }
+        return;
+      }
+
+      // Handle paid plans with Paddle
       if (plan.paddleConfig?.priceId && paddleRef.current) {
         if (currentSubscriptionId) {
           paddleRef.current.updatePlan(
@@ -168,6 +220,7 @@ export default function Pricing({
     if (loading === plan.id) return "Processing...";
     if (plan.id === currentPlanId) return "Subscribed";
     if (currentPlanId) return "Upgrade";
+    if (plan.name === "Free Trial") return "Start Free Trial";
     return "Get started today";
   };
 
@@ -196,6 +249,7 @@ export default function Pricing({
       id="pricing"
       className="bg-gray-1 pb-8 pt-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-16"
     >
+      <LoadingOverlay loading={overlayLoading} htmlText="Applying free trial..." />
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -236,13 +290,19 @@ export default function Pricing({
                 </div>
                 <p className="mt-6 flex items-baseline gap-x-1">
                   <span className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-                    <span className="pr-1 text-sm font-semibold leading-6 text-gray-600 dark:text-gray-300">
-                      {plan.currency}
-                    </span>
-                    {plan.price}
+                    {plan.name === "Free Trial" ? (
+                      "Free"
+                    ) : (
+                      <>
+                        <span className="pr-1 text-sm font-semibold leading-6 text-gray-600 dark:text-gray-300">
+                          {plan.currency}
+                        </span>
+                        {plan.price}
+                      </>
+                    )}
                   </span>
                   <span className="text-sm font-semibold leading-6 text-gray-600 dark:text-gray-300">
-                    / month
+                    {plan.name === "Free Trial" ? ` for ${plan.description}` : "/ month"}
                   </span>
                 </p>
                 <ul

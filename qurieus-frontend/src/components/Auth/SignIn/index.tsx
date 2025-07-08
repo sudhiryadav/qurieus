@@ -6,7 +6,7 @@ import Link from "next/link";
 import Logo from "@/components/Common/Logo";
 import SwitchOption from "@/components/Auth/SwitchOption";
 import Loader from "@/components/Common/Loader";
-import MagicLink from "@/components/Auth/MagicLink";
+// MagicLink component hidden for now
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
 
@@ -64,22 +64,7 @@ export default function SignIn({
     }
   };
 
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await axios.post("/api/auth/magic-link", {
-        email: loginData.email,
-      });
-
-      showToast.success("Magic link sent to your email!");
-    } catch (error: any) {
-      showToast.error(error.response?.data?.error || "Failed to send magic link. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Magic link functionality hidden for now
 
   if (status === "authenticated") {
     return null;
@@ -123,16 +108,7 @@ export default function SignIn({
                 <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
                   {error}
                 </h3>
-                {error.includes("verify your email") && loginData.email && (
-                  <button
-                    type="button"
-                    className="w-fit text-left text-primary underline"
-                    disabled={loading}
-                    onClick={handleMagicLink}
-                  >
-                    Resend verification email
-                  </button>
-                )}
+                {/* Magic link resend functionality hidden for now */}
               </div>
             </div>
           )}
@@ -171,7 +147,9 @@ export default function SignIn({
           </div>
         </form>
       ) : (
-        <MagicLink />
+        <div className="text-center text-gray-500">
+          Magic link functionality is currently unavailable.
+        </div>
       )}
     </div>
   );

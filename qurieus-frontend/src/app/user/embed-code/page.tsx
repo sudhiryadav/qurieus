@@ -52,7 +52,7 @@ export default function EmbedCode() {
   };
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="mx-auto">
       <div className="mb-8">
         <h1 className="mb-4 text-3xl font-bold">Embed Chat Widget</h1>
         <p className="text-gray-600 dark:text-gray-300">

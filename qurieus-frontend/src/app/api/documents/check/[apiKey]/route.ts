@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/utils/prismaDB";
-import { footerData, sendEmail } from "@/lib/email";
+import { sendConfigurationNotificationEmail } from "@/lib/email";
 
 export async function GET(
   request: Request,
@@ -33,28 +33,12 @@ export async function GET(
       // Send notification emails
       try {
         if (user.email) {
-          await sendEmail({
-            to: user.email,
-            subject: "System Configuration Required - No Documents Found",
-            template: "configuration-notification",
-            context: {
+          await sendConfigurationNotificationEmail({
               userId: apiKey,
+            query: "No documents found",
               timestamp: new Date().toISOString(),
-              dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`,
-              ...footerData
-            }
-          });
-
-          await sendEmail({
-            to: process.env.ADMIN_EMAIL || '',
-            subject: "System Configuration Required - No Documents Found",
-            template: "configuration-notification",
-            context: {
-              userId: apiKey,
-              timestamp: new Date().toISOString(),
-              dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/user/dashboard`,
-              ...footerData
-            }
+            adminEmail: process.env.ADMIN_EMAIL || '',
+            userEmail: user.email
           });
         }
       } catch (error) {

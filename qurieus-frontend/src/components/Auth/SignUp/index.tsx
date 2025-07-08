@@ -1,5 +1,5 @@
 "use client";
-import MagicLink from "@/components/Auth/MagicLink";
+// MagicLink component hidden for now
 import SwitchOption from "@/components/Auth/SwitchOption";
 import Loader from "@/components/Common/Loader";
 import Logo from "@/components/Common/Logo";
@@ -262,7 +262,9 @@ export default function SignUp({
           </div>
         </form>
       ) : (
-        <MagicLink />
+        <div className="text-center text-gray-500">
+          Magic link functionality is currently unavailable.
+        </div>
       )}
 
       <p className="text-body-secondary mb-4 text-base">

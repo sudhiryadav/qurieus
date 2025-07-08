@@ -1,0 +1,36 @@
+{{> partials/header title="Your Free Trial Has Started!" }}
+
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+  <h1 style="margin: 0; font-size: 28px;">🎉 Your Free Trial Has Started!</h1>
+  <p style="margin: 10px 0 0 0; font-size: 16px;">Welcome to Qurieus - Your AI-Powered Document Q&A Platform</p>
+</div>
+
+<div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+  <p style="margin: 0 0 20px 0; font-size: 16px;">Hi {{name}},</p>
+  
+  <p style="margin: 0 0 20px 0; font-size: 16px;">Great news! Your free trial has been successfully activated. You now have full access to Qurieus for <strong>{{trial_days}} days</strong>.</p>
+  
+  <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #667eea;">
+    <h3 style="margin: 0 0 15px 0; color: #333;">Your Trial Includes:</h3>
+    <ul style="margin: 0; padding-left: 20px; color: #333;">
+      <li style="margin-bottom: 8px;"><strong>{{max_docs}} documents</strong> - Upload and analyze your documents</li>
+      <li style="margin-bottom: 8px;"><strong>{{max_storage}} MB storage</strong> - Store your files securely</li>
+      <li style="margin-bottom: 8px;"><strong>{{max_queries}} queries per day</strong> - Ask unlimited questions about your documents</li>
+      <li style="margin-bottom: 8px;"><strong>AI-powered insights</strong> - Get intelligent answers from your content</li>
+    </ul>
+  </div>
+  
+  <p style="margin: 20px 0; font-size: 16px;">Ready to get started? Upload your first document and start asking questions!</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{NEXT_PUBLIC_APP_URL}}/user/dashboard" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+  </div>
+  
+  <p style="margin: 20px 0; font-size: 16px;"><strong>Important:</strong> Your trial will automatically expire on <strong>{{trial_end_date}}</strong>. To continue using Qurieus after your trial, you'll need to upgrade to a paid plan.</p>
+  
+  <p style="margin: 20px 0; font-size: 16px;">If you have any questions or need help getting started, don't hesitate to reach out to our support team.</p>
+  
+  <p style="margin: 20px 0; font-size: 16px;">Best regards,<br>The Qurieus Team</p>
+</div>
+
+{{> partials/footer }} 

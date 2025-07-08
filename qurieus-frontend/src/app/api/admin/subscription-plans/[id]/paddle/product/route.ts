@@ -29,6 +29,14 @@ export async function POST(
   if (!plan)
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
 
+  // Skip Paddle sync for Free Trial plans
+  if (plan.name === "Free Trial") {
+    return NextResponse.json({ 
+      message: "Free Trial plans are not synced to Paddle. Use trial days on paid plans instead.",
+      productId: null 
+    });
+  }
+
   let paddleConfig = await prisma.paddleConfig.findUnique({
     where: { subscriptionPlanId: plan.id },
   });

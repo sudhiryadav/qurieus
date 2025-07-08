@@ -1,0 +1,57 @@
+{{> partials/header title="Your Trial Has Expired" }}
+
+<div style="background: linear-gradient(135deg, #636e72 0%, #2d3436 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+  <h1 style="margin: 0; font-size: 28px;">⏰ Your Trial Has Expired</h1>
+  <p style="margin: 10px 0 0 0; font-size: 16px;">Upgrade now to restore access to your documents</p>
+</div>
+
+<div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+  <p style="margin: 0 0 20px 0; font-size: 16px;">Hi {{name}},</p>
+  
+  <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 5px; margin: 20px 0;">
+    <h3 style="margin: 0 0 15px 0; color: #721c24;">🚫 Access Suspended</h3>
+    <p style="margin: 0 0 10px 0; color: #721c24;">Your free trial expired on <strong>{{trial_end_date}}</strong>.</p>
+    <p style="margin: 0; color: #721c24;">Your account is now suspended and you cannot access your documents or AI insights.</p>
+  </div>
+  
+  <p style="margin: 20px 0; font-size: 16px;">Don't worry! Your documents are still safely stored. Upgrade to a paid plan to restore full access immediately.</p>
+  
+  <div style="background: #e8f5e8; border: 1px solid #c3e6c3; padding: 20px; border-radius: 5px; margin: 20px 0;">
+    <h3 style="margin: 0 0 15px 0; color: #155724;">💾 Your Data is Safe</h3>
+    <p style="margin: 0; color: #155724;">We keep your documents for 30 days after trial expiration. Upgrade within this period to restore access without re-uploading.</p>
+  </div>
+  
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+    <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd; text-align: center;">
+      <h4 style="margin: 0 0 10px 0; color: #333;">Basic</h4>
+      <div style="font-size: 24px; font-weight: bold; color: #636e72;">₹499</div>
+      <p style="margin: 5px 0; font-size: 14px;">25 docs · 100 MB · 100 queries/day</p>
+      <p style="margin: 5px 0; font-size: 14px;">Perfect for individuals</p>
+    </div>
+    <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd; text-align: center;">
+      <h4 style="margin: 0 0 10px 0; color: #333;">Standard</h4>
+      <div style="font-size: 24px; font-weight: bold; color: #636e72;">₹999</div>
+      <p style="margin: 5px 0; font-size: 14px;">100 docs · 500 MB · 500 queries/day</p>
+      <p style="margin: 5px 0; font-size: 14px;">Great for small teams</p>
+    </div>
+  </div>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{NEXT_PUBLIC_APP_URL}}/pricing" style="display: inline-block; background: #636e72; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Restore Access Now</a>
+  </div>
+  
+  <p style="margin: 20px 0; font-size: 16px;"><strong>What happens next?</strong></p>
+  <ul style="margin: 20px 0; padding-left: 20px; color: #333;">
+    <li style="margin-bottom: 8px;">Upgrade now: Immediate access restoration</li>
+    <li style="margin-bottom: 8px;">Within 30 days: Your documents are preserved</li>
+    <li style="margin-bottom: 8px;">After 30 days: Documents will be permanently deleted</li>
+  </ul>
+  
+  <p style="margin: 20px 0; font-size: 16px;">We'd hate to see you lose your valuable documents and insights. Upgrade today to continue your AI-powered document analysis journey!</p>
+  
+  <p style="margin: 20px 0; font-size: 16px;">If you have any questions or need assistance with the upgrade process, our support team is here to help.</p>
+  
+  <p style="margin: 20px 0; font-size: 16px;">Best regards,<br>The Qurieus Team</p>
+</div>
+
+{{> partials/footer }} 

@@ -1,0 +1,52 @@
+{{> partials/header title="Your Trial is Expiring Soon" }}
+
+<div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+  <h1 style="margin: 0; font-size: 28px;">⚠️ Your Trial is Expiring Soon</h1>
+  <p style="margin: 10px 0 0 0; font-size: 16px;">Don't lose access to your documents and insights!</p>
+</div>
+
+<div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+  <p style="margin: 0 0 20px 0; font-size: 16px;">Hi {{name}},</p>
+  
+  <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 5px; margin: 20px 0;">
+    <h3 style="margin: 0 0 15px 0; color: #856404;">⚠️ Important Notice</h3>
+    <p style="margin: 0 0 10px 0; color: #856404;">Your free trial will expire in <strong>{{days_left}} {{#if (eq days_left 1)}}day{{else}}days{{/if}}</strong> (on {{trial_end_date}}).</p>
+    <p style="margin: 0; color: #856404;">After expiration, you'll lose access to your uploaded documents and AI insights.</p>
+  </div>
+  
+  <p style="margin: 20px 0; font-size: 16px;">To continue using Qurieus and keep your data safe, upgrade to a paid plan today!</p>
+  
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+    <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd; text-align: center;">
+      <h4 style="margin: 0 0 10px 0; color: #333;">Basic</h4>
+      <div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">₹499</div>
+      <p style="margin: 5px 0; font-size: 14px;">25 docs · 100 MB · 100 queries/day</p>
+      <p style="margin: 5px 0; font-size: 14px;">Perfect for individuals</p>
+    </div>
+    <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd; text-align: center;">
+      <h4 style="margin: 0 0 10px 0; color: #333;">Standard</h4>
+      <div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">₹999</div>
+      <p style="margin: 5px 0; font-size: 14px;">100 docs · 500 MB · 500 queries/day</p>
+      <p style="margin: 5px 0; font-size: 14px;">Great for small teams</p>
+    </div>
+  </div>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{NEXT_PUBLIC_APP_URL}}/pricing" style="display: inline-block; background: #ff6b6b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Upgrade Now</a>
+  </div>
+  
+  <p style="margin: 20px 0; font-size: 16px;"><strong>What happens if you don't upgrade?</strong></p>
+  <ul style="margin: 20px 0; padding-left: 20px; color: #333;">
+    <li style="margin-bottom: 8px;">You'll lose access to all uploaded documents</li>
+    <li style="margin-bottom: 8px;">Your AI insights and chat history will be deleted</li>
+    <li style="margin-bottom: 8px;">You'll need to re-upload documents if you upgrade later</li>
+  </ul>
+  
+  <p style="margin: 20px 0; font-size: 16px;">Don't wait until the last minute! Upgrade now to ensure uninterrupted access to your documents.</p>
+  
+  <p style="margin: 20px 0; font-size: 16px;">If you have any questions about our plans or need help with the upgrade process, please contact our support team.</p>
+  
+  <p style="margin: 20px 0; font-size: 16px;">Best regards,<br>The Qurieus Team</p>
+</div>
+
+{{> partials/footer }} 

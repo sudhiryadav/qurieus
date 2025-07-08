@@ -58,11 +58,6 @@ export default function AdminPlansPage() {
     maxStorageMB: undefined as number | undefined,
     maxQueriesPerDay: undefined as number | undefined,
   });
-  const [paddleConfig, setPaddleConfig] = useState<PaddleConfig | null>(null);
-  const [paddleSyncLoading, setPaddleSyncLoading] = useState(false);
-  const [paddleSyncError, setPaddleSyncError] = useState<string | null>(null);
-  const [paddleSyncSuccess, setPaddleSyncSuccess] = useState<string | null>(null);
-  const [syncIdsLoading, setSyncIdsLoading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -87,17 +82,6 @@ export default function AdminPlansPage() {
     }
   }, [status, router, session]);
 
-  const fetchPaddleConfig = async (planId: string) => {
-    try {
-      setPaddleConfig(null);
-      const { data } = await axios.get(`/api/admin/subscription-plans/${planId}/paddle`);
-      setPaddleConfig(data);
-    } catch (error) {
-      console.error("Error fetching Paddle config:", error);
-      showToast.error("Failed to fetch Paddle config");
-    }
-  };
-
   const handleEditClick = (plan: Plan) => {
     setEditingPlan(plan);
     setEditForm({
@@ -113,54 +97,31 @@ export default function AdminPlansPage() {
       maxStorageMB: plan.maxStorageMB === null ? undefined : plan.maxStorageMB,
       maxQueriesPerDay: plan.maxQueriesPerDay === null ? undefined : plan.maxQueriesPerDay,
     });
-    fetchPaddleConfig(plan.id);
   };
 
-  const handleEditSubmit = async () => {
-    if (!editingPlan) return;
+  const handleSavePlan = async () => {
     try {
-      const response = await axios.put(
-        `/api/admin/subscription-plans/${editingPlan.id}`,
-        {
+      let response;
+      if (editingPlan) {
+        response = await axios.patch(
+          `/api/admin/subscription-plans/${editingPlan.id}`,
+          {
+            ...editForm,
+            features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
+          }
+        );
+        showToast.success("Subscription plan updated successfully. Paddle sync will be triggered automatically.");
+      } else {
+        response = await axios.post("/api/admin/subscription-plans", {
           ...editForm,
           features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
-        }
-      );
-      const updatedPlan = await response.data;
-      setPlans(plans.map(plan => plan.id === editingPlan.id ? updatedPlan : plan));
+        });
+        showToast.success("Plan created successfully. Paddle sync will be triggered automatically.");
+      }
+      // Always refresh plans from backend after add/edit
+      const { data: refreshedPlans } = await axios.get("/api/admin/subscription-plans");
+      setPlans(refreshedPlans);
       setEditingPlan(null);
-      showToast.success("Subscription plan updated successfully. Please sync with Paddle to update the plan in the customer portal. You can do this by clicking the sync button below.");
-    } catch (error) {
-      console.error("Error updating subscription plan:", error);
-      showToast.error("Failed to update subscription plan");
-    }
-  };
-
-  const handlePaddleSync = async () => {
-    if (!editingPlan) return;
-    setPaddleSyncLoading(true);
-    setPaddleSyncError(null);
-    try {
-      await axios.post(`/api/admin/subscription-plans/${editingPlan.id}/paddle/product`);
-      await axios.post(`/api/admin/subscription-plans/${editingPlan.id}/paddle/price`);
-      await fetchPaddleConfig(editingPlan.id);
-      showToast.success("Paddle sync successful");
-    } catch (err: any) {
-      setPaddleSyncError("Paddle sync failed");
-      showToast.error("Paddle sync failed");
-    } finally {
-      setPaddleSyncLoading(false);
-    }
-  };
-
-  const handleAddPlan = async () => {
-    try {
-      const response = await axios.post("/api/admin/subscription-plans", {
-        ...editForm,
-        features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
-      });
-      const newPlan = await response.data;
-      setPlans([newPlan, ...plans]);
       setIsAddModalOpen(false);
       setEditForm({
         name: "",
@@ -175,10 +136,14 @@ export default function AdminPlansPage() {
         maxStorageMB: undefined,
         maxQueriesPerDay: undefined,
       });
-      showToast.success("Plan created successfully");
     } catch (error) {
-      console.error("Error creating plan:", error);
-      showToast.error("Failed to create plan");
+      if (editingPlan) {
+        console.error("Error updating subscription plan:", error);
+        showToast.error("Failed to update subscription plan");
+      } else {
+        console.error("Error creating plan:", error);
+        showToast.error("Failed to create plan");
+      }
     }
   };
 
@@ -194,27 +159,6 @@ export default function AdminPlansPage() {
     }
   };
 
-  const handleSyncPaddleIds = async () => {
-    setSyncIdsLoading(true);
-    try {
-      const response = await axios.post('/api/admin/subscription-plans/sync-paddle-ids');
-      const result = response.data;
-      
-      console.log('Sync Paddle IDs result:', result);
-      
-      // Refresh the plans to show updated Paddle configs
-      const { data: updatedPlans } = await axios.get("/api/admin/subscription-plans");
-      setPlans(updatedPlans);
-      
-      showToast.success(result.message);
-    } catch (error: any) {
-      console.error('Error syncing Paddle IDs:', error);
-      showToast.error(error?.response?.data?.error || 'Failed to sync Paddle IDs');
-    } finally {
-      setSyncIdsLoading(false);
-    }
-  };
-
   const filteredPlans = plans.filter(plan =>
     plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     plan.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -222,9 +166,8 @@ export default function AdminPlansPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="mx-auto px-4">
       <LoadingOverlay loading={loading} htmlText="Loading plans..." />
-      
       {/* Workflow Note */}
       <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
         <div className="flex items-start">
@@ -260,14 +203,6 @@ export default function AdminPlansPage() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
           </div>
-          <Button 
-            onClick={handleSyncPaddleIds} 
-            disabled={syncIdsLoading}
-            variant="outline"
-            className="flex items-center space-x-2 whitespace-nowrap"
-          >
-            {syncIdsLoading ? "Syncing..." : "Sync Paddle IDs"}
-          </Button>
           <Button onClick={() => { setIsAddModalOpen(true); setEditForm({ name: "", description: "", price: 0, currency: "INR", features: "", isActive: true, idealFor: "", keyLimits: "", maxDocs: undefined, maxStorageMB: undefined, maxQueriesPerDay: undefined }); }} className="flex items-center space-x-2 whitespace-nowrap">
             <Plus className="h-4 w-4" />
             <span>Add Plan</span>
@@ -326,7 +261,7 @@ export default function AdminPlansPage() {
         footer={
           <div className="flex space-x-2">
             <Button variant="outline" onClick={() => setEditingPlan(null)}>Cancel</Button>
-            <Button onClick={handleEditSubmit}>Save Changes</Button>
+            <Button onClick={handleSavePlan}>Save Changes</Button>
           </div>
         }
       >
@@ -375,27 +310,6 @@ export default function AdminPlansPage() {
             <label className="block text-sm font-medium text-gray-300 mb-1">Max Queries/Day</label>
             <input type="number" value={editForm.maxQueriesPerDay ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxQueriesPerDay: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-          {editingPlan && (
-            <div className="mt-6 p-4 rounded bg-gray-800 border border-gray-700">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-white">Paddle Sync</span>
-                <button
-                  className="px-3 py-1 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                  onClick={handlePaddleSync}
-                  disabled={paddleSyncLoading}
-                >
-                  {paddleSyncLoading ? "Syncing..." : "Sync to Paddle"}
-                </button>
-              </div>
-              {paddleSyncError && <div className="text-red-400 text-sm mb-2">{paddleSyncError}</div>}
-              <div className="text-sm text-gray-300">
-                <div><b>Product ID:</b> {paddleConfig?.productId || <span className="text-gray-500">Not synced</span>}</div>
-                <div><b>Price ID:</b> {paddleConfig?.priceId || <span className="text-gray-500">Not synced</span>}</div>
-                <div><b>Trial Days:</b> {paddleConfig?.trialDays ?? <span className="text-gray-500">-</span>}</div>
-                <div><b>Billing Cycle:</b> {paddleConfig?.billingCycle ?? <span className="text-gray-500">-</span>}</div>
-              </div>
-            </div>
-          )}
         </div>
       </ModalDialog>
       {/* Add Plan Modal */}
@@ -406,7 +320,7 @@ export default function AdminPlansPage() {
         footer={
           <div className="flex space-x-2">
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddPlan}>Create Plan</Button>
+            <Button onClick={handleSavePlan}>Create Plan</Button>
           </div>
         }
       >

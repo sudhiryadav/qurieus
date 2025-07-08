@@ -3,7 +3,7 @@ import Logo from "@/components/Common/Logo";
 
 export const metadata: Metadata = {
   title: "Check your email | Qurieus - AI-Powered Document Conversations",
-  description: "Please check your email for the magic link to sign in.",
+  description: "Please check your email for the verification link to sign in.",
 };
 
 export default function VerifyRequest() {

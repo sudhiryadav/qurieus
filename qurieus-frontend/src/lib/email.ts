@@ -57,6 +57,7 @@ export async function sendEmail({ to, subject, template, context, html,attachmen
 }
 
 export async function sendVerificationEmail(email: string, code: string) {
+  console.log("Sending verification email to", email, code);
   return sendEmail({
     to: email,
     subject: "Verify your email address",
@@ -106,6 +107,50 @@ export async function sendConfigurationNotificationEmail(data: {
     subject: "System Configuration Required - No Documents Found",
     template: "configuration-notification",
     context: { ...data, dashboardUrl, ...footerData },
+  });
+}
+
+export async function sendTrialStartedEmail(data: {
+  email: string;
+  name: string;
+  trial_days: number;
+  trial_end_date: string;
+  max_docs: number;
+  max_storage: number;
+  max_queries: number;
+}) {
+  return sendEmail({
+    to: data.email,
+    subject: "Your Free Trial Has Started!",
+    template: "trial-started",
+    context: { ...data, ...footerData },
+  });
+}
+
+export async function sendTrialExpiringEmail(data: {
+  email: string;
+  name: string;
+  days_left: number;
+  trial_end_date: string;
+}) {
+  return sendEmail({
+    to: data.email,
+    subject: data.days_left === 1 ? "Your Trial Expires Tomorrow!" : `Your Trial Expires in ${data.days_left} Days`,
+    template: "trial-expiring",
+    context: { ...data, ...footerData },
+  });
+}
+
+export async function sendTrialExpiredEmail(data: {
+  email: string;
+  name: string;
+  trial_end_date: string;
+}) {
+  return sendEmail({
+    to: data.email,
+    subject: "Your Trial Has Expired",
+    template: "trial-expired",
+    context: { ...data, ...footerData },
   });
 }
 
