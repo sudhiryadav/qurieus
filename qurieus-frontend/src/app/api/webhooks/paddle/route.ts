@@ -339,22 +339,27 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      await prisma.userSubscription.update({
-        where: {
-          userId: user.id,
-        },
-        data: {
-          status,
-          planId: subscriptionPlan.id,
-          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-          paddlePaymentCurrency: currency,
-          nextBillingDate: new Date(next_billed_at),
-          billingCycle: billing_cycle.interval,
-          currentPeriodStart: new Date(created_at),
-          currentPeriodEnd: new Date(next_billed_at),
-          startDate: new Date(created_at),
-        },
+      // Instead of update by userId, find the latest subscription for the user and update by id
+      const latestSubscription = await prisma.userSubscription.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
       });
+      if (latestSubscription) {
+        await prisma.userSubscription.update({
+          where: { id: latestSubscription.id },
+          data: {
+            status,
+            planId: subscriptionPlan.id,
+            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+            paddlePaymentCurrency: currency,
+            nextBillingDate: new Date(next_billed_at),
+            billingCycle: billing_cycle.interval,
+            currentPeriodStart: new Date(created_at),
+            currentPeriodEnd: new Date(next_billed_at),
+            startDate: new Date(created_at),
+          },
+        });
+      }
 
       // await prisma.userSubscriptionupsert({
       //   where: {
