@@ -429,39 +429,64 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Plan not found" }, { status: 404 });
       }
 
-      // Use upsert instead of update and remove the 404 return
-      await prisma.userSubscription.upsert({
-        where: {
-          userId: user.id,
-        },
-        create: {
-          userId: user.id,
-          paddleSubscriptionId: subscriptionId,
-          paddleCustomerId: customerId || custom_data.application_customer_id,
-          status: status === "completed" ? "active" : "in-progress",
-          planId: subscriptionPlan.id,
-          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-          paddlePaymentCurrency: currency,
-          ...(billing_period?.ends_at && {
-            nextBillingDate: new Date(billing_period.ends_at),
-            currentPeriodEnd: new Date(billing_period.ends_at),
-          }),
-          currentPeriodStart: new Date(billing_period?.starts_at || created_at),
-          startDate: new Date(billing_period?.starts_at || created_at),
-        },
-        update: {
-          status: status === "billed" ? "active" : "in-progress",
-          planId: subscriptionPlan.id,
-          paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-          paddlePaymentCurrency: currency,
-          ...(billing_period?.ends_at && {
-            nextBillingDate: new Date(billing_period.ends_at),
-            currentPeriodEnd: new Date(billing_period.ends_at),
-          }),
-          currentPeriodStart: new Date(billing_period?.starts_at || created_at),
-          startDate: new Date(billing_period?.starts_at || created_at),
-        },
-      });
+      // Use upsert with paddleSubscriptionId as the unique key
+      if (subscriptionId) {
+        await prisma.userSubscription.upsert({
+          where: {
+            paddleSubscriptionId: subscriptionId,
+          },
+          create: {
+            userId: user.id,
+            paddleSubscriptionId: subscriptionId,
+            paddleCustomerId: customerId || custom_data.application_customer_id,
+            status: status === "completed" ? "active" : "in-progress",
+            planId: subscriptionPlan.id,
+            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+            paddlePaymentCurrency: currency,
+            ...(billing_period?.ends_at && {
+              nextBillingDate: new Date(billing_period.ends_at),
+              currentPeriodEnd: new Date(billing_period.ends_at),
+            }),
+            currentPeriodStart: new Date(billing_period?.starts_at || created_at),
+            startDate: new Date(billing_period?.starts_at || created_at),
+          },
+          update: {
+            status: status === "billed" ? "active" : "in-progress",
+            planId: subscriptionPlan.id,
+            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+            paddlePaymentCurrency: currency,
+            ...(billing_period?.ends_at && {
+              nextBillingDate: new Date(billing_period.ends_at),
+              currentPeriodEnd: new Date(billing_period.ends_at),
+            }),
+            currentPeriodStart: new Date(billing_period?.starts_at || created_at),
+            startDate: new Date(billing_period?.starts_at || created_at),
+          },
+        });
+      } else {
+        // If no paddleSubscriptionId, deactivate all user's subscriptions and create a new one
+        await prisma.userSubscription.updateMany({
+          where: { userId: user.id, status: "active" },
+          data: { status: "inactive" },
+        });
+        await prisma.userSubscription.create({
+          data: {
+            userId: user.id,
+            paddleSubscriptionId: subscriptionId,
+            paddleCustomerId: customerId || custom_data.application_customer_id,
+            status: status === "completed" ? "active" : "in-progress",
+            planId: subscriptionPlan.id,
+            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
+            paddlePaymentCurrency: currency,
+            ...(billing_period?.ends_at && {
+              nextBillingDate: new Date(billing_period.ends_at),
+              currentPeriodEnd: new Date(billing_period.ends_at),
+            }),
+            currentPeriodStart: new Date(billing_period?.starts_at || created_at),
+            startDate: new Date(billing_period?.starts_at || created_at),
+          },
+        });
+      }
 
       return NextResponse.json({ success: true });
     }

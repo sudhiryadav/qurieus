@@ -93,7 +93,7 @@ model User {
   
   accounts              Account[]
   sessions              Session[]
-  subscription          UserSubscription?
+  subscriptions         UserSubscription[] // one-to-many
   messages              Message[]
   documents             Document[]
   embeddings            Embedding[]
@@ -148,8 +148,8 @@ model PaddleConfig {
 }
 
 model UserSubscription {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
+  id                    String   @id @default(uuid())
+  userId                String
   user                  User    @relation(fields: [userId], references: [id])
   planId                String
   plan                  SubscriptionPlan @relation(fields: [planId], references: [id])
@@ -169,6 +169,7 @@ model UserSubscription {
   createdAt             DateTime @default(now())
   billingCycle          String @default("monthly")
   updatedAt             DateTime @updatedAt
+  planSnapshot          Json?
 }
 
 model Message {

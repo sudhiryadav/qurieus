@@ -48,6 +48,17 @@ export async function POST(req: NextRequest) {
     const trialEndDate = new Date();
     trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
+    // Deactivate all other subscriptions for this user
+    await prisma.userSubscription.updateMany({
+      where: {
+        userId: session.user.id,
+        status: "active",
+      },
+      data: {
+        status: "inactive",
+      },
+    });
+
     // Create trial subscription
     const trialSubscription = await prisma.userSubscription.create({
       data: {
@@ -63,6 +74,18 @@ export async function POST(req: NextRequest) {
         billingCycle: "trial",
         paddlePaymentAmount: 0,
         paddlePaymentCurrency: "INR",
+        planSnapshot: {
+          name: freeTrialPlan.name,
+          price: freeTrialPlan.price,
+          currency: freeTrialPlan.currency,
+          features: freeTrialPlan.features,
+          maxDocs: freeTrialPlan.maxDocs,
+          maxStorageMB: freeTrialPlan.maxStorageMB,
+          maxQueriesPerDay: freeTrialPlan.maxQueriesPerDay,
+          idealFor: freeTrialPlan.idealFor,
+          keyLimits: freeTrialPlan.keyLimits,
+          description: freeTrialPlan.description,
+        },
       },
       include: {
         plan: true,

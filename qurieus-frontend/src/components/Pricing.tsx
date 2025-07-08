@@ -185,14 +185,8 @@ export default function Pricing({
 
       // Handle paid plans with Paddle
       if (plan.paddleConfig?.priceId && paddleRef.current) {
-        if (currentSubscriptionId) {
-          paddleRef.current.updatePlan(
-            currentSubscriptionId,
-            plan.paddleConfig.priceId,
-          );
-        } else {
-          paddleRef.current.openCheckout(plan.paddleConfig.priceId, plan.id);
-        }
+        // If user is on free tier (no Paddle subscription), always open Paddle checkout
+        paddleRef.current.openCheckout(plan.paddleConfig.priceId, plan.id);
         return;
       } else {
         showToast.error(

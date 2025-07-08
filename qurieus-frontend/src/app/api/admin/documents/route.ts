@@ -22,8 +22,8 @@ const ALLOWED_FILE_TYPES = [
 ];
 
 async function validateMaxDocs(userId: string, filesCount: number) {
-  const subscription = await prisma.userSubscription.findUnique({
-    where: { userId },
+  const subscription = await prisma.userSubscription.findFirst({
+    where: { userId, status: 'active' },
     include: { plan: true },
   });
   const maxDocs = subscription?.plan?.maxDocs ?? null;

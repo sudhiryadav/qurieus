@@ -34,6 +34,45 @@ export async function POST(req: Request) {
       );
     }
 
+    // If the current subscription is a free tier (no Paddle subscription or price 0), create a new Paddle subscription
+    if (!subscription.paddleSubscriptionId || subscription.planSnapshot?.price === 0) {
+      // Call Paddle API to create a new subscription
+      const endpoint = process.env.NODE_ENV === "production"
+        ? `https://api.paddle.com/subscriptions`
+        : `https://sandbox-api.paddle.com/subscriptions`;
+
+      const createResponse = await axios.post(
+        endpoint,
+        {
+          customer_id: session.user.id, // or the correct Paddle customer identifier
+          items: [
+            {
+              price_id: priceId,
+              quantity: 1
+            }
+          ]
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PADDLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Save the new Paddle subscription ID to the user's subscription
+      const newPaddleSubscriptionId = createResponse.data.data.id;
+      await prisma.userSubscription.update({
+        where: { id: subscription.id },
+        data: { paddleSubscriptionId: newPaddleSubscriptionId, status: "active" }
+      });
+
+      return NextResponse.json({
+        success: true,
+        subscription: createResponse.data.data
+      });
+    }
+
     // Update the subscription in our database to set that status as in progress    
     await prisma.userSubscription.update({
       where: {

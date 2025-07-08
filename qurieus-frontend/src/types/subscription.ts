@@ -6,7 +6,7 @@ export type SubscriptionPlanWithPaddle = Prisma.SubscriptionPlanGetPayload<{
 
 export type UserSubscription = Prisma.UserSubscriptionGetPayload<{
   include: { plan: true };
-}>;
+}> & { planSnapshot?: any };
 
 export type SubscriptionPlan = Prisma.SubscriptionPlanGetPayload<{
   include: { paddleConfig: true };
