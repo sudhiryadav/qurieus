@@ -170,26 +170,33 @@ export async function POST(request: Request) {
         allowedOrigins: true,
         allowedReferrers: true,
         allowedIPs: true,
-        subscription: {
-          select: {
-            plan: true,
-          },
+        subscriptions: {
+          where: { status: 'active' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { plan: true },
         },
-      },
+      } as any,
     });
 
-    if (!user)
+    // Flatten the subscriptions array to a single subscription (if any)
+    const userWithSubscription = user
+      ? ({ ...user, subscription: (user as any).subscriptions?.[0] || null, subscriptions: undefined } as any)
+      : null;
+
+    if (!userWithSubscription)
       return errorResponse({ error: "Invalid API Key", status: 404, errorCode: "INVALID_API_KEY" });
-    if (!checkAllowed(user.allowedOrigins, origin))
+    if (!checkAllowed(userWithSubscription.allowedOrigins, origin))
       return errorResponse({ error: "Origin not allowed", status: 403, errorCode: "ORIGIN_NOT_ALLOWED" });
-    if (!checkAllowed(user.allowedReferrers, referer))
+    if (!checkAllowed(userWithSubscription.allowedReferrers, referer))
       return errorResponse({ error: "Referrer not allowed", status: 403, errorCode: "REFERER_NOT_ALLOWED" });
-    if (!checkAllowed(user.allowedIPs, ip))
+    if (!checkAllowed(userWithSubscription.allowedIPs, ip))
       return errorResponse({ error: "IP not allowed", status: 403, errorCode: "IP_NOT_ALLOWED" });
 
     // Check if user has a subscription
-    const subscription = await prisma.userSubscription.findUnique({
-      where: { userId: apiKey },
+    const subscription = await prisma.userSubscription.findFirst({
+      where: { userId: apiKey, status: 'active' },
+      orderBy: { createdAt: 'desc' },
     });
     if (!subscription)
       return errorResponse({ error: "User has no subscription", status: 403, errorCode: "NO_SUBSCRIPTION" });
@@ -198,7 +205,7 @@ export async function POST(request: Request) {
     const queryCount = await prisma.queryAnalytics.count({
       where: { userId: apiKey, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 1)) } },
     });
-    if (user.subscription?.plan.maxQueriesPerDay && user.subscription.plan.maxQueriesPerDay < queryCount)
+    if (userWithSubscription.subscription?.plan.maxQueriesPerDay && userWithSubscription.subscription.plan.maxQueriesPerDay < queryCount)
       return errorResponse({ error: "Number of requests exceeded", status: 403, errorCode: "QUERY_LIMIT_EXCEEDED" });
 
     // (DEV) Test Response

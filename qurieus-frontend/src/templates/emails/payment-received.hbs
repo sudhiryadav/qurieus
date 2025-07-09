@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Received</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .highlight {
+            background-color: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💰 Payment Received</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{customerName}},</p>
+        
+        <p>Thank you! We've successfully received your payment.</p>
+        
+        <div class="highlight">
+            <h3>Payment Details:</h3>
+            <p><strong>Plan:</strong> {{planName}}</p>
+            <p><strong>Amount:</strong> {{currency}} {{amount}}</p>
+            <p><strong>Transaction ID:</strong> {{transactionId}}</p>
+        </div>
+        
+        <p>Your payment has been processed and your subscription is active. You can continue using all the features included in your plan.</p>
+        
+        <p>If you have any questions about this payment or your subscription, please don't hesitate to contact our support team.</p>
+        
+        <p>Best regards,<br>Qurieus Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>{{footerText}}</p>
+        <p>{{footerLink}}</p>
+    </div>
+</body>
+</html> 

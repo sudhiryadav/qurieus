@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         paddleSubscriptionId: subscriptionId,
         userId: session.user.id,
       },
-    });
+    }) as any;
 
     if (!subscription) {
       return NextResponse.json(
@@ -35,7 +35,8 @@ export async function POST(req: Request) {
     }
 
     // If the current subscription is a free tier (no Paddle subscription or price 0), create a new Paddle subscription
-    if (!subscription.paddleSubscriptionId || subscription.planSnapshot?.price === 0) {
+    const planSnapshot = subscription.planSnapshot as { price?: number } | null;
+    if (!subscription.paddleSubscriptionId || (planSnapshot && planSnapshot.price === 0)) {
       // Call Paddle API to create a new subscription
       const endpoint = process.env.NODE_ENV === "production"
         ? `https://api.paddle.com/subscriptions`

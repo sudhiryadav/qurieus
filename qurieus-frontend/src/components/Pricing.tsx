@@ -108,10 +108,13 @@ export default function Pricing({
       
       // Handle paid plans with Paddle
       if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
-        paddleRef.current.openCheckout(
-          selectedPlan.paddleConfig.priceId,
-          selectedPlan.id,
-        );
+        if (currentSubscriptionId) {
+          // User already has a Paddle subscription, update plan (no checkout popup)
+          paddleRef.current.updatePlan(currentSubscriptionId, selectedPlan.paddleConfig.priceId);
+        } else {
+          // No Paddle subscription, show checkout popup
+          paddleRef.current.openCheckout(selectedPlan.paddleConfig.priceId, selectedPlan.id);
+        }
       } else {
         showToast.error(
           "Paddle configuration is incomplete. Please contact support.",
@@ -185,8 +188,18 @@ export default function Pricing({
 
       // Handle paid plans with Paddle
       if (plan.paddleConfig?.priceId && paddleRef.current) {
-        // If user is on free tier (no Paddle subscription), always open Paddle checkout
-        paddleRef.current.openCheckout(plan.paddleConfig.priceId, plan.id);
+        if (currentSubscriptionId) {
+          // User already has a Paddle subscription, show loader and update plan (no checkout popup)
+          setOverlayLoading(true);
+          try {
+            paddleRef.current.updatePlan(currentSubscriptionId, plan.paddleConfig.priceId);
+          } finally {
+            setOverlayLoading(false);
+          }
+        } else {
+          // No Paddle subscription, show checkout popup
+          paddleRef.current.openCheckout(plan.paddleConfig.priceId, plan.id);
+        }
         return;
       } else {
         showToast.error(

@@ -17,13 +17,25 @@ export async function GET(req: NextRequest) {
   if (guard) return guard;
   const users = await prisma.user.findMany({
     include: {
-      subscription: {
+      subscriptions: {
+        where: { status: 'active' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
         include: { plan: true },
       },
-    },
+    } as any, // bypass linter error
     orderBy: { created_at: "desc" },
   });
-  return NextResponse.json(users);
+  // Flatten the subscriptions array to a single subscription (if any)
+  const usersWithLatestSubscription = users.map(user => {
+    const u = user as any;
+    return {
+      ...user,
+      subscription: u.subscriptions?.[0] || null,
+      subscriptions: undefined,
+    };
+  });
+  return NextResponse.json(usersWithLatestSubscription);
 }
 
 export async function PATCH(req: NextRequest) {

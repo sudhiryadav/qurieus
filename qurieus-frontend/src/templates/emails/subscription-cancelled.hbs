@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Cancelled</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>❌ Subscription Cancelled</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{customerName}},</p>
+        
+        <p>We're sorry to see you go. Your Qurieus subscription has been cancelled as requested.</p>
+        
+        <div class="highlight">
+            <h3>What happens next:</h3>
+            <ul>
+                <li>You'll continue to have access to your current plan until the end of your billing period</li>
+                <li>No further charges will be made to your account</li>
+                <li>You can reactivate your subscription at any time</li>
+            </ul>
+        </div>
+        
+        <p>If you change your mind, you can easily reactivate your subscription by logging into your account.</p>
+        
+        <p>We'd love to hear your feedback on how we can improve our service. Please don't hesitate to reach out to our support team.</p>
+        
+        <p>Best regards,<br>Qurieus Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>{{footerText}}</p>
+        <p>{{footerLink}}</p>
+    </div>
+</body>
+</html> 

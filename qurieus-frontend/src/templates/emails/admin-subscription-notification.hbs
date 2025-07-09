@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Subscription Created</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .highlight {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎉 New Subscription Created</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hello Admin,</p>
+        
+        <p>A new subscription has been created for your platform.</p>
+        
+        <div class="highlight">
+            <h3>Customer Details:</h3>
+            <p><strong>Name:</strong> {{customerName}}</p>
+            <p><strong>Email:</strong> {{customerEmail}}</p>
+        </div>
+        
+        <div class="details">
+            <h3>Subscription Details:</h3>
+            <p><strong>Plan:</strong> {{planName}}</p>
+            <p><strong>Amount:</strong> {{currency}} {{amount}}</p>
+            <p><strong>Billing Cycle:</strong> {{billingCycle}}</p>
+            <p><strong>Next Billing Date:</strong> {{nextBillingDate}}</p>
+        </div>
+        
+        <p>This subscription has been automatically processed and the customer has been notified.</p>
+        
+        <p>Best regards,<br>Qurieus Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>{{footerText}}</p>
+        <p>{{footerLink}}</p>
+    </div>
+</body>
+</html> 

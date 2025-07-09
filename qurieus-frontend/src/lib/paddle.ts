@@ -1,39 +1,9 @@
-import crypto from "crypto";
 import axios from "axios";
 import { prisma } from "@/utils/prismaDB";
 import { EventName } from '@paddle/paddle-node-sdk';
 
 // Re-export EventName for easier imports
 export { EventName };
-
-export function verifyPaddleWebhook(
-  body: any,
-  signature: string,
-  webhookKey: string
-): boolean {
-  try {
-    // Paddle sends the signature in the format "ts=timestamp,v1=signature"
-    const [timestamp, signatureValue] = signature.split(",");
-    const [, timestampValue] = timestamp.split("=");
-    const [, signatureHash] = signatureValue.split("=");
-
-    // Create the string to verify
-    const stringToVerify = `${timestampValue}:${JSON.stringify(body)}`;
-
-    // Create HMAC
-    const hmac = crypto.createHmac("sha256", webhookKey);
-    const digest = hmac.update(stringToVerify).digest("hex");
-
-    // Compare the signatures
-    return crypto.timingSafeEqual(
-      Buffer.from(signatureHash),
-      Buffer.from(digest)
-    );
-  } catch (error) {
-    console.error("Error verifying webhook signature:", error);
-    return false;
-  }
-}
 
 export async function fetchPaddleSubscription(subscriptionId: string) {
   const endpoint = process.env.NODE_ENV === "production"

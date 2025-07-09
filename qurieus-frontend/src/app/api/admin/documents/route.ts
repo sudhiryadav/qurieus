@@ -38,9 +38,10 @@ async function validateMaxDocs(userId: string, filesCount: number) {
 }
 
 async function validateMaxStorage(userId: string, files: File[]) {
-  const subscription = await prisma.userSubscription.findUnique({
+  const subscription = await prisma.userSubscription.findFirst({
     where: { userId },
     include: { plan: true },
+    orderBy: { createdAt: 'desc' },
   });
   const maxStorageMB = subscription?.plan?.maxStorageMB ?? null;
   if (maxStorageMB !== null) {
