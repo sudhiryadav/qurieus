@@ -320,11 +320,12 @@ export async function POST(request: Request) {
               template: "subscription-confirmation",
               context: {
                 customerName: user.name || "Customer",
-                planName: plan,
-                amount,
+                plan,
+                amount: amount/100,
                 currency: currencyCode,
                 billingCycle: billingCycle.interval,
-                nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A',
+                nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A', 
+                subscriptionId: subscriptionId,
                 ...footerData
               },
               attachments: [
