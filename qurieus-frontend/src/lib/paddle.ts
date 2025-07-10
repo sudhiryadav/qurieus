@@ -28,15 +28,50 @@ export async function fetchPaddleSubscription(subscriptionId: string) {
 }
 
 export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: string) {
-  // Find the plan in our database
-  const plan = await prisma.subscriptionPlan.findFirst({
+  let plan = await prisma.subscriptionPlan.findFirst({
     where: {
       paddleConfig: {
         priceId: paddleSub.items[0].price.id,
       },
     },
   });
-  if (!plan) throw new Error("Plan not found for Paddle subscription");
+
+  // If not found by price ID, try to find by plan name
+  if (!plan && paddleSub.items[0]?.price?.name) {
+    console.log("Plan not found by price ID, trying to find by name:", paddleSub.items[0].price.name);
+    plan = await prisma.subscriptionPlan.findFirst({
+      where: {
+        name: paddleSub.items[0].price.name,
+      },
+    });
+  }
+
+  if (!plan) {
+    console.error("Plan not found for Paddle subscription:", {
+      priceId: paddleSub.items[0]?.price?.id,
+      priceName: paddleSub.items[0]?.price?.name,
+      subscriptionId: paddleSub.id
+    });
+    throw new Error(`Plan not found for Paddle subscription. Price ID: ${paddleSub.items[0]?.price?.id}, Price Name: ${paddleSub.items[0]?.price?.name}`);
+  }
+
+  console.log("Found plan:", plan.name);
+
+  // Create plan snapshot for new subscriptions
+  const planSnapshot = {
+    id: plan.id,
+    name: plan.name,
+    description: plan.description,
+    price: plan.price,
+    currency: plan.currency,
+    features: plan.features,
+    idealFor: plan.idealFor,
+    keyLimits: plan.keyLimits,
+    maxDocs: plan.maxDocs,
+    maxStorageMB: plan.maxStorageMB,
+    maxQueriesPerDay: plan.maxQueriesPerDay,
+    snapshotDate: new Date().toISOString()
+  };
 
   return prisma.userSubscription.upsert({
     where: { paddleSubscriptionId: paddleSub.id },
@@ -53,6 +88,7 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
       currentPeriodEnd: new Date(paddleSub.next_billed_at),
       userId,
       planId: plan.id,
+      planSnapshot: planSnapshot,
     },
     update: {
       status: paddleSub.status,

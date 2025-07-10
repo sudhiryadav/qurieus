@@ -1,6 +1,7 @@
 import { footerData, sendEmail } from "@/lib/email";
-import paddle,{ EventName } from "@/lib/paddle";
+import paddle,{ EventName, upsertUserSubscriptionFromPaddle } from "@/lib/paddle";
 import { prisma } from "@/utils/prismaDB";
+import { ensureSingleActiveSubscription } from "@/utils/subscription";
 import fs from "fs/promises";
 import handlebars from "handlebars";
 import { headers } from "next/headers";
@@ -8,6 +9,7 @@ import { NextResponse } from "next/server";
 import path from "path";
 import puppeteer from "puppeteer";
 import { createHmac, timingSafeEqual } from "crypto";
+import { isNullOrUndefined } from "util";
 
 // Register Handlebars helpers
 handlebars.registerHelper("formatDate", (date: Date) =>
@@ -25,15 +27,6 @@ async function validateWebhookAndGetUser(customData: any) {
   const applicationCustomerEmail = customData?.application_customer_email;
   const sessionId = customData?.session_id;
   const timestamp = customData?.timestamp;
-
-  console.log("Security validation:", {
-    applicationCustomerId,
-    applicationCustomerEmail,
-    sessionId,
-    timestamp,
-    currentTime: Date.now(),
-    timestampAge: timestamp ? Date.now() - parseInt(timestamp) : 'N/A'
-  });
 
   // Validate required fields
   if (!applicationCustomerId) {
@@ -70,71 +63,15 @@ async function validateWebhookAndGetUser(customData: any) {
   return user;
 }
 
-// Helper function to create or update subscription
-async function upsertSubscription({
-  subscriptionId,
-  customerId,
-  status,
-  plan,
-  amount,
-  currencyCode,
-  nextBilledAt,
-  billingCycle,
-  createdAt,
-  userId,
-}: {
-  subscriptionId: string;
-  customerId: string;
-  status: string;
-  plan: string;
-  amount: string | number;
-  currencyCode: string;
-  nextBilledAt?: string;
-  billingCycle?: { interval: string };
-  createdAt?: string;
-  userId: string;
-}) {
-  // Find the plan in our database
-  const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
-    where: {
-      name: plan,
-    },
-  });
-
-  if (!subscriptionPlan) {
-    throw new Error("Plan not found");
+// Helper function to create or update subscription using the better upsertUserSubscriptionFromPaddle method
+async function upsertSubscription(paddleSubscriptionData: any, userId: string) {
+  // If this is a new subscription being created, deactivate all other subscriptions first
+  if (paddleSubscriptionData.status === "active") {
+    await ensureSingleActiveSubscription(userId);
   }
 
-  // Upsert subscription - handles both create and update
-  return await prisma.userSubscription.upsert({
-    where: {
-      paddleSubscriptionId: subscriptionId,
-    },
-    create: {
-      paddleSubscriptionId: subscriptionId,
-      paddleCustomerId: customerId,
-      status,
-      paddlePaymentAmount: amount ? parseFloat(amount.toString()) : 0,
-      paddlePaymentCurrency: currencyCode,
-      nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-      billingCycle: billingCycle?.interval || "monthly",
-      startDate: createdAt ? new Date(createdAt) : new Date(),
-      currentPeriodStart: createdAt ? new Date(createdAt) : new Date(),
-      currentPeriodEnd: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-      userId,
-      planId: subscriptionPlan.id,
-    },
-    update: {
-      status,
-      paddlePaymentAmount: amount ? parseFloat(amount.toString()) : 0,
-      paddlePaymentCurrency: currencyCode,
-      nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-      billingCycle: billingCycle?.interval || "monthly",
-      currentPeriodStart: createdAt ? new Date(createdAt) : new Date(),
-      currentPeriodEnd: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-      planId: subscriptionPlan.id,
-    },
-  });
+  // Use the better upsertUserSubscriptionFromPaddle method
+  return await upsertUserSubscriptionFromPaddle(paddleSubscriptionData, userId);
 }
 
 async function generateInvoicePDF({
@@ -210,8 +147,6 @@ export async function POST(request: Request) {
       console.log('⚠️ Webhook verification bypassed for testing');
       const bodyRaw = await request.text();
       event = JSON.parse(bodyRaw);
-      console.log("Webhook event received:", event.event_type);
-      console.log("Event data:", JSON.stringify(event, null, 2));
     } else {
       // Verify webhook signature using proper Paddle method
       const headersList = await headers();
@@ -234,8 +169,6 @@ export async function POST(request: Request) {
       
       // Parse the signature header - it can have multiple parts
       const parts = paddleSignature.split(";");
-      console.log("🔍 Signature header parts:", parts);
-      
       let timestamp: string | null = null;
       let signature: string | null = null;
       
@@ -274,23 +207,10 @@ export async function POST(request: Request) {
       const bodyRaw = await request.text();
       const signedPayload = `${timestamp}:${bodyRaw}`;
 
-      // Debug logging for signature verification
-      console.log("🔍 Signature verification debug:");
-      console.log("- Secret key length:", secretKey.length);
-      console.log("- Secret key prefix:", secretKey.substring(0, 4));
-      console.log("- Timestamp:", timestamp);
-      console.log("- Body length:", bodyRaw.length);
-      console.log("- Signed payload length:", signedPayload.length);
-      console.log("- Signed payload (first 100 chars):", signedPayload.substring(0, 100));
-      
       // Hash signed payload using HMAC SHA256 and the secret key
       const hashedPayload = createHmac("sha256", secretKey)
         .update(signedPayload, "utf8")
         .digest("hex");
-
-      console.log("- Computed signature:", hashedPayload);
-      console.log("- Expected signature:", signature);
-      console.log("- Signatures match:", hashedPayload === signature);
 
       // Compare signatures
       if (!timingSafeEqual(Buffer.from(hashedPayload), Buffer.from(signature))) {
@@ -298,10 +218,6 @@ export async function POST(request: Request) {
         console.error("Computed:", hashedPayload);
         console.error("Expected:", signature);
         
-        // Try alternative verification methods for debugging
-        console.log("🔄 Trying alternative verification methods...");
-        
-        // Method 1: Try without timestamp
         const hmacBodyOnly = createHmac("sha256", secretKey)
           .update(bodyRaw, "utf8")
           .digest("hex");
@@ -328,13 +244,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ message: "Invalid signature" }, { status: 401 });
         }
       }
-
-      console.log("✅ Webhook signature verified successfully");
-      
-      // Parse the webhook event
       event = JSON.parse(bodyRaw);
-      console.log("Webhook event received:", event.event_type);
-      console.log("Event data:", JSON.stringify(event, null, 2));
     }
     
     // Extract data from the webhook event (available in both bypass and verification paths)
@@ -359,7 +269,7 @@ export async function POST(request: Request) {
         custom_data: customData,
       } = data;
 
-      const plan = items[0]?.product?.name || items[0]?.product?.description || 'Unknown Plan';
+      const plan = items[0]?.price?.name || items[0]?.price?.description || 'Unknown Plan';
       const amount = items[0]?.price?.unit_price?.amount;
 
       let user;
@@ -374,20 +284,17 @@ export async function POST(request: Request) {
 
       try {
         // Use the helper function to create or update subscription
-        await upsertSubscription({
-          subscriptionId,
-          customerId,
-          status,
-          plan,
-          amount,
-          currencyCode,
-          nextBilledAt,
-          billingCycle,
-          createdAt,
-          userId: user.id,
-        });
+        await upsertSubscription(data, user.id);
       } catch (error) {
-        if (error instanceof Error && error.message === "Plan not found") {
+        if (error instanceof Error && error.message.includes("Plan not found")) {
+          console.error("Plan not found error:", error.message);
+          // Log the data for debugging
+          console.error("Subscription data:", {
+            subscriptionId: data.id,
+            priceId: data.items?.[0]?.price?.id,
+            priceName: data.items?.[0]?.price?.name,
+            plan: data.items?.[0]?.price?.name
+          });
           return NextResponse.json({ error: "Plan not found" }, { status: 404 });
         }
         throw error;
@@ -496,20 +403,11 @@ export async function POST(request: Request) {
       if (eventType === EventName.TransactionCreated) {
         const {
           id: transactionId,
-          status,
           items,
           currency_code: currencyCode,
           custom_data: customData,
           subscription_id: subscriptionId, // This is the subscription ID if transaction is for a subscription
         } = data;
-
-        console.log("Transaction created event:", {
-          transactionId,
-          subscriptionId,
-          hasSubscriptionId: !!subscriptionId,
-          items: items?.length,
-          customData: customData || 'none'
-        });
 
         let user;
         const transactionCustomData = customData || data?.custom_data || {};
@@ -536,19 +434,60 @@ export async function POST(request: Request) {
 
         // If this transaction is for an existing subscription, just update payment info
         if (subscriptionId) {
-          await prisma.userSubscription.update({
+          console.log("Transaction for existing subscription, updating payment info only");
+          
+          // Find the existing subscription
+          const existingSubscription = await prisma.userSubscription.findFirst({
             where: {
               paddleSubscriptionId: subscriptionId,
             },
-            data: {
-              paddlePaymentId: transactionId,
-              paddlePaymentDate: new Date(),
-              paddlePaymentAmount: items[0]?.price?.unit_price?.amount ? parseFloat(items[0]?.price?.unit_price?.amount) : 0,
-              paddlePaymentCurrency: currencyCode,
-            },
           });
 
-          // Send payment confirmation email
+          if (existingSubscription) {
+            // Update payment information only
+            await prisma.userSubscription.update({
+              where: {
+                paddleSubscriptionId: subscriptionId,
+              },
+              data: {
+                paddlePaymentId: transactionId,
+                paddlePaymentDate: new Date(),
+                paddlePaymentAmount: items[0]?.price?.unit_price?.amount ? parseFloat(items[0]?.price?.unit_price?.amount) : 0,
+                paddlePaymentCurrency: currencyCode,
+              },
+            });
+
+            // Send payment confirmation email
+            try {
+              await sendEmail({
+                to: user.email,
+                subject: "Payment Received - Qurieus",
+                template: "payment-received",
+                context: {
+                  customerName: user.name || "Customer",
+                  planName: "Subscription Payment",
+                  amount: items[0]?.price?.unit_price?.amount/100,
+                  currency: currencyCode,
+                  transactionId,
+                  ...footerData
+                },
+              });
+            } catch (emailError) {
+              console.error("Error sending payment confirmation email:", emailError);
+            }
+          } else {
+            console.warn("Transaction for subscription but subscription not found:", subscriptionId);
+          }
+        } else {
+          // This is a one-time transaction (not for a subscription)
+          // For standalone transactions, we should NOT create a subscription
+          // Subscriptions should only be created via subscription webhooks
+          console.log("Standalone transaction - no subscription to create");
+          
+          // Just send payment confirmation email
+          const amount = items[0]?.price?.unit_price?.amount;
+          const plan = items[0]?.price?.name;
+
           try {
             await sendEmail({
               to: user.email,
@@ -556,8 +495,8 @@ export async function POST(request: Request) {
               template: "payment-received",
               context: {
                 customerName: user.name || "Customer",
-                planName: "Subscription Payment",
-                amount: items[0]?.price?.unit_price?.amount,
+                planName: plan || "One-time Payment",
+                amount: amount/100,
                 currency: currencyCode,
                 transactionId,
                 ...footerData
@@ -565,57 +504,6 @@ export async function POST(request: Request) {
             });
           } catch (emailError) {
             console.error("Error sending payment confirmation email:", emailError);
-          }
-        } else {
-          // This is a one-time transaction (not for a subscription)
-          // Handle as before for transaction-based subscriptions
-          const amount = items[0]?.price?.unit_price?.amount;
-          const plan = items[0]?.price?.name;
-
-          try {
-            await upsertSubscription({
-              subscriptionId: transactionId,
-              customerId: user.id,
-              status: "active",
-              plan,
-              amount,
-              currencyCode,
-              nextBilledAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              billingCycle: { interval: "monthly" },
-              createdAt: new Date().toISOString(),
-              userId: user.id,
-            });
-
-            // Update additional transaction-specific fields
-            await prisma.userSubscription.update({
-              where: {
-                paddleSubscriptionId: transactionId,
-              },
-              data: {
-                paddlePaymentId: transactionId,
-                paddlePaymentDate: new Date(),
-                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              },
-            });
-
-            await sendEmail({
-              to: user.email,
-              subject: "Payment Received - Qurieus",
-              template: "payment-received",
-              context: {
-                customerName: user.name || "Customer",
-                planName: plan,
-                amount,
-                currency: currencyCode,
-                transactionId,
-                ...footerData
-              },
-            });
-          } catch (error) {
-            if (error instanceof Error && error.message === "Plan not found") {
-              return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-            }
-            throw error;
           }
         }
       }

@@ -38,89 +38,56 @@ export default function Pricing({
   const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
   const [overlayLoading, setOverlayLoading] = useState(false);
 
-  // Common function to handle plan upgrade logic
+  // Simplified plan upgrade logic
   const handlePlanUpgrade = async (plan: SubscriptionPlanWithPaddle) => {
-    console.log("handlePlanUpgrade debug:", {
-      currentSubscriptionId,
-      currentSubscription: currentSubscription,
-      paddleSubscriptionId: currentSubscription?.paddleSubscriptionId,
-      paddleSubscriptionIdType: typeof currentSubscription?.paddleSubscriptionId,
-      paddleSubscriptionIdLength: currentSubscription?.paddleSubscriptionId?.length,
-      planName: plan.name,
-      priceId: plan.paddleConfig?.priceId
-    });
-    
-    // Check if user has a valid paid Paddle subscription
-    const hasValidPaidSubscription = !!currentSubscriptionId && 
-      !!currentSubscription?.paddleSubscriptionId && 
-      currentSubscription?.paddleSubscriptionId?.trim() !== '' &&
-      !currentSubscription?.paddleSubscriptionId?.startsWith('trial_') && // Not a trial subscription
-      currentSubscription?.billingCycle !== 'trial'; // Not a trial billing cycle
-    
-    if (hasValidPaidSubscription) {
-      // User already has a paid Paddle subscription, update plan (no checkout popup)
-      console.log("Updating existing paid subscription");
-      paddleRef.current?.updatePlan(currentSubscriptionId, plan.paddleConfig!.priceId);
-    } else {
-      // Check if user has existing payment methods with Paddle
-      try {
-        const customerCheck = await axios.post("/api/paddle/check-customer", {
-          priceId: plan.paddleConfig!.priceId
-        });
+    try {
+      // Check if user exists in Paddle and has payment methods
+      const customerCheck = await axios.post("/api/paddle/check-customer", {
+        priceId: plan.paddleConfig!.priceId
+      });
+      
+      console.log("Customer check result:", customerCheck.data);
+      
+      if (customerCheck.data.hasPaymentMethod) {
+        // User exists in Paddle, try direct payment
+        setOverlayLoading(true);
         
-        console.log("Customer check result:", customerCheck.data);
-        
-        // Check if user has a Paddle customer ID and payment methods
-        if (customerCheck.data.customerId && customerCheck.data.hasPaymentMethod) {
-          // User has payment method, try direct payment
-          console.log("User has Paddle customer ID and payment methods, attempting direct payment");
-          setOverlayLoading(true);
+        try {
+          const directPayment = await axios.post("/api/paddle/direct-payment", {
+            priceId: plan.paddleConfig!.priceId,
+            planId: plan.id
+          });
           
-          try {
-            const directPayment = await axios.post("/api/paddle/direct-payment", {
-              priceId: plan.paddleConfig!.priceId,
-              planId: plan.id
-            });
-            
-            if (directPayment.data.success) {
-              showToast.success("Payment processed successfully using existing payment method!");
-              // Refresh the page to update subscription state
-              window.location.reload();
-            } else if (directPayment.data.needsCheckout) {
-              // Fallback to checkout if direct payment not possible
-              console.log("Direct payment not possible, falling back to checkout");
-              setTimeout(() => {
-                paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
-              }, 100);
-            }
-          } catch (directError: any) {
-            console.error("Direct payment failed:", directError);
+          if (directPayment.data.success) {
+            showToast.success("Payment processed successfully!");
+            window.location.reload();
+          } else if (directPayment.data.needsCheckout) {
             // Fallback to checkout
-            console.log("Direct payment failed, falling back to checkout");
             setTimeout(() => {
               paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
             }, 100);
-          } finally {
-            setOverlayLoading(false);
           }
-        } else {
-          // User has no Paddle customer ID or no payment method, show checkout popup
-          console.log("No Paddle customer ID or payment method, opening Paddle checkout", {
-            hasCustomerId: !!customerCheck.data.customerId,
-            hasPaymentMethod: customerCheck.data.hasPaymentMethod
-          });
+        } catch (error) {
+          console.error("Direct payment failed:", error);
+          // Fallback to checkout
           setTimeout(() => {
             paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
           }, 100);
+        } finally {
+          setOverlayLoading(false);
         }
-      } catch (error) {
-        console.error("Error checking customer status:", error);
-        // Fallback to checkout if customer check fails
-        console.log("Customer check failed, falling back to checkout");
+      } else {
+        // User doesn't exist in Paddle, show checkout
         setTimeout(() => {
           paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
         }, 100);
       }
+    } catch (error) {
+      console.error("Error checking customer:", error);
+      // Fallback to checkout
+      setTimeout(() => {
+        paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
+      }, 100);
     }
   };
 
@@ -206,8 +173,6 @@ export default function Pricing({
   const handlePaddleComplete = async (
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
-    console.log("Paddle checkout complete event data:", data);
-    
     // Show success message immediately
     showToast.success("Payment processed successfully! Redirecting...");
     
@@ -228,10 +193,6 @@ export default function Pricing({
     setTimeout(() => {
       router.push("/user/subscription");
     }, 1000);
-  };
-  
-  const handlePaddleClose = (data: CheckoutEventsData | undefined) => {
-    console.log("User Closed Checkout");
   };
 
   const handlePaddleError = (data: CheckoutEventError | undefined) => {
@@ -332,7 +293,7 @@ export default function Pricing({
       id="pricing"
       className="bg-gray-1 pb-8 pt-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-16"
     >
-      <LoadingOverlay loading={overlayLoading} htmlText="Applying free trial..." />
+      <LoadingOverlay loading={overlayLoading} htmlText="Applying subscription..." />
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -343,7 +304,6 @@ export default function Pricing({
         ref={paddleRef}
         mode="overlay"
         onComplete={handlePaddleComplete}
-        onClose={handlePaddleClose}
         onError={handlePaddleError}
         onFailed={handlePaddleFailed}
         onUpdatePlan={onUpdatePlan}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
+import { ensureSingleActiveSubscription } from "@/utils/subscription";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,15 +50,7 @@ export async function POST(req: NextRequest) {
     trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
     // Deactivate all other subscriptions for this user
-    await prisma.userSubscription.updateMany({
-      where: {
-        userId: session.user.id,
-        status: "active",
-      },
-      data: {
-        status: "inactive",
-      },
-    });
+    await ensureSingleActiveSubscription(session.user.id);
 
     // Create trial subscription
     const trialSubscription = await prisma.userSubscription.create({

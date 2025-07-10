@@ -17,6 +17,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
     const subscription = await prisma.userSubscription.findFirst({
       where: {
         userId: userId,
+        status: "active",
       },
       include: {
         plan: true,
