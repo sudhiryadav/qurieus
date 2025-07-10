@@ -28,7 +28,7 @@ const Faq = () => {
             />
             <SingleFaq
               question="What happens if my account is deactivated?"
-              answer="If your account is deactivated by an admin, you will not be able to log in, and your chat widget will display: 'AI has temporarily stopped and will be resumed. Please contact admin.'"
+              answer="If your account is deactivated, you will not be able to log in, and your chat widget will display: 'AI has temporarily stopped and will be resumed. Please contact support.'"
             />
             <SingleFaq
               question="How do subscriptions and plans work?"
@@ -44,11 +44,19 @@ const Faq = () => {
             />
             <SingleFaq
               question="How do I reset my password?"
-              answer="Use the 'Forgot Password' link on the sign-in page. If you are an admin, you can also reset user passwords from the admin panel."
+              answer="Use the 'Forgot Password' link on the sign-in page. You'll receive an email with instructions to reset your password."
             />
             <SingleFaq
               question="Who do I contact for support?"
-              answer="For any questions or support, please use the 'Contact' page or reach out to your admin if you are part of an organization."
+              answer="For any questions or support, please use the 'Contact' page on our website or email us directly at support@qurieus.com."
+            />
+            <SingleFaq
+              question="What file formats are supported?"
+              answer="Qurieus supports PDF, DOCX, plain text, CSV, Markdown, and Excel files. You can upload multiple files at once and organize them by categories."
+            />
+            <SingleFaq
+              question="How do I embed the chat widget on my website?"
+              answer="After setting up your knowledge base, go to the 'Widget' section in your dashboard. Copy the provided JavaScript code and paste it into your website's HTML. The widget will automatically appear on your site."
             />
         </div>
       </div>
