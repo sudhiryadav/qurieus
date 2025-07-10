@@ -43,13 +43,13 @@ export default function SignUp({
     try {
       const email = user.email;
 
-      if (process.env.NODE_ENV !== "development" && !isBusinessEmail(email)) {
+      if (process.env.NEXT_PUBLIC_ALLOW_PERSONAL_EMAILS !== "true" && !isBusinessEmail(email)) {
         showToast.error("Please use a business email address");
         setLoading(false);
         return;
       }
 
-      const response = await axios.post("/api/user/signup", user);
+      await axios.post("/api/user/signup", user);
       
       // If we get here, either it's a new user or an unverified user
       showToast.success("Verification code sent to your email!");
