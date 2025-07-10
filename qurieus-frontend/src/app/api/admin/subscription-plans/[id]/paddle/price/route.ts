@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
-import { Environment, Paddle } from "@paddle/paddle-node-sdk";
-
-const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
-  environment:
-    process.env.NODE_ENV === "production"
-      ? Environment.production
-      : Environment.sandbox,
-});
+import paddle from "@/lib/paddle";
 
 export async function POST(
   request: NextRequest,

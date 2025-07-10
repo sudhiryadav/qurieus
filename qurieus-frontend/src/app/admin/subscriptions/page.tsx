@@ -124,21 +124,21 @@ export default function AdminSubscriptionsPage() {
               </tr>
             ) : (
               filteredSubscriptions.map(sub => (
-                <tr key={sub.id} className="border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-4 py-3 text-sm font-medium text-dark dark:text-white">{sub.user.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.user.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.plan.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.status}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(sub.currentPeriodStart).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(sub.currentPeriodEnd).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(sub.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEditClick(sub)}>Edit</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteSubscription(sub.id)}>Delete</Button>
-                    </div>
-                  </td>
-                </tr>
+              <tr key={sub.id} className="border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <td className="px-4 py-3 text-sm font-medium text-dark dark:text-white">{sub.user.name}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.user.email}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.plan.name}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.status}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(sub.currentPeriodStart).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(sub.currentPeriodEnd).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(sub.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-3">
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEditClick(sub)}>Edit</Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteSubscription(sub.id)}>Delete</Button>
+                  </div>
+                </td>
+              </tr>
               ))
             )}
           </tbody>

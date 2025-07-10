@@ -1,7 +1,7 @@
 "use client";
 
 import ChatWidget from "@/components/ChatWidget";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, FileText, Upload } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,6 +10,8 @@ export default function EmbedCode() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [previewConfig, setPreviewConfig] = useState({
     theme: 'light',
     position: 'bottom-right',
@@ -21,12 +23,65 @@ export default function EmbedCode() {
     if (status === "unauthenticated") {
       router.push("/signin");
     }
-  }, [status, router]);
+    const fetchDocuments = async () => {
+        try {
+          const response = await fetch('/api/documents');
+          if (response.ok) {
+            const data = await response.json();
+            setDocuments(data.documents || []);
+          }
+        } catch (error) {
+          console.error('Error fetching documents:', error);
+        } finally {
+          setLoading(false);
+        }
+    };
 
-  if (status === "loading") {
+    fetchDocuments();
+  }, [status, session?.user?.id,router]);
+
+  if (status === "loading" || loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center pt-16">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (documents.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="rounded-full bg-blue-100 p-4 dark:bg-blue-900/20">
+              <FileText className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          
+          <h1 className="mb-4 text-3xl font-bold">No Documents Found</h1>
+          <p className="mb-6 text-gray-600 dark:text-gray-300">
+            You need to add documents to your knowledge base before you can embed the chat widget.
+          </p>
+          
+          <div className="space-y-4">
+            <button
+              onClick={() => router.push('/user/knowledge-base')}
+              className="inline-flex items-center space-x-2 rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90"
+            >
+              <Upload className="h-5 w-5" />
+              <span>Upload Documents</span>
+            </button>
+            
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              <p>Once you have documents in your knowledge base, you&apos;ll be able to:</p>
+              <ul className="mt-2 list-inside list-disc space-y-1">
+                <li>Configure and customize your chat widget</li>
+                <li>Preview how it will look on your website</li>
+                <li>Get the embed code to add to your site</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

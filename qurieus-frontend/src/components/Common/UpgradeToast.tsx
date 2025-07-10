@@ -12,6 +12,7 @@ const UpgradeToastContent: React.FC<UpgradeToastProps> = ({ message, daysLeft })
   const router = useRouter();
 
   const handleUpgrade = () => {
+    toast.dismiss(); // Close the toast first
     router.push('/pricing');
   };
 

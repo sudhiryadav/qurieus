@@ -1,9 +1,4 @@
-const { Paddle, Environment } = require('@paddle/paddle-node-sdk');
-
-// Initialize Paddle
-const paddle = new Paddle(process.env.PADDLE_API_KEY, {
-  environment: process.env.NODE_ENV === 'production' ? Environment.production : Environment.sandbox,
-});
+import paddle from '@/lib/paddle';
 
 async function cleanupFreeTrialProducts() {
   try {

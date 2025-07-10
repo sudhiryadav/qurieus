@@ -20,9 +20,9 @@ export const footerData = {
   year: new Date().getFullYear(),
 }
 
-const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.svg`;
+const logoUrl = `https://qurieus.com/images/logo/logo.png`;
 const year = new Date().getFullYear();
-
+ 
 // Register partials
 const partialsDir = path.resolve("./src/templates/emails/partials/");
 fs.readdirSync(partialsDir).forEach((file) => {

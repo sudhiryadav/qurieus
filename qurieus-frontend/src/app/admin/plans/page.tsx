@@ -104,18 +104,18 @@ export default function AdminPlansPage() {
       let response;
       if (editingPlan) {
         response = await axios.patch(
-          `/api/admin/subscription-plans/${editingPlan.id}`,
-          {
-            ...editForm,
-            features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
-          }
-        );
+        `/api/admin/subscription-plans/${editingPlan.id}`,
+        {
+          ...editForm,
+          features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
+        }
+      );
         showToast.success("Subscription plan updated successfully. Paddle sync will be triggered automatically.");
       } else {
         response = await axios.post("/api/admin/subscription-plans", {
-          ...editForm,
-          features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
-        });
+        ...editForm,
+        features: editForm.features.split(",").map(f => f.trim()).filter(Boolean),
+      });
         showToast.success("Plan created successfully. Paddle sync will be triggered automatically.");
       }
       // Always refresh plans from backend after add/edit
@@ -141,8 +141,8 @@ export default function AdminPlansPage() {
         console.error("Error updating subscription plan:", error);
         showToast.error("Failed to update subscription plan");
       } else {
-        console.error("Error creating plan:", error);
-        showToast.error("Failed to create plan");
+      console.error("Error creating plan:", error);
+      showToast.error("Failed to create plan");
       }
     }
   };

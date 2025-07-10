@@ -18,6 +18,8 @@ import {
   useState,
 } from "react";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 export type PaddleCheckoutProps = {
   mode?: "overlay" | "inline";
@@ -53,8 +55,10 @@ export const PaddleCheckout = forwardRef<
     ref,
   ) => {
     const { theme } = useTheme();
+    const router = useRouter();
     const inlineContainerRef = useRef<HTMLDivElement>(null);
     const [paddle, setPaddle] = useState<Paddle | null>(null);
+    const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
 
     const { data: session } = useSession();
     const { email, id: applicationCustomerId, name } = session?.user || {}; // Use 'id' as applicationCustomerId
@@ -65,20 +69,25 @@ export const PaddleCheckout = forwardRef<
           process.env.NODE_ENV === "production" ? "production" : "sandbox",
         token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
         eventCallback: (event: PaddleEventData) => {
+          console.log("Paddle event received:", event.name, event.data);
+          
           if (event.name === CheckoutEventNames.CHECKOUT_COMPLETED) {
+            console.log("Checkout completed, closing immediately");
             onComplete?.(event.data);
+            // Close checkout immediately when payment is completed
             paddle?.Checkout.close();
           }
           if (event.name === CheckoutEventNames.CHECKOUT_CLOSED) {
+            console.log("Checkout closed");
             onClose?.(event.data);
-            // Don't call close again here, it's already closed.
-            // paddle?.Checkout.close();
           }
           if (event.name === CheckoutEventNames.CHECKOUT_ERROR) {
+            console.log("Checkout error:", event.error);
             onError?.(event.error);
             paddle?.Checkout.close();
           }
           if (event.name === CheckoutEventNames.CHECKOUT_FAILED) {
+            console.log("Checkout failed");
             onFailed?.(event.data);
             paddle?.Checkout.close();
           }
@@ -102,40 +111,68 @@ export const PaddleCheckout = forwardRef<
 
     function openCheckout(priceId: string, planId: string) {
       if (!paddle) return;
+      
+      // Security validation
+      if (!applicationCustomerId || !email) {
+        console.error("Missing required user data for checkout");
+        toast.error("Authentication error. Please log in again.");
+        return;
+      }
+      
+      console.log("Opening checkout for user:", {
+        userId: applicationCustomerId,
+        email: email,
+        name: name,
+        priceId: priceId,
+        planId: planId
+      });
+      
       const settings: CheckoutSettings = {
         theme: theme === "dark" ? "dark" : "light",
         displayMode: mode,
       };
+      
       paddle.Checkout.open({
         settings,
         items: [{ priceId }],
-        customer: email ? { email } : undefined, // Ensure email is valid
+        customer: { 
+          email: email,
+        },
         customData: {
           application_customer_id: applicationCustomerId,
           application_customer_email: email,
           application_customer_name: name,
           application_plan_id: planId,
+          session_id: session?.user?.id,
+          timestamp: Date.now().toString(),
         },
       });
     }
 
     async function updatePlan(subscriptionId: string, priceId: string) {
-      if (!subscriptionId || !priceId)  return;
+      if (!subscriptionId || !priceId) return;
 
+      setIsUpdatingPlan(true);
       try {
         const response = await axios.post('/api/paddle/update-plan', {
           subscriptionId,
           priceId,
         });
         if (response.data.success) {
-          toast.success("Plan updated successfully. Please wait for the subscription to be updated in the customer portal.");
+          toast.success("Plan upgraded successfully! Redirecting to subscription page...");
           onUpdatePlan?.(subscriptionId, priceId);
+          // Redirect to subscription page after successful upgrade
+          setTimeout(() => {
+            router.push('/user/subscription');
+          }, 1500);
         } else {
-          toast.error(response.data.error);
+          toast.error(response.data.error || "Failed to upgrade plan");
         }
       } catch (error) {
         console.error("Error updating plan:", error);
-        toast.error("Error updating plan");
+        toast.error("Error updating plan. Please try again.");
+      } finally {
+        setIsUpdatingPlan(false);
       }
     }
 
@@ -165,9 +202,17 @@ export const PaddleCheckout = forwardRef<
       }
     }
 
-    return mode === "inline" ? (
+    return (
+      <>
+        <LoadingOverlay 
+          loading={isUpdatingPlan} 
+          htmlText="Upgrading your plan..." 
+        />
+        {mode === "inline" ? (
       <div ref={inlineContainerRef} className={className} id="paddle-inline-checkout" />
-    ) : null;
+        ) : null}
+      </>
+    );
   },
 );
 

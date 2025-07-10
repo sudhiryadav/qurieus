@@ -1,6 +1,14 @@
 import axios from "axios";
 import { prisma } from "@/utils/prismaDB";
-import { EventName } from '@paddle/paddle-node-sdk';
+import { EventName, LogLevel, Environment, Paddle } from "@paddle/paddle-node-sdk";
+
+const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
+  environment:
+    process.env.NODE_ENV === "production"
+      ? Environment.production
+      : Environment.sandbox,
+  logLevel: LogLevel.verbose,
+});
 
 // Re-export EventName for easier imports
 export { EventName };
@@ -58,3 +66,5 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
     },
   });
 } 
+
+export default paddle;

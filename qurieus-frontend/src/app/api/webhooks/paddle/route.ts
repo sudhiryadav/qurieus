@@ -1,5 +1,5 @@
 import { footerData, sendEmail } from "@/lib/email";
-import { EventName } from "@/lib/paddle";
+import paddle,{ EventName } from "@/lib/paddle";
 import { prisma } from "@/utils/prismaDB";
 import fs from "fs/promises";
 import handlebars from "handlebars";
@@ -7,7 +7,6 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import path from "path";
 import puppeteer from "puppeteer";
-import { Paddle } from '@paddle/paddle-node-sdk';
 import { createHmac, timingSafeEqual } from "crypto";
 
 // Register Handlebars helpers
@@ -19,8 +18,124 @@ handlebars.registerHelper("formatAmount", (amount: string) =>
 );
 handlebars.registerHelper("eq", (a: string, b: string) => a === b);
 
-// Initialize Paddle SDK
-const paddle = new Paddle(process.env.PADDLE_API_KEY || '');
+// Helper function to validate webhook security and get user
+async function validateWebhookAndGetUser(customData: any) {
+  // Enhanced security validation
+  const applicationCustomerId = customData?.application_customer_id;
+  const applicationCustomerEmail = customData?.application_customer_email;
+  const sessionId = customData?.session_id;
+  const timestamp = customData?.timestamp;
+
+  console.log("Security validation:", {
+    applicationCustomerId,
+    applicationCustomerEmail,
+    sessionId,
+    timestamp,
+    currentTime: Date.now(),
+    timestampAge: timestamp ? Date.now() - parseInt(timestamp) : 'N/A'
+  });
+
+  // Validate required fields
+  if (!applicationCustomerId) {
+    console.error("Missing application_customer_id in webhook");
+    throw new Error("Invalid webhook data");
+  }
+
+  // Validate timestamp (prevent replay attacks - max 5 minutes old)
+  if (timestamp && (Date.now() - parseInt(timestamp)) > 5 * 60 * 1000) {
+    console.error("Webhook timestamp too old, possible replay attack");
+    throw new Error("Webhook expired");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: applicationCustomerId,
+    },
+  });
+
+  if (!user) {
+    console.error("User not found for customer ID:", applicationCustomerId);
+    throw new Error("User not found");
+  }
+
+  // Validate email matches (additional security)
+  if (applicationCustomerEmail && applicationCustomerEmail !== user.email) {
+    console.error("Email mismatch in webhook:", {
+      webhookEmail: applicationCustomerEmail,
+      userEmail: user.email
+    });
+    throw new Error("Email validation failed");
+  }
+
+  return user;
+}
+
+// Helper function to create or update subscription
+async function upsertSubscription({
+  subscriptionId,
+  customerId,
+  status,
+  plan,
+  amount,
+  currencyCode,
+  nextBilledAt,
+  billingCycle,
+  createdAt,
+  userId,
+}: {
+  subscriptionId: string;
+  customerId: string;
+  status: string;
+  plan: string;
+  amount: string | number;
+  currencyCode: string;
+  nextBilledAt?: string;
+  billingCycle?: { interval: string };
+  createdAt?: string;
+  userId: string;
+}) {
+  // Find the plan in our database
+  const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
+    where: {
+      name: plan,
+    },
+  });
+
+  if (!subscriptionPlan) {
+    throw new Error("Plan not found");
+  }
+
+  // Upsert subscription - handles both create and update
+  return await prisma.userSubscription.upsert({
+    where: {
+      paddleSubscriptionId: subscriptionId,
+    },
+    create: {
+      paddleSubscriptionId: subscriptionId,
+      paddleCustomerId: customerId,
+      status,
+      paddlePaymentAmount: amount ? parseFloat(amount.toString()) : 0,
+      paddlePaymentCurrency: currencyCode,
+      nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
+      billingCycle: billingCycle?.interval || "monthly",
+      startDate: createdAt ? new Date(createdAt) : new Date(),
+      currentPeriodStart: createdAt ? new Date(createdAt) : new Date(),
+      currentPeriodEnd: nextBilledAt ? new Date(nextBilledAt) : new Date(),
+      userId,
+      planId: subscriptionPlan.id,
+    },
+    update: {
+      status,
+      paddlePaymentAmount: amount ? parseFloat(amount.toString()) : 0,
+      paddlePaymentCurrency: currencyCode,
+      nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
+      billingCycle: billingCycle?.interval || "monthly",
+      currentPeriodStart: createdAt ? new Date(createdAt) : new Date(),
+      currentPeriodEnd: nextBilledAt ? new Date(nextBilledAt) : new Date(),
+      planId: subscriptionPlan.id,
+    },
+  });
+}
 
 async function generateInvoicePDF({
   customerName,
@@ -225,211 +340,130 @@ export async function POST(request: Request) {
     // Extract data from the webhook event (available in both bypass and verification paths)
     const { event_type: eventType, data } = event;
 
-      if (eventType === EventName.SubscriptionCreated) {
-        const {
-          id: subscriptionId,
+    // Handle all subscription status changes with a single, unified approach
+    if (eventType === EventName.SubscriptionUpdated || 
+        eventType === EventName.SubscriptionCreated || 
+        eventType === EventName.SubscriptionActivated ||
+        eventType === EventName.SubscriptionPaused ||
+        eventType === EventName.SubscriptionResumed) {
+      
+      const {
+        id: subscriptionId,
+        status,
+        items,
+        next_billed_at: nextBilledAt,
+        billing_cycle: billingCycle,
+        currency_code: currencyCode,
+        created_at: createdAt,
+        customer_id: customerId,
+        custom_data: customData,
+      } = data;
+
+      const plan = items[0]?.product?.name || items[0]?.product?.description || 'Unknown Plan';
+      const amount = items[0]?.price?.unit_price?.amount;
+
+      let user;
+      try {
+        user = await validateWebhookAndGetUser(customData);
+      } catch (error) {
+        if (error instanceof Error) {
+          return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+        throw error;
+      }
+
+      try {
+        // Use the helper function to create or update subscription
+        await upsertSubscription({
+          subscriptionId,
+          customerId,
           status,
-          items,
+          plan,
+          amount,
+          currencyCode,
           nextBilledAt,
           billingCycle,
-          currencyCode,
           createdAt,
-          customerId,
-          customData,
-        } = data;
-
-        const plan = items[0]?.product?.name || items[0]?.product?.description || 'Unknown Plan';
-        const amount = items[0]?.price?.unitPrice?.amount;
-
-        const user = await prisma.user.findFirst({
-          where: {
-            id: (customData as any)?.application_customer_id,
-          },
+          userId: user.id,
         });
-
-        if (!user) {
-          return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
-        // First find the plan in our database
-        const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
-          where: {
-            name: plan,
-          },
-        });
-
-        if (!subscriptionPlan) {
+      } catch (error) {
+        if (error instanceof Error && error.message === "Plan not found") {
           return NextResponse.json({ error: "Plan not found" }, { status: 404 });
         }
+        throw error;
+      }
 
-        // if the subscription already exists, update it
-        await prisma.userSubscription.upsert({
-          where: {
-            paddleSubscriptionId: subscriptionId,
-          },
-          create: {
-            paddleSubscriptionId: subscriptionId,
-            paddleCustomerId: customerId,
-            status,
-            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-            paddlePaymentCurrency: currencyCode,
-            nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-            billingCycle: billingCycle.interval,
-            startDate: createdAt ? new Date(createdAt) : new Date(),
-            currentPeriodStart: createdAt ? new Date(createdAt) : new Date(),
-            currentPeriodEnd: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-            userId: user.id,
-            planId: subscriptionPlan.id,
-          },
-          update: {
-            status,
-            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-            paddlePaymentCurrency: currencyCode,
-            nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-            billingCycle: billingCycle.interval,
-            currentPeriodStart: createdAt ? new Date(createdAt) : new Date(),
-            currentPeriodEnd: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-            planId: subscriptionPlan.id,
-          },
-        });
-
-        try {
-          const invoicePDF = await generateInvoicePDF({
-            customerName: user.name || "Customer",
-            customerEmail: user.email,
-            subscriptionId,
-            planName: subscriptionPlan.name,
-            amount: amount || '0',
-            currency: currencyCode,
-            date: createdAt ? new Date(createdAt) : new Date(),
-            status,
-          });
-
-          await sendEmail({
-            to: user.email,
-            subject: "Welcome to Qurieus - Your Subscription Details",
-            template: "subscription-confirmation",
-            context: {
-              customerName: user.name || "Customer",
-              planName: subscriptionPlan.name,
-              amount,
-              currency: currencyCode,
-              billingCycle: billingCycle.interval,
-              nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A',
-              ...footerData
-            },
-            attachments: [
-              {
-                filename: `invoice-${subscriptionId}.pdf`,
-                content: invoicePDF,
-                contentType: "application/pdf",
-              },
-            ],
-          });
-
-          await sendEmail({
-            to: process.env.ADMIN_EMAIL || "admin@qurieus.com",
-            subject: "New Subscription Created",
-            template: "admin-subscription-notification",
-            context: {
+              // Send email only for new subscriptions
+        if (eventType === EventName.SubscriptionCreated) {
+          try {
+            const invoicePDF = await generateInvoicePDF({
               customerName: user.name || "Customer",
               customerEmail: user.email,
-              planName: subscriptionPlan.name,
-              amount,
+              subscriptionId,
+              planName: plan,
+              amount: amount || '0',
               currency: currencyCode,
-              billingCycle: billingCycle.interval,
-              nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A',
-              ...footerData
-            },
-          });
-        } catch (emailError) {
-          console.error("Error sending subscription confirmation email:", emailError);
+              date: createdAt ? new Date(createdAt) : new Date(),
+              status,
+            });
+
+            await sendEmail({
+              to: user.email,
+              subject: "Welcome to Qurieus - Your Subscription Details",
+              template: "subscription-confirmation",
+              context: {
+                customerName: user.name || "Customer",
+                planName: plan,
+                amount,
+                currency: currencyCode,
+                billingCycle: billingCycle.interval,
+                nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A',
+                ...footerData
+              },
+              attachments: [
+                {
+                  filename: `invoice-${subscriptionId}.pdf`,
+                  content: invoicePDF,
+                  contentType: "application/pdf",
+                },
+              ],
+            });
+
+            await sendEmail({
+              to: process.env.ADMIN_EMAIL || "admin@qurieus.com",
+              subject: "New Subscription Created",
+              template: "admin-subscription-notification",
+              context: {
+                customerName: user.name || "Customer",
+                customerEmail: user.email,
+                planName: plan,
+                amount,
+                currency: currencyCode,
+                billingCycle: billingCycle.interval,
+                nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A',
+                ...footerData
+              },
+            });
+          } catch (emailError) {
+            console.error("Error sending subscription confirmation email:", emailError);
+          }
         }
-      }
+    }
 
-      //#region Subscription Updated
-      if (eventType === EventName.SubscriptionUpdated) {
-        const {
-          id: subscriptionId,
-          status,
-          items,
-          nextBilledAt,
-          billingCycle,
-          currencyCode,
-          customData,
-        } = data;
 
-        const plan = items[0]?.product?.name || items[0]?.product?.description || 'Unknown Plan';
-        const amount = items[0]?.price?.unitPrice?.amount;
-
-        const user = await prisma.user.findFirst({
-          where: {
-            id: (customData as any)?.application_customer_id,
-          },
-        });
-
-        if (!user) {
-          return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
-        // First find the plan in our database
-        const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
-          where: {
-            name: plan,
-          },
-        });
-
-        if (!subscriptionPlan) {
-          return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-        }
-
-        // Update the subscription
-        await prisma.userSubscription.update({
-          where: {
-            paddleSubscriptionId: subscriptionId,
-          },
-          data: {
-            status,
-            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-            paddlePaymentCurrency: currencyCode,
-            nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-            billingCycle: billingCycle.interval,
-            planId: subscriptionPlan.id,
-          },
-        });
-
-        try {
-          await sendEmail({
-            to: user.email,
-            subject: "Your Qurieus Subscription Has Been Updated",
-            template: "subscription-updated",
-            context: {
-              customerName: user.name || "Customer",
-              planName: subscriptionPlan.name,
-              amount,
-              currency: currencyCode,
-              billingCycle: billingCycle.interval,
-              nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A',
-              ...footerData
-            },
-          });
-        } catch (emailError) {
-          console.error("Error sending subscription update email:", emailError);
-        }
-      }
 
       //#region Subscription Cancelled
       if (eventType === EventName.SubscriptionCanceled) {
-        const { id: subscriptionId, status, customData } = data;
+        const { id: subscriptionId, status, custom_data: customData } = data;
 
-        const user = await prisma.user.findFirst({
-          where: {
-            id: (customData as any)?.application_customer_id,
-          },
-        });
-
-        if (!user) {
-          return NextResponse.json({ error: "User not found" }, { status: 404 });
+        let user;
+        try {
+          user = await validateWebhookAndGetUser(customData);
+        } catch (error) {
+          if (error instanceof Error) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+          }
+          throw error;
         }
 
         // Update the subscription status
@@ -457,197 +491,136 @@ export async function POST(request: Request) {
         }
       }
 
-      //#region Subscription Activated
-      if (eventType === EventName.SubscriptionActivated) {
-        const {
-          id: subscriptionId,
-          status,
-          items,
-          nextBilledAt,
-          billingCycle,
-          currencyCode,
-          customData,
-        } = data;
-
-        const plan = items[0]?.product?.name || items[0]?.product?.description || 'Unknown Plan';
-        const amount = items[0]?.price?.unitPrice?.amount;
-
-        const user = await prisma.user.findFirst({
-          where: {
-            id: (customData as any)?.application_customer_id,
-          },
-        });
-
-        if (!user) {
-          return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
-        // First find the plan in our database
-        const subscriptionPlan = await prisma.subscriptionPlan.findFirst({
-          where: {
-            name: plan,
-          },
-        });
-
-        if (!subscriptionPlan) {
-          return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-        }
-
-        // Update the subscription
-        await prisma.userSubscription.update({
-          where: {
-            paddleSubscriptionId: subscriptionId,
-          },
-          data: {
-            status,
-            paddlePaymentAmount: amount ? parseFloat(amount) : 0,
-            paddlePaymentCurrency: currencyCode,
-            nextBillingDate: nextBilledAt ? new Date(nextBilledAt) : new Date(),
-            billingCycle: billingCycle.interval,
-            planId: subscriptionPlan.id,
-          },
-        });
-
-        try {
-          await sendEmail({
-            to: user.email,
-            subject: "Your Qurieus Subscription Has Been Activated",
-            template: "subscription-activated",
-            context: {
-              customerName: user.name || "Customer",
-              planName: subscriptionPlan.name,
-              amount,
-              currency: currencyCode,
-              billingCycle: billingCycle.interval,
-              nextBillingDate: nextBilledAt ? new Date(nextBilledAt).toLocaleDateString() : 'N/A',
-              ...footerData
-            },
-          });
-        } catch (emailError) {
-          console.error("Error sending subscription activation email:", emailError);
-        }
-      }
 
       //#region Transaction Completed
-      if (eventType === EventName.TransactionCompleted) {
+      if (eventType === EventName.TransactionCreated) {
         const {
           id: transactionId,
           status,
           items,
-          currencyCode,
-          customData,
+          currency_code: currencyCode,
+          custom_data: customData,
+          subscription_id: subscriptionId, // This is the subscription ID if transaction is for a subscription
         } = data;
 
-        // For transaction items, we need to access the product differently
-        const amount = items[0]?.price?.unitPrice?.amount;
-        const plan = 'Transaction Completed'; // Transaction items don't have direct product info
-
-        const user = await prisma.user.findFirst({
-          where: {
-            id: (customData as any)?.application_customer_id,
-          },
+        console.log("Transaction created event:", {
+          transactionId,
+          subscriptionId,
+          hasSubscriptionId: !!subscriptionId,
+          items: items?.length,
+          customData: customData || 'none'
         });
 
-        if (!user) {
-          return NextResponse.json({ error: "User not found" }, { status: 404 });
+        let user;
+        const transactionCustomData = customData || data?.custom_data || {};
+        try {
+          user = await validateWebhookAndGetUser(transactionCustomData);
+        } catch (error: any) {
+          console.error("Transaction webhook validation failed:", error.message);
+          // For transaction events, try to get user from subscription if available
+          if (subscriptionId) {
+            const existingSubscription = await prisma.userSubscription.findFirst({
+              where: { paddleSubscriptionId: subscriptionId },
+              include: { user: true }
+            });
+            if (existingSubscription) {
+              user = existingSubscription.user;
+              console.log("Found user from existing subscription:", user.id);
+            } else {
+              return NextResponse.json({ error: error.message }, { status: 400 });
+            }
+          } else {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+          }
         }
 
-        try {
-          await sendEmail({
-            to: user.email,
-            subject: "Payment Received - Qurieus",
-            template: "payment-received",
-            context: {
-              customerName: user.name || "Customer",
-              planName: plan,
+        // If this transaction is for an existing subscription, just update payment info
+        if (subscriptionId) {
+          await prisma.userSubscription.update({
+            where: {
+              paddleSubscriptionId: subscriptionId,
+            },
+            data: {
+              paddlePaymentId: transactionId,
+              paddlePaymentDate: new Date(),
+              paddlePaymentAmount: items[0]?.price?.unit_price?.amount ? parseFloat(items[0]?.price?.unit_price?.amount) : 0,
+              paddlePaymentCurrency: currencyCode,
+            },
+          });
+
+          // Send payment confirmation email
+          try {
+            await sendEmail({
+              to: user.email,
+              subject: "Payment Received - Qurieus",
+              template: "payment-received",
+              context: {
+                customerName: user.name || "Customer",
+                planName: "Subscription Payment",
+                amount: items[0]?.price?.unit_price?.amount,
+                currency: currencyCode,
+                transactionId,
+                ...footerData
+              },
+            });
+          } catch (emailError) {
+            console.error("Error sending payment confirmation email:", emailError);
+          }
+        } else {
+          // This is a one-time transaction (not for a subscription)
+          // Handle as before for transaction-based subscriptions
+          const amount = items[0]?.price?.unit_price?.amount;
+          const plan = items[0]?.price?.name;
+
+          try {
+            await upsertSubscription({
+              subscriptionId: transactionId,
+              customerId: user.id,
+              status: "active",
+              plan,
               amount,
-              currency: currencyCode,
-              transactionId,
-              ...footerData
-            },
-          });
-        } catch (emailError) {
-          console.error("Error sending payment confirmation email:", emailError);
+              currencyCode,
+              nextBilledAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              billingCycle: { interval: "monthly" },
+              createdAt: new Date().toISOString(),
+              userId: user.id,
+            });
+
+            // Update additional transaction-specific fields
+            await prisma.userSubscription.update({
+              where: {
+                paddleSubscriptionId: transactionId,
+              },
+              data: {
+                paddlePaymentId: transactionId,
+                paddlePaymentDate: new Date(),
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              },
+            });
+
+            await sendEmail({
+              to: user.email,
+              subject: "Payment Received - Qurieus",
+              template: "payment-received",
+              context: {
+                customerName: user.name || "Customer",
+                planName: plan,
+                amount,
+                currency: currencyCode,
+                transactionId,
+                ...footerData
+              },
+            });
+          } catch (error) {
+            if (error instanceof Error && error.message === "Plan not found") {
+              return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+            }
+            throw error;
+          }
         }
       }
 
-      //#region Subscription Paused
-      if (eventType === EventName.SubscriptionPaused) {
-        const { id: subscriptionId, status, customData } = data;
 
-        const user = await prisma.user.findFirst({
-          where: {
-            id: (customData as any)?.application_customer_id,
-          },
-        });
-
-        if (!user) {
-          return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
-        // Update the subscription status
-        await prisma.userSubscription.update({
-          where: {
-            paddleSubscriptionId: subscriptionId,
-          },
-          data: {
-            status,
-          },
-        });
-
-        try {
-          await sendEmail({
-            to: user.email,
-            subject: "Your Qurieus Subscription Has Been Paused",
-            template: "subscription-paused",
-            context: {
-              customerName: user.name || "Customer",
-              ...footerData
-            },
-          });
-        } catch (emailError) {
-          console.error("Error sending subscription pause email:", emailError);
-        }
-      }
-
-      //#region Subscription Unpaused
-      if (eventType === EventName.SubscriptionResumed) {
-        const { id: subscriptionId, status, customData } = data;
-
-        const user = await prisma.user.findFirst({
-          where: {
-            id: (customData as any)?.application_customer_id,
-          },
-        });
-
-        if (!user) {
-          return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
-        // Update the subscription status
-        await prisma.userSubscription.update({
-          where: {
-            paddleSubscriptionId: subscriptionId,
-          },
-          data: {
-            status,
-          },
-        });
-
-        try {
-          await sendEmail({
-            to: user.email,
-            subject: "Your Qurieus Subscription Has Been Resumed",
-            template: "subscription-resumed",
-            context: {
-              customerName: user.name || "Customer",
-              ...footerData
-            },
-          });
-        } catch (emailError) {
-          console.error("Error sending subscription resume email:", emailError);
-        }
-      }
 
       return NextResponse.json({ success: true });
   } catch (error) {

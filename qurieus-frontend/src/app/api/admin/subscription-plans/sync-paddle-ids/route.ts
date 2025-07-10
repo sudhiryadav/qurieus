@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
-import { Environment, Paddle } from "@paddle/paddle-node-sdk";
+import paddle from "@/lib/paddle";
 import axios from "axios";
-
-const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
-  environment: process.env.NODE_ENV === "production" ? Environment.production : Environment.sandbox,
-});
 
 // Fallback function to manually fetch products from Paddle API
 async function fetchProductsManually(): Promise<any[]> {

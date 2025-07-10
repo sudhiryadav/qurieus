@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
       data: {
         userId: session.user.id,
         planId: freeTrialPlan.id,
-        paddleSubscriptionId: `trial_${session.user.id}_${Date.now()}`, // Generate unique trial ID
-        paddleCustomerId: session.user.id, // Use user ID as customer ID for trials
+        paddleSubscriptionId: `trial_${session.user.id}_${Date.now()}`,
+        paddleCustomerId: "",
         status: "active",
         currentPeriodStart: new Date(),
         currentPeriodEnd: trialEndDate,
