@@ -25,7 +25,7 @@ export default function EmbedCode() {
     }
     const fetchDocuments = async () => {
         try {
-          const response = await fetch('/api/documents');
+          const response = await fetch('/api/admin/documents');
           if (response.ok) {
             const data = await response.json();
             setDocuments(data.documents || []);
