@@ -525,7 +525,7 @@ export default function AdminPlansPage() {
               </h3>
               <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 <p>This action will:</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
+                <ul className="list-disc list-inside mt-2 space-y-1 text-gray-500 dark:text-gray-400">
                   <li>Archive the plan (not available for new subscriptions)</li>
                   <li>Preserve all existing data and Paddle configuration</li>
                   <li>Update the corresponding Paddle product status</li>
