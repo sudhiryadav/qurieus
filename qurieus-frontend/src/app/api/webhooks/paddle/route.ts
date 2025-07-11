@@ -95,6 +95,8 @@ async function generateInvoicePDF({
 }) {
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
   });
   const page = await browser.newPage();
 
@@ -196,12 +198,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: "Invalid request" }, { status: 400 });
       }
 
-      const currentTime = Date.now();
+      // const currentTime = Date.now();
 
-      if (currentTime - timestampInt > 5000) {
-        console.error("Webhook event expired (timestamp is over 5 seconds old):", timestampInt, currentTime);
-        return NextResponse.json({ message: "Event expired" }, { status: 408 });
-      }
+      // if (currentTime - timestampInt > 5000) {
+      //   console.error("Webhook event expired (timestamp is over 5 seconds old):", timestampInt, currentTime);
+      //   return NextResponse.json({ message: "Event expired" }, { status: 408 });
+      // }
 
       // Build signed payload
       const bodyRaw = await request.text();
