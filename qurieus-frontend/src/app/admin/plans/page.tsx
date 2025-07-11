@@ -45,6 +45,7 @@ export default function AdminPlansPage() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showInactivePlans, setShowInactivePlans] = useState(true);
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
@@ -148,21 +149,44 @@ export default function AdminPlansPage() {
   };
 
   const handleDeletePlan = async (planId: string) => {
-    if (!window.confirm("Are you sure you want to delete this plan?")) return;
+    if (!window.confirm("Are you sure you want to deactivate this plan? This will make it inactive but preserve all data.")) return;
     try {
       await axios.delete(`/api/admin/subscription-plans/${planId}`);
-      setPlans(plans.filter(plan => plan.id !== planId));
-      showToast.success("Plan deleted successfully");
+      // Update the plan in the local state to show it as inactive
+      setPlans(plans.map(plan => 
+        plan.id === planId ? { ...plan, isActive: false } : plan
+      ));
+      showToast.success("Plan deactivated successfully");
     } catch (error) {
-      console.error("Error deleting plan:", error);
-      showToast.error("Failed to delete plan");
+      console.error("Error deactivating plan:", error);
+      showToast.error("Failed to deactivate plan");
     }
   };
 
-  const filteredPlans = plans.filter(plan =>
-    plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    plan.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleReactivatePlan = async (planId: string) => {
+    try {
+      await axios.patch(`/api/admin/subscription-plans/${planId}`, {
+        isActive: true
+      });
+      // Update the plan in the local state to show it as active
+      setPlans(plans.map(plan => 
+        plan.id === planId ? { ...plan, isActive: true } : plan
+      ));
+      showToast.success("Plan reactivated successfully");
+    } catch (error) {
+      console.error("Error reactivating plan:", error);
+      showToast.error("Failed to reactivate plan");
+    }
+  };
+
+  const filteredPlans = plans.filter(plan => {
+    const matchesSearch = plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      plan.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = showInactivePlans || plan.isActive;
+    
+    return matchesSearch && matchesStatus;
+  });
 
 
   return (
@@ -181,10 +205,12 @@ export default function AdminPlansPage() {
               Paddle Integration Workflow
             </h3>
             <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
-              <p>• Create plans in Paddle first (via Paddle dashboard)</p>
-              <p>• Use &quot;Sync Paddle IDs&quot; to fetch existing product/price IDs from Paddle</p>
-              <p>• Use &quot;Sync to Paddle&quot; to update existing products with database changes</p>
-              <p>• Paddle IDs are stored in the database for exact synchronization</p>
+              <p>• <strong>Automatic Sync:</strong> When you create or edit a plan, it automatically syncs to Paddle</p>
+              <p>• <strong>Free Plans:</strong> Free Trial and $0 plans are not synced to Paddle</p>
+              <p>• <strong>Product Creation:</strong> If no Paddle product exists, one will be created automatically</p>
+              <p>• <strong>Price Updates:</strong> Existing Paddle products and prices are updated with your changes</p>
+              <p>• <strong>Plan Deactivation:</strong> Plans are deactivated (not deleted) to preserve data and Paddle configuration</p>
+              <p>• <strong>Manual Sync:</strong> Use &quot;Sync Paddle IDs&quot; to fetch existing product/price IDs from Paddle</p>
             </div>
           </div>
         </div>
@@ -202,6 +228,17 @@ export default function AdminPlansPage() {
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
+          </div>
+          <div className="flex items-center space-x-2">
+            <label className="flex items-center space-x-2 text-sm">
+              <input
+                type="checkbox"
+                checked={showInactivePlans}
+                onChange={e => setShowInactivePlans(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+              />
+              <span className="text-gray-700 dark:text-gray-300">Show inactive plans</span>
+            </label>
           </div>
           <Button onClick={() => { setIsAddModalOpen(true); setEditForm({ name: "", description: "", price: 0, currency: "INR", features: "", isActive: true, idealFor: "", keyLimits: "", maxDocs: undefined, maxStorageMB: undefined, maxQueriesPerDay: undefined }); }} className="flex items-center space-x-2 whitespace-nowrap">
             <Plus className="h-4 w-4" />
@@ -233,7 +270,15 @@ export default function AdminPlansPage() {
                 <td className="px-4 py-3 text-sm font-medium text-dark dark:text-white">{plan.name}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.description}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.price === 0 ? '-' : `${plan.currency} ${plan.price}`}</td>
-                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.isActive ? "Active" : "Inactive"}</td>
+                <td className="px-4 py-3 text-sm">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    plan.isActive 
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                  }`}>
+                    {plan.isActive ? "Active" : "Inactive"}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{new Date(plan.createdAt).toLocaleDateString()}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.idealFor}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxDocs ?? 'Custom'}</td>
@@ -248,7 +293,23 @@ export default function AdminPlansPage() {
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(plan)}>Edit</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeletePlan(plan.id)}>Delete</Button>
+                    {plan.isActive ? (
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={() => handleDeletePlan(plan.id)}
+                      >
+                        Deactivate
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleReactivatePlan(plan.id)}
+                      >
+                        Reactivate
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>

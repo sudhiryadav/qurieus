@@ -52,8 +52,8 @@ export async function POST(req: Request) {
 
         // Activate this subscription and deactivate others
         await activateSubscription(userSubscription.id, session.user.id, {
-          planId: plan.id,
-          currentPeriodStart: new Date(),
+            planId: plan.id,
+            currentPeriodStart: new Date(),
           currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         });
