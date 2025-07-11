@@ -44,6 +44,10 @@ export default function AdminPlansPage() {
   const [loading, setLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [planToDeactivate, setPlanToDeactivate] = useState<Plan | null>(null);
+  const [deactivatingPlanId, setDeactivatingPlanId] = useState<string | null>(null);
+  const [reactivatingPlanId, setReactivatingPlanId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showInactivePlans, setShowInactivePlans] = useState(true);
   const [editForm, setEditForm] = useState({
@@ -148,22 +152,36 @@ export default function AdminPlansPage() {
     }
   };
 
-  const handleDeletePlan = async (planId: string) => {
-    if (!window.confirm("Are you sure you want to deactivate this plan? This will make it inactive but preserve all data.")) return;
+  const handleDeactivateClick = (plan: Plan) => {
+    setPlanToDeactivate(plan);
+    setIsDeactivateModalOpen(true);
+  };
+
+  const handleDeactivatePlan = async () => {
+    if (!planToDeactivate) return;
+    
+    setDeactivatingPlanId(planToDeactivate.id);
+    
     try {
-      await axios.delete(`/api/admin/subscription-plans/${planId}`);
+      await axios.delete(`/api/admin/subscription-plans/${planToDeactivate.id}`);
       // Update the plan in the local state to show it as inactive
       setPlans(plans.map(plan => 
-        plan.id === planId ? { ...plan, isActive: false } : plan
+        plan.id === planToDeactivate.id ? { ...plan, isActive: false } : plan
       ));
-      showToast.success("Plan deactivated successfully");
+              showToast.success("Plan archived successfully");
+      setIsDeactivateModalOpen(false);
+      setPlanToDeactivate(null);
     } catch (error) {
       console.error("Error deactivating plan:", error);
-      showToast.error("Failed to deactivate plan");
+              showToast.error("Failed to archive plan");
+    } finally {
+      setDeactivatingPlanId(null);
     }
   };
 
   const handleReactivatePlan = async (planId: string) => {
+    setReactivatingPlanId(planId);
+    
     try {
       await axios.patch(`/api/admin/subscription-plans/${planId}`, {
         isActive: true
@@ -172,10 +190,12 @@ export default function AdminPlansPage() {
       setPlans(plans.map(plan => 
         plan.id === planId ? { ...plan, isActive: true } : plan
       ));
-      showToast.success("Plan reactivated successfully");
+              showToast.success("Plan unarchived successfully");
     } catch (error) {
       console.error("Error reactivating plan:", error);
-      showToast.error("Failed to reactivate plan");
+              showToast.error("Failed to unarchive plan");
+    } finally {
+      setReactivatingPlanId(null);
     }
   };
 
@@ -209,7 +229,7 @@ export default function AdminPlansPage() {
               <p>• <strong>Free Plans:</strong> Free Trial and $0 plans are not synced to Paddle</p>
               <p>• <strong>Product Creation:</strong> If no Paddle product exists, one will be created automatically</p>
               <p>• <strong>Price Updates:</strong> Existing Paddle products and prices are updated with your changes</p>
-              <p>• <strong>Plan Deactivation:</strong> Plans are deactivated (not deleted) to preserve data and Paddle configuration</p>
+              <p>• <strong>Plan Archiving:</strong> Plans are archived (not deleted) to preserve data and Paddle configuration</p>
               <p>• <strong>Manual Sync:</strong> Use &quot;Sync Paddle IDs&quot; to fetch existing product/price IDs from Paddle</p>
             </div>
           </div>
@@ -293,22 +313,40 @@ export default function AdminPlansPage() {
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(plan)}>Edit</Button>
-                    {plan.isActive ? (
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={() => handleDeletePlan(plan.id)}
-                      >
-                        Deactivate
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleReactivatePlan(plan.id)}
-                      >
-                        Reactivate
-                      </Button>
+                    {plan.name !== "Free Trial" && (
+                      plan.isActive ? (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => handleDeactivateClick(plan)}
+                          disabled={deactivatingPlanId === plan.id}
+                        >
+                          {deactivatingPlanId === plan.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Archiving...
+                            </>
+                          ) : (
+                            "Archive"
+                          )}
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleReactivatePlan(plan.id)}
+                          disabled={reactivatingPlanId === plan.id}
+                        >
+                          {reactivatingPlanId === plan.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                              Unarchiving...
+                            </>
+                          ) : (
+                            "Unarchive"
+                          )}
+                        </Button>
+                      )
                     )}
                   </div>
                 </td>
@@ -433,6 +471,71 @@ export default function AdminPlansPage() {
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Max Queries/Day</label>
             <input type="number" value={editForm.maxQueriesPerDay ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxQueriesPerDay: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+      </ModalDialog>
+      
+      {/* Deactivate Plan Confirmation Modal */}
+      <ModalDialog
+        isOpen={isDeactivateModalOpen}
+        onClose={() => {
+          setIsDeactivateModalOpen(false);
+          setPlanToDeactivate(null);
+        }}
+        header="Archive Plan"
+        width="500px"
+        footer={
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeactivateModalOpen(false);
+                setPlanToDeactivate(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeactivatePlan}
+              disabled={deactivatingPlanId === planToDeactivate?.id}
+            >
+              {deactivatingPlanId === planToDeactivate?.id ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deactivating...
+                </>
+              ) : (
+                "Archive Plan"
+              )}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Archive &quot;{planToDeactivate?.name}&quot;?
+              </h3>
+              <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <p>This action will:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Archive the plan (not available for new subscriptions)</li>
+                  <li>Preserve all existing data and Paddle configuration</li>
+                  <li>Update the corresponding Paddle product status</li>
+                  <li>Keep existing user subscriptions active</li>
+                </ul>
+                <p className="mt-3 font-medium text-gray-700 dark:text-gray-300">
+                  You can unarchive this plan at any time.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </ModalDialog>

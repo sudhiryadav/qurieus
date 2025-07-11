@@ -61,16 +61,16 @@ export default function AdminSubscriptionsPage() {
   };
 
   const handleDeleteSubscription = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this subscription?")) return;
+    if (!window.confirm("Are you sure you want to archive this subscription?")) return;
     try {
       await axios.delete(`/api/admin/subscriptions`, {
         data: { id }
       });
       setSubscriptions(subscriptions.filter(s => s.id !== id));
-      showToast.success("Subscription deleted successfully");
+      showToast.success("Subscription archived successfully");
     } catch (error) {
       console.error("Error deleting subscription:", error);
-      showToast.error("Failed to delete subscription");
+      showToast.error("Failed to archive subscription");
     }
   };
 
@@ -135,7 +135,7 @@ export default function AdminSubscriptionsPage() {
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(sub)}>Edit</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteSubscription(sub.id)}>Delete</Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteSubscription(sub.id)}>Archive</Button>
                   </div>
                 </td>
               </tr>
