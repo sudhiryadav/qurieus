@@ -35,10 +35,10 @@ async function validateWebhookAndGetUser(customData: any) {
   }
 
   // Validate timestamp (prevent replay attacks - max 5 minutes old)
-  if (timestamp && (Date.now() - parseInt(timestamp)) > 5 * 60 * 1000) {
-    console.error("Webhook timestamp too old, possible replay attack");
-    throw new Error("Webhook expired");
-  }
+  // if (timestamp && (Date.now() - parseInt(timestamp)) > 5 * 60 * 1000) {
+  //   console.error("Webhook timestamp too old, possible replay attack");
+  //   throw new Error("Webhook expired");
+  // }
 
   const user = await prisma.user.findFirst({
     where: {
