@@ -359,6 +359,7 @@
       display: flex;
       flex-direction: column;
       animation: slideIn 0.3s ease;
+      transition: width 0.3s ease, height 0.3s ease;
     `;
     
     // Add CSS animation
@@ -390,6 +391,24 @@
       border-radius: 12px 12px 0 0;
     `;
     
+    // Title container with logo and text
+    const titleContainer = document.createElement('div');
+    titleContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `;
+    
+    // Logo icon
+    const logoIcon = document.createElement('img');
+    logoIcon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
+    logoIcon.alt = 'Qurieus';
+    logoIcon.style.cssText = `
+      width: 20px;
+      height: 20px;
+      filter: ${widgetConfig.theme === 'dark' ? 'brightness(0) invert(1)' : 'none'};
+    `;
+    
     const title = document.createElement('h3');
     title.textContent = 'Chat Support';
     title.style.cssText = `
@@ -398,6 +417,63 @@
       font-weight: 600;
       color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
     `;
+    
+    titleContainer.appendChild(logoIcon);
+    titleContainer.appendChild(title);
+    
+    // Button container for expand and close buttons
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    `;
+    
+    // Expand button
+    const expandBtn = document.createElement('button');
+    expandBtn.innerHTML = '⤢';
+    expandBtn.style.cssText = `
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: bold;
+    `;
+    expandBtn.onmouseenter = () => expandBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? '#4b5563' : '#e5e7eb';
+    expandBtn.onmouseleave = () => expandBtn.style.backgroundColor = 'transparent';
+    expandBtn.onclick = () => {
+      // Toggle between normal and expanded size with smooth animation
+      const chatWindow = document.querySelector('#qurieus-chat-widget > div');
+      if (chatWindow) {
+        const isExpanded = chatWindow.style.width === '500px';
+        
+        // Add transition class for smooth animation
+        chatWindow.style.transition = 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        if (isExpanded) {
+          // Contract to normal size
+          chatWindow.style.width = '350px';
+          chatWindow.style.height = '500px';
+          expandBtn.innerHTML = '⤢';
+          expandBtn.style.transform = 'rotate(0deg)';
+        } else {
+          // Expand to larger size
+          chatWindow.style.width = '500px';
+          chatWindow.style.height = '600px';
+          expandBtn.innerHTML = '⤡';
+          expandBtn.style.transform = 'rotate(180deg)';
+        }
+        
+        // Remove transition after animation completes
+        setTimeout(() => {
+          chatWindow.style.transition = 'width 0.3s ease, height 0.3s ease';
+        }, 400);
+      }
+    };
     
     const closeBtn = document.createElement('button');
     closeBtn.innerHTML = '×';
@@ -415,8 +491,11 @@
     closeBtn.onmouseleave = () => closeBtn.style.backgroundColor = 'transparent';
     closeBtn.onclick = () => setWidgetState({ isOpen: false });
     
-    header.appendChild(title);
-    header.appendChild(closeBtn);
+    buttonContainer.appendChild(expandBtn);
+    buttonContainer.appendChild(closeBtn);
+    
+    header.appendChild(titleContainer);
+    header.appendChild(buttonContainer);
     
     // Messages container
     const messagesContainer = document.createElement('div');
@@ -634,11 +713,11 @@
       border-radius: 0 0 12px 12px;
     `;
     
-    const input = document.createElement('input');
-    input.type = 'text';
+    const input = document.createElement('textarea');
     input.value = widgetState.inputMessage;
     input.placeholder = 'Type your message...';
     input.disabled = widgetState.isLoading;
+    input.rows = 1;
     input.style.cssText = `
       flex: 1;
       padding: 8px 12px;
@@ -649,6 +728,12 @@
       color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
       outline: none;
       transition: border-color 0.2s ease;
+      resize: none;
+      overflow-y: hidden;
+      min-height: 36px;
+      max-height: 120px;
+      font-family: inherit;
+      line-height: 1.4;
     `;
     input.onfocus = () => input.style.borderColor = BRAND_COLOR;
     input.onblur = () => input.style.borderColor = '#d1d5db';
@@ -696,6 +781,7 @@
       
       // Update input and button directly
       input.value = '';
+      input.style.height = '36px'; // Reset to minimum height
       sendBtn.disabled = true;
       sendBtn.style.opacity = '0.5';
       
@@ -1003,7 +1089,7 @@
           // Auto-scroll to bottom
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Chat error:', error);
         
         // Remove peeking character indicator
@@ -1108,11 +1194,20 @@
       }
     };
     
+    // Auto-resize textarea function
+    const autoResize = () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    };
+    
     // Handle input changes
     input.oninput = (e) => {
       // Update state without triggering re-render
       widgetState.inputMessage = e.target.value;
       widgetState.isLoading = false;
+      
+      // Auto-resize textarea
+      autoResize();
       
       // Update send button state directly
       sendBtn.disabled = widgetState.isLoading || !e.target.value.trim();
@@ -1156,16 +1251,16 @@
         console.error('API key is required');
         return;
       }
-      
+
       // Clear the container
       container.innerHTML = '';
       
       // Initialize the ChatWidget (it handles rendering internally)
       ChatWidget({
-        apiKey: config.apiKey,
-        baseUrl: config.baseUrl,
-        initialMessage: config.initialMessage,
-        position: config.position,
+          apiKey: config.apiKey,
+          baseUrl: config.baseUrl,
+          initialMessage: config.initialMessage,
+          position: config.position,
         theme: config.theme,
         showSources: config.showSources
       });
