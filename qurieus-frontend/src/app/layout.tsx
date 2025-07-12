@@ -129,6 +129,16 @@ export default function RootLayout({
         {/* Security Headers */}
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
+        <script 
+  src="http://localhost:8000/embed.js"
+  data-api-key="cmd051tkd0000vjjumkfflmv2"
+  data-initial-message="Hello! How can I help you today?"
+  data-position="bottom-right"
+  data-theme="light"
+  data-show-sources="false"
+  data-inline="false"
+  async
+></script>
       </head>
       <body>
         <SessionProvider>

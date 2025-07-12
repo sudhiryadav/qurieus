@@ -14,7 +14,6 @@ interface ChatWidgetProps {
   initialMessage?: string;
   position?: "bottom-right" | "bottom-left";
   theme?: "light" | "dark";
-  inline?: boolean;
   showSources?: boolean;
 }
 
@@ -67,10 +66,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   initialMessage = "Hello! How can I help you today?",
   position = "bottom-right",
   theme = "light",
-  inline = false,
   showSources = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(inline ? true : false);
+  const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<
     Array<{ role: string; content: string }>
@@ -168,13 +166,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!inline) {
-      messagesEndRef.current?.scrollTo({
-        top: messagesEndRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [messages, inline]);
+    if (!isOpen) return;
+    messagesEndRef.current?.scrollTo({
+      top: messagesEndRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, isOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowUp") {
@@ -342,22 +339,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     }
   };
 
-  if (!visitorInfoLoaded) {
-    return (
-      <div className="flex items-center justify-center h-full p-8">
-        <span className="text-gray-500">Loading chat...</span>
-      </div>
-    );
-  }
-
-  if (showVisitorInfoForm) {
-    return (
-      <VisitorInfoForm
-        onSubmit={() => setShowVisitorInfoForm(false)}
-      />
-    );
-  }
-
   const positionClasses = {
     "bottom-right": "bottom-4 right-4",
     "bottom-left": "bottom-4 left-4",
@@ -384,260 +365,176 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     },
   };
 
+  // --- Widget rendering logic ---
+  if (!visitorInfoLoaded) {
+    return (
+      <div className="flex items-center justify-center h-full p-8">
+        <span className="text-gray-500">Loading chat...</span>
+      </div>
+    );
+  }
+
+  // Always show the chat icon first
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className={`${themeClasses[theme].button} rounded-full p-4 shadow-lg transition-all duration-300`}
+      >
+        <svg
+          className="h-6 w-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+          />
+        </svg>
+      </button>
+    );
+  }
+
+  // If visitor info is missing, show the form inside the widget popover
+  if (showVisitorInfoForm) {
+    return (
+      <div className={`fixed ${positionClasses[position]} z-50`}>
+        <div className={`${themeClasses[theme].container} w-96 rounded-lg shadow-xl p-6`}>
+          <VisitorInfoForm onSubmit={() => setShowVisitorInfoForm(false)} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Inject shimmer CSS */}
       <style>{shimmerStyle}</style>
-      <div
-        className={
-          inline
-            ? "flex h-full w-full flex-col"
-            : `fixed ${positionClasses[position]} z-50`
-        }
-      >
-        {inline ? (
-          <>
-            <div
-              ref={messagesEndRef}
-              className="flex-1 overflow-y-auto bg-transparent p-4"
-            >
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`mb-4 max-w-[80%] rounded-lg p-3 ${message.role === "user"
-                      ? `${themeClasses[theme].message.user} ml-auto`
-                      : `${themeClasses[theme].message.assistant}`
-                  }`}
+      <div className={`fixed ${positionClasses[position]} z-50`}>
+        <div className={`${themeClasses[theme].container} w-96 rounded-lg shadow-xl transition-all duration-300 ${isMinimized ? "h-16" : "h-[600px]"}`}>
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between border-b p-4">
+              {/* Add qurieus logo besides chat with us */}
+              <span className="flex items-center space-x-2">
+                <Image src="/images/logo/logo.svg" alt="qurieus" width={32} height={32} />
+                <h3 className="text-lg font-semibold">Chat with us</h3>
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  {message.role === "assistant"
-                    ? formatMessage(message.content)
-                    : message.content}
-                </div>
-              ))}
-              {showThinking && (
-                <div
-                  className={`mb-4 max-w-[80%] rounded-lg p-3 ${themeClasses[theme].message.assistant}`}
+                  {isMinimized ? (
+                    <Maximize2 className="h-4 w-4" />
+                  ) : (
+                    <Minimize2 className="h-4 w-4" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  <span className="shimmer">Thinking...</span>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-              {showSources && sources && (
-                <div className="mt-4">
-                  <button
-                    className="mb-2 text-xs text-primary underline"
-                    onClick={() => setShowSourcesUI((v) => !v)}
-                  >
-                    {showSourcesUI ? "Hide Sources" : "Show Sources"}
-                  </button>
-                  {showSourcesUI && (
-                    <div className="rounded bg-gray-100 p-2 text-xs dark:bg-gray-800">
-                      <p className="mb-1 font-semibold">Sources:</p>
-                      <ul className="ml-4 list-disc">
-                        {sources.map((source, i) => (
-                          <li key={i}>
-                            {source.document} (Similarity:{" "}
-                            {(source.similarity * 100).toFixed(1)}%)
-                          </li>
-                        ))}
-                      </ul>
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {!isMinimized && (
+              <>
+                <div
+                  ref={messagesEndRef}
+                  className="flex-1 overflow-y-auto p-4"
+                >
+                  {messages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`mb-4 max-w-[80%] rounded-lg p-3 ${message.role === "user"
+                        ? `${themeClasses[theme].message.user} ml-auto`
+                        : `${themeClasses[theme].message.assistant}`
+                      }`}
+                    >
+                      {message.role === "assistant"
+                        ? formatMessage(message.content)
+                        : message.content}
+                    </div>
+                  ))}
+                  {showThinking && (
+                    <div
+                      className={`mb-4 max-w-[80%] rounded-lg p-3 ${themeClasses[theme].message.assistant}`}
+                    >
+                      <span className="shimmer">Thinking...</span>
+                    </div>
+                  )}
+                  {showSources && sources && (
+                    <div className="mt-4">
+                      <button
+                        className="mb-2 text-xs text-primary underline"
+                        onClick={() => setShowSourcesUI((v) => !v)}
+                      >
+                        {showSourcesUI ? "Hide Sources" : "Show Sources"}
+                      </button>
+                      {showSourcesUI && (
+                        <div className="rounded bg-gray-100 p-2 text-xs dark:bg-gray-800">
+                          <p className="mb-1 font-semibold">Sources:</p>
+                          <ul className="ml-4 list-disc">
+                            {sources.map((source, i) => (
+                              <li key={i}>
+                                {source.document} (Similarity: {" "}
+                                {(source.similarity * 100).toFixed(1)}%)
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-            {hasDocuments && (
-              <form
-                onSubmit={handleSubmit}
-                className="border-t bg-transparent p-4"
-              >
-                <div>
-                  <div className="flex items-end space-x-2">
-                    <textarea
-                    value={inputMessage}
-                      onChange={(e) => {
-                        setInputMessage(e.target.value);
-                        autoResizeTextarea(e.target);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSubmit(e as any);
-                        }
-                      }}
-                    placeholder="Type your message..."
-                      rows={1}
-                      className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[40px] max-h-[120px]`}
-                      style={{
-                        minHeight: '40px',
-                        maxHeight: '120px',
-                        overflowY: 'auto'
-                      }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                      className={`${themeClasses[theme].button} rounded-lg p-2 h-10`}
-                  >
-                    <Send className="h-5 w-5" />
-                  </button>
-                  </div>
-                  <div className="text-xs text-gray-500 text-left">
-                    <Image src="/images/logo/logo.svg" alt="qurieus" width={16} height={16} className="inline-block mr-1" />
-                  © {new Date().getFullYear()} <a href="https://qurieus.com" target="_blank" rel="noopener noreferrer" className="underline text-color-purple">Qurieus</a>. All rights reserved.
-                  </div>
-                </div>
-              </form>
-            )}
-          </>
-        ) : (
-          <>
-            {!isOpen ? (
-              <button
-                onClick={() => setIsOpen(true)}
-                className={`${themeClasses[theme].button} rounded-full p-4 shadow-lg transition-all duration-300`}
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                  />
-                </svg>
-              </button>
-            ) : (
-              <div
-                className={`${themeClasses[theme].container} w-96 rounded-lg shadow-xl transition-all duration-300 ${isMinimized ? "h-16" : "h-[600px]"}`}
-              >
-                <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between border-b p-4">
-                    {/* Add qurieus logo besides chat with us */}
-                    <span className="flex items-center space-x-2">
-                      <Image src="/images/logo/logo.svg" alt="qurieus" width={32} height={32} />
-                  <h3 className="text-lg font-semibold">Chat with us</h3>
-                    </span>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setIsMinimized(!isMinimized)}
-                      className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      {isMinimized ? (
-                        <Maximize2 className="h-4 w-4" />
-                      ) : (
-                        <Minimize2 className="h-4 w-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setIsOpen(false)}
-                      className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                {!isMinimized && (
-                  <>
-                    <div
-                      ref={messagesEndRef}
-                        className="flex-1 overflow-y-auto p-4"
-                    >
-                      {messages.map((message, index) => (
-                        <div
-                          key={index}
-                            className={`mb-4 max-w-[80%] rounded-lg p-3 ${message.role === "user"
-                              ? `${themeClasses[theme].message.user} ml-auto`
-                              : `${themeClasses[theme].message.assistant}`
-                          }`}
+                {hasDocuments && (
+                  <form onSubmit={handleSubmit} className="border-t p-2">
+                    <div>
+                      <div className="flex items-end space-x-2">
+                        <textarea
+                          value={inputMessage}
+                          onChange={(e) => {
+                            setInputMessage(e.target.value);
+                            autoResizeTextarea(e.target);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSubmit(e as any);
+                            }
+                          }}
+                          placeholder="Type your message..."
+                          rows={1}
+                          className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[40px] max-h-[120px]`}
+                          style={{
+                            minHeight: '40px',
+                            maxHeight: '120px',
+                            overflowY: 'auto'
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={isLoading}
+                          className={`${themeClasses[theme].button} rounded-lg p-2 h-10`}
                         >
-                            {message.role === "assistant"
-                              ? formatMessage(message.content)
-                              : message.content}
-                        </div>
-                      ))}
-                      {showThinking && (
-                        <div
-                          className={`mb-4 max-w-[80%] rounded-lg p-3 ${themeClasses[theme].message.assistant}`}
-                        >
-                          <span className="shimmer">Thinking...</span>
-                        </div>
-                      )}
-                      {showSources && sources && (
-                        <div className="mt-4">
-                          <button
-                            className="mb-2 text-xs text-primary underline"
-                            onClick={() => setShowSourcesUI((v) => !v)}
-                          >
-                            {showSourcesUI ? "Hide Sources" : "Show Sources"}
-                          </button>
-                          {showSourcesUI && (
-                            <div className="rounded bg-gray-100 p-2 text-xs dark:bg-gray-800">
-                              <p className="mb-1 font-semibold">Sources:</p>
-                              <ul className="ml-4 list-disc">
-                                {sources.map((source, i) => (
-                                  <li key={i}>
-                                    {source.document} (Similarity:{" "}
-                                    {(source.similarity * 100).toFixed(1)}%)
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    {hasDocuments && (
-                        <form onSubmit={handleSubmit} className="border-t p-2">
-                          <div>
-                            <div className="flex items-end space-x-2">
-                              <textarea
-                            value={inputMessage}
-                                onChange={(e) => {
-                                  setInputMessage(e.target.value);
-                                  autoResizeTextarea(e.target);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSubmit(e as any);
-                                  }
-                                }}
-                            placeholder="Type your message..."
-                                rows={1}
-                                className={`${themeClasses[theme].input} flex-1 rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[40px] max-h-[120px]`}
-                                style={{
-                                  minHeight: '40px',
-                                  maxHeight: '120px',
-                                  overflowY: 'auto'
-                                }}
-                          />
-                          <button
-                            type="submit"
-                            disabled={isLoading}
-                                className={`${themeClasses[theme].button} rounded-lg p-2 h-10`}
-                          >
-                            <Send className="h-5 w-5" />
-                          </button>
-                            </div>
-                        </div>
-                      </form>
-                    )}
-                      <div className="text-xs text-gray-500 text-left p-1">
-                        <Image src="/images/logo/logo.svg" alt="qurieus" width={16} height={16} className="inline-block mr-1" />
-                        © {new Date().getFullYear()} <a href="https://qurieus.com" className="underline text-color-purple" target="_blank" rel="noopener noreferrer">Qurieus</a>. All rights reserved.
+                          <Send className="h-5 w-5" />
+                        </button>
                       </div>
-                  </>
+                    </div>
+                  </form>
                 )}
+                <div className="text-xs text-gray-500 text-left p-1">
+                  <Image src="/images/logo/logo.svg" alt="qurieus" width={16} height={16} className="inline-block mr-1" />
+                  © {new Date().getFullYear()} <a href="https://qurieus.com" className="underline text-color-purple" target="_blank" rel="noopener noreferrer">Qurieus</a>. All rights reserved.
                 </div>
-              </div>
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </>
   );

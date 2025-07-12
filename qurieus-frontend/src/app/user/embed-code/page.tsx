@@ -15,9 +15,10 @@ export default function EmbedCode() {
   const [previewConfig, setPreviewConfig] = useState({
     theme: 'light',
     position: 'bottom-right',
-    initialMessage: 'Hello! How can I help you today?'
+    initialMessage: 'Hello! How can I help you today?',
+    showSources: false,
+    inline: false
   });
-  const [showEmbedWidget, setShowEmbedWidget] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -87,13 +88,17 @@ export default function EmbedCode() {
   }
 
   const apiKey = session?.user?.id || '';
+  const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'https://qurieus.com';
 
   const embedCode = `<script 
-  src=\"https://qurieus.com/embed.js\"
+  src=\"${currentDomain}/embed.js\"
   data-api-key=\"${apiKey}\"
   data-initial-message=\"${previewConfig.initialMessage}\"
   data-position=\"${previewConfig.position}\"
   data-theme=\"${previewConfig.theme}\"
+  data-show-sources=\"${previewConfig.showSources}\"
+  data-inline=\"${previewConfig.inline}\"
+  async
 ></script>`;
 
   const copyToClipboard = async () => {
@@ -110,20 +115,7 @@ export default function EmbedCode() {
     <div className="mx-auto">
       <div className="mb-8">
         <h1 className="mb-4 text-3xl font-bold">Embed Chat Widget</h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Add our chat widget to your website by copying and pasting the code below.
-        </p>
       </div>
-
-      <div className="mb-6 flex justify-end">
-        <button
-          className="rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
-          onClick={() => setShowEmbedWidget((v) => !v)}
-        >
-          {showEmbedWidget ? 'Hide Embed Widget' : 'Show Embed Widget'}
-        </button>
-      </div>
-
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
           <h2 className="mb-4 text-xl font-semibold">Widget Configuration</h2>
@@ -163,6 +155,32 @@ export default function EmbedCode() {
                 placeholder="Enter initial message"
               />
             </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">Show Sources</label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={previewConfig.showSources}
+                  onChange={(e) => setPreviewConfig(prev => ({ ...prev, showSources: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-dark-3 dark:border-dark-3 dark:checked:bg-primary"
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-300">Display source documents for responses</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">Inline Mode</label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={previewConfig.inline}
+                  onChange={(e) => setPreviewConfig(prev => ({ ...prev, inline: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-dark-3 dark:border-dark-3 dark:checked:bg-primary"
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-300">Embed directly in page content (not floating)</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -185,6 +203,13 @@ export default function EmbedCode() {
                 </>
               )}
             </button>
+            <ChatWidget
+              apiKey={apiKey}
+              initialMessage={previewConfig.initialMessage}
+              position={previewConfig.position as 'bottom-right' | 'bottom-left'}
+              theme={previewConfig.theme as 'light' | 'dark'}
+              showSources={previewConfig.showSources}
+            />
           </div>
           
           <div className="relative">
@@ -196,44 +221,13 @@ export default function EmbedCode() {
           <div className="mt-4 rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
             <h3 className="mb-2 font-semibold text-yellow-800 dark:text-yellow-200">Important Notes:</h3>
             <ul className="list-inside list-disc space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+              <li>Add our chat widget to your website by copying and pasting the code above.</li>
               <li>The widget requires an active subscription to work</li>
               <li>Customize the appearance using the configuration options</li>
-              <li>Test the widget using the live preview below</li>
             </ul>
           </div>
         </div>
       </div>
-
-      <div className="mt-8 rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-        <h2 className="mb-4 text-xl font-semibold">Live Preview</h2>
-        <div className="relative min-h-[400px] max-h-[600px] rounded-lg border border-dashed border-gray-300 dark:border-dark-3 overflow-auto">
-          {apiKey ? (
-            <ChatWidget
-              apiKey={apiKey}
-              initialMessage={previewConfig.initialMessage}
-              position={previewConfig.position as 'bottom-right' | 'bottom-left'}
-              theme={previewConfig.theme as 'light' | 'dark'}
-              inline={true}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-center text-gray-500 dark:text-gray-400">
-              <div>
-                <p className="mb-2 font-semibold">No API key found for your user session.</p>
-                <p>Please make sure you are logged in and your account is set up correctly.</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showEmbedWidget && apiKey && (
-        <ChatWidget
-          apiKey={apiKey}
-          initialMessage={previewConfig.initialMessage}
-          position={previewConfig.position as 'bottom-right' | 'bottom-left'}
-          theme={previewConfig.theme as 'light' | 'dark'}
-        />
-      )}
     </div>
   );
 }
