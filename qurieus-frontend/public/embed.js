@@ -128,7 +128,7 @@
       font-size: 14px;
       font-weight: 600;
       color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
-      text-align: center;
+      text-align: left;
     `;
     
     const formSubtitle = document.createElement('p');
@@ -137,7 +137,7 @@
       margin: 0 0 20px 0;
       font-size: 12px;
       color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-      text-align: center;
+      text-align: left;
     `;
     
     // Form
@@ -175,6 +175,7 @@
       font-weight: 500;
       transition: background-color 0.2s ease;
       margin-top: 8px;
+      align-self: flex-start;
     `;
     submitBtn.onmouseenter = () => submitBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? '#7c3aed' : '#7c3aed';
     submitBtn.onmouseleave = () => submitBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR;
@@ -266,25 +267,10 @@
   
   // Helper function to create form fields
   function createFormField(name, label, type, placeholder, required) {
-    const fieldContainer = document.createElement('div');
-    fieldContainer.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    `;
-    
-    const labelElement = document.createElement('label');
-    labelElement.textContent = label + (required ? ' *' : '');
-    labelElement.style.cssText = `
-      font-size: 12px;
-      font-weight: 500;
-      color: ${widgetConfig.theme === 'dark' ? 'white' : '#374151'};
-    `;
-    
     const input = document.createElement('input');
     input.type = type;
     input.name = name;
-    input.placeholder = placeholder;
+    input.placeholder = placeholder + (required ? ' *' : '');
     input.required = required;
     input.style.cssText = `
       padding: 8px 12px;
@@ -299,10 +285,7 @@
     input.onfocus = () => input.style.borderColor = BRAND_COLOR;
     input.onblur = () => input.style.borderColor = '#d1d5db';
     
-    fieldContainer.appendChild(labelElement);
-    fieldContainer.appendChild(input);
-    
-    return fieldContainer;
+    return input;
   }
 
   // Render the widget
