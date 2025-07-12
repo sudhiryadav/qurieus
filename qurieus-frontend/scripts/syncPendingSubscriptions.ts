@@ -1,6 +1,7 @@
 import { syncPendingSubscriptions } from "../lib/syncPendingSubscriptions";
+import { logger } from "../src/lib/logger";
 
 syncPendingSubscriptions().then(() => {
-  console.log("Pending subscriptions sync complete.");
+  logger.info("Pending subscriptions sync complete.");
   process.exit(0);
 }); 

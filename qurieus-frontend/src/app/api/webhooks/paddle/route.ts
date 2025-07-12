@@ -10,6 +10,7 @@ import path from "path";
 import puppeteer from "puppeteer";
 import { createHmac, timingSafeEqual } from "crypto";
 import { isNullOrUndefined } from "util";
+import { logger } from "@/lib/logger";
 
 // Register Handlebars helpers
 handlebars.registerHelper("formatDate", (date: Date) =>
@@ -30,7 +31,7 @@ async function validateWebhookAndGetUser(customData: any) {
 
   // Validate required fields
   if (!applicationCustomerId) {
-    console.error("Missing application_customer_id in webhook");
+    logger.error("Missing application_customer_id in webhook");
     throw new Error("Invalid webhook data");
   }
 
@@ -47,13 +48,13 @@ async function validateWebhookAndGetUser(customData: any) {
   });
 
   if (!user) {
-    console.error("User not found for customer ID:", applicationCustomerId);
+    logger.error("User not found for customer ID:", applicationCustomerId);
     throw new Error("User not found");
   }
 
   // Validate email matches (additional security)
   if (applicationCustomerEmail && applicationCustomerEmail !== user.email) {
-    console.error("Email mismatch in webhook:", {
+    logger.error("Email mismatch in webhook:", {
       webhookEmail: applicationCustomerEmail,
       userEmail: user.email
     });
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
     
     // Check if webhook verification is bypassed for testing
     if (process.env.BYPASS_WEBHOOK_VERIFICATION === 'true') {
-      console.log('⚠️ Webhook verification bypassed for testing');
+      logger.warn('⚠️ Webhook verification bypassed for testing');
       const bodyRaw = await request.text();
       event = JSON.parse(bodyRaw);
     } else {
@@ -157,17 +158,17 @@ export async function POST(request: Request) {
 
       // Check if header and secret key are present
       if (!paddleSignature) {
-        console.error("Paddle-Signature not present in request headers");
+        logger.error("Paddle-Signature not present in request headers");
         return NextResponse.json({ message: "Invalid request" }, { status: 400 });
       }
 
       if (!secretKey) {
-        console.error("Secret key not defined");
+        logger.error("Secret key not defined");
         return NextResponse.json({ message: "Server misconfigured" }, { status: 500 });
       }
 
       // Extract timestamp and signature from header
-      console.log("🔍 Raw Paddle-Signature header:", paddleSignature);
+      logger.info("🔍 Raw Paddle-Signature header:", paddleSignature);
       
       // Parse the signature header - it can have multiple parts
       const parts = paddleSignature.split(";");
@@ -184,9 +185,9 @@ export async function POST(request: Request) {
       }
       
       if (!timestamp || !signature) {
-        console.error("Unable to extract timestamp or signature from Paddle-Signature header");
-        console.error("Timestamp found:", timestamp);
-        console.error("Signature found:", signature);
+        logger.error("Unable to extract timestamp or signature from Paddle-Signature header");
+        logger.error("Timestamp found:", timestamp);
+        logger.error("Signature found:", signature);
         return NextResponse.json({ message: "Invalid request" }, { status: 400 });
       }
 
@@ -194,7 +195,7 @@ export async function POST(request: Request) {
       const timestampInt = parseInt(timestamp) * 1000; // Convert seconds to milliseconds
 
       if (isNaN(timestampInt)) {
-        console.error("Invalid timestamp format");
+        logger.error("Invalid timestamp format");
         return NextResponse.json({ message: "Invalid request" }, { status: 400 });
       }
 
@@ -216,33 +217,33 @@ export async function POST(request: Request) {
 
       // Compare signatures
       if (!timingSafeEqual(Buffer.from(hashedPayload), Buffer.from(signature))) {
-        console.error("Computed signature does not match Paddle signature");
-        console.error("Computed:", hashedPayload);
-        console.error("Expected:", signature);
+        logger.error("Computed signature does not match Paddle signature");
+        logger.error("Computed:", hashedPayload);
+        logger.error("Expected:", signature);
         
         const hmacBodyOnly = createHmac("sha256", secretKey)
           .update(bodyRaw, "utf8")
           .digest("hex");
-        console.log("- Body-only signature:", hmacBodyOnly);
-        console.log("- Body-only match:", hmacBodyOnly === signature);
+        logger.info("- Body-only signature:", hmacBodyOnly);
+        logger.info("- Body-only match:", hmacBodyOnly === signature);
         
         // Method 2: Try with different secret key format
         const altSecretKey = secretKey.startsWith('pdl_') ? secretKey.substring(4) : `pdl_${secretKey}`;
         const hmacAltKey = createHmac("sha256", altSecretKey)
           .update(signedPayload, "utf8")
           .digest("hex");
-        console.log("- Alt key signature:", hmacAltKey);
-        console.log("- Alt key match:", hmacAltKey === signature);
+        logger.info("- Alt key signature:", hmacAltKey);
+        logger.info("- Alt key match:", hmacAltKey === signature);
         
         // Try Paddle SDK unmarshal as final fallback
-        console.log("🔄 Trying Paddle SDK unmarshal method...");
+        logger.info("🔄 Trying Paddle SDK unmarshal method...");
         try {
           const event = paddle.webhooks.unmarshal(bodyRaw, paddleSignature, secretKey);
-          console.log("✅ Paddle SDK unmarshal verification successful");
+          logger.info("✅ Paddle SDK unmarshal verification successful");
           // Continue with the verified event
         } catch (unmarshalError) {
-          console.error("❌ Paddle SDK unmarshal also failed:", unmarshalError);
-          console.error("❌ All signature verification methods failed");
+          logger.error("❌ Paddle SDK unmarshal also failed:", unmarshalError);
+          logger.error("❌ All signature verification methods failed");
           return NextResponse.json({ message: "Invalid signature" }, { status: 401 });
         }
       }
@@ -289,9 +290,9 @@ export async function POST(request: Request) {
         await upsertSubscription(data, user.id);
       } catch (error) {
         if (error instanceof Error && error.message.includes("Plan not found")) {
-          console.error("Plan not found error:", error.message);
+          logger.error("Plan not found error:", error.message);
           // Log the data for debugging
-          console.error("Subscription data:", {
+          logger.error("Subscription data:", {
             subscriptionId: data.id,
             priceId: data.items?.[0]?.price?.id,
             priceName: data.items?.[0]?.price?.name,
@@ -355,7 +356,7 @@ export async function POST(request: Request) {
               },
             });
           } catch (emailError) {
-            console.error("Error sending subscription confirmation email:", emailError);
+            logger.error("Error sending subscription confirmation email:", emailError);
           }
         }
     }
@@ -397,7 +398,7 @@ export async function POST(request: Request) {
             },
           });
         } catch (emailError) {
-          console.error("Error sending subscription cancellation email:", emailError);
+          logger.error("Error sending subscription cancellation email:", emailError);
         }
       }
 
@@ -417,7 +418,7 @@ export async function POST(request: Request) {
         try {
           user = await validateWebhookAndGetUser(transactionCustomData);
         } catch (error: any) {
-          console.error("Transaction webhook validation failed:", error.message);
+          logger.error("Transaction webhook validation failed:", error.message);
           // For transaction events, try to get user from subscription if available
           if (subscriptionId) {
             const existingSubscription = await prisma.userSubscription.findFirst({
@@ -426,7 +427,7 @@ export async function POST(request: Request) {
             });
             if (existingSubscription) {
               user = existingSubscription.user;
-              console.log("Found user from existing subscription:", user.id);
+              logger.info("Found user from existing subscription:", user.id);
             } else {
               return NextResponse.json({ error: error.message }, { status: 400 });
             }
@@ -437,7 +438,7 @@ export async function POST(request: Request) {
 
         // If this transaction is for an existing subscription, just update payment info
         if (subscriptionId) {
-          console.log("Transaction for existing subscription, updating payment info only");
+          logger.info("Transaction for existing subscription, updating payment info only");
           
           // Find the existing subscription
           const existingSubscription = await prisma.userSubscription.findFirst({
@@ -476,16 +477,16 @@ export async function POST(request: Request) {
                 },
               });
             } catch (emailError) {
-              console.error("Error sending payment confirmation email:", emailError);
+              logger.error("Error sending payment confirmation email:", emailError);
             }
           } else {
-            console.warn("Transaction for subscription but subscription not found:", subscriptionId);
+            logger.warn("Transaction for subscription but subscription not found:", subscriptionId);
           }
         } else {
           // This is a one-time transaction (not for a subscription)
           // For standalone transactions, we should NOT create a subscription
           // Subscriptions should only be created via subscription webhooks
-          console.log("Standalone transaction - no subscription to create");
+          logger.info("Standalone transaction - no subscription to create");
           
           // Just send payment confirmation email
           const amount = items[0]?.price?.unit_price?.amount;
@@ -506,7 +507,7 @@ export async function POST(request: Request) {
               },
             });
           } catch (emailError) {
-            console.error("Error sending payment confirmation email:", emailError);
+            logger.error("Error sending payment confirmation email:", emailError);
           }
         }
       }
@@ -515,7 +516,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error processing webhook:", error);
+    logger.error("Error processing webhook:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

@@ -29,6 +29,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { logger } from "@/lib/logger";
 
 interface UserNavProps {
   isOpen: boolean;
@@ -40,12 +41,12 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const router = useRouter();
 
-  console.log("UserNav session", session, "status", status);
+  logger.info("UserNav session", { session, status });
   if (!session?.user) {
     return <div style={{ color: 'red', padding: 16 }}>No user session found</div>;
   }
 
-  console.log('xxx session' , session?.user?.role);
+  logger.info("xxx session", { role: session?.user?.role });
 
   const navItems = [
     {

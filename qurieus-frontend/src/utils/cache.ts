@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { logger } from "@/lib/logger";
 
 class RedisClient {
   private static instance: RedisClient;
@@ -42,7 +43,7 @@ export async function cacheGet(key: string): Promise<string | null> {
   try {
     return await redisClient.get(key);
   } catch (error) {
-    console.error('Error getting from cache:', error);
+    logger.error('Error getting from cache', error);
     return null;
   }
 }
@@ -51,7 +52,7 @@ export async function cacheSet(key: string, value: string, ttlSeconds: number = 
   try {
     await redisClient.set(key, value, ttlSeconds);
   } catch (error) {
-    console.error('Error setting cache:', error);
+    logger.error('Error setting cache', error);
   }
 }
 
@@ -66,6 +67,6 @@ export async function invalidateAnalyticsCache(userId: string) {
       await redisClient.del(...keys);
     }
   } catch (error) {
-    console.error('Error invalidating analytics cache:', error);
+    logger.error('Error invalidating analytics cache', error);
   }
 } 

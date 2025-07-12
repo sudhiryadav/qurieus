@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error('Error serving chat widget:', error);
+    logger.error('Error serving chat widget:', error);
     return new NextResponse('Error serving chat widget', { status: 500 });
   }
 } 

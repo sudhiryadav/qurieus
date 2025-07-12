@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import ModalDialog from "../ui/ModalDialog";
 import { showToast } from "@/components/Common/Toast";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import { logger } from "@/lib/logger";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -195,7 +196,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         handleReset();
       }
     } catch (error: any) {
-      console.error("Upload error details:", error);
+      logger.error("Upload error details:", error);
       showToast.error(error.response?.data?.error || error.message || "Failed to upload files");
       handleReset();
     } finally {

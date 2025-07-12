@@ -11,6 +11,7 @@ import LoadingButton from "@/components/Common/LoadingButton";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { Document } from "@prisma/client";
 import { formatFileSize } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (documents: Document[]) => void }) {
   const { data: session } = useSession();
@@ -31,7 +32,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
       setSelectedDocuments(new Set()); // Reset selections after refresh
       onFetchDocuments(response.data.documents);
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      logger.error('Error fetching documents:', error);
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
         fetchDocuments(); // Refresh the list
       }
     } catch (error) {
-      console.error("Error deleting document:", error);
+      logger.error("Error deleting document:", error);
       showToast.error("Failed to delete document");
     } finally {
       setDeleteModalOpen(false);
@@ -77,7 +78,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
         fetchDocuments();
       }
     } catch (error) {
-      console.error("Error deleting all documents:", error);
+      logger.error("Error deleting all documents:", error);
       showToast.error("Failed to delete all documents");
     } finally {
       setDeleteAllLoading(false);
@@ -96,7 +97,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
         fetchDocuments();
       }
     } catch (error) {
-      console.error("Error deleting selected documents:", error);
+      logger.error("Error deleting selected documents:", error);
       showToast.error("Failed to delete selected documents");
     } finally {
       setDeleteSelectedModalOpen(false);
@@ -121,7 +122,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
       window.URL.revokeObjectURL(url);
       showToast.success("Document downloaded successfully");
     } catch (error) {
-      console.error('Error downloading document:', error);
+      logger.error('Error downloading document:', error);
       showToast.error('Failed to download document');
     }
   };

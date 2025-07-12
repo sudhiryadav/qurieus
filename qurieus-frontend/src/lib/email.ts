@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import handlebars from "handlebars";
 import fs from "fs";
 import path from "path";
+import { logger } from "@/lib/logger";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -57,7 +58,7 @@ export async function sendEmail({ to, subject, template, context, html,attachmen
 }
 
 export async function sendVerificationEmail(email: string, code: string) {
-  console.log("Sending verification email to", email, code);
+  logger.info("Sending verification email", { email, code });
   return sendEmail({
     to: email,
     subject: "Verify your email address",
