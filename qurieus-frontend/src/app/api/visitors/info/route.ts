@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/utils/prismaDB';
 import { logger } from '@/lib/logger';
+import { sendEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
   try {
+    // Get API key from headers
+    const apiKey = request.headers.get('x-api-key');
+    
+    if (!apiKey) {
+      logger.warn("Visitor Info API: Missing API key");
+      return NextResponse.json(
+        { error: "API key is required" },
+        { status: 401 }
+      );
+    }
+
+    // Validate API key by checking if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: apiKey },
+      select: { id: true }
+    });
+
+    if (!user) {
+      logger.warn("Visitor Info API: Invalid API key", { apiKey });
+      return NextResponse.json(
+        { error: "Invalid API key" },
+        { status: 401 }
+      );
+    }
+
     const { visitorId, name, email, phone, company, source = 'chat_widget' } = await request.json();
     
     logger.info("Visitor Info API: Saving visitor information", { 
@@ -14,7 +40,8 @@ export async function POST(request: NextRequest) {
       email, 
       hasPhone: !!phone,
       hasCompany: !!company,
-      source 
+      source,
+      apiKey
     });
 
     if (!visitorId) {
@@ -67,6 +94,41 @@ export async function POST(request: NextRequest) {
         totalVisits: 1
       }
     });
+
+    // Send email notification to support team
+    try {
+      const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || process.env.ADMIN_EMAIL;
+      if (supportEmail) {
+        await sendEmail({
+          to: supportEmail,
+          subject: `New Chat Visitor: ${name} (${email})`,
+          template: "visitor-notification",
+          context: {
+            name,
+            email,
+            phone,
+            company,
+            visitorId,
+            source,
+            timestamp: new Date().toLocaleString(),
+            year: new Date().getFullYear()
+          }
+        });
+
+        logger.info("Visitor Info API: Support notification email sent", { 
+          visitorId, 
+          email, 
+          supportEmail 
+        });
+      }
+    } catch (emailError) {
+      logger.error("Visitor Info API: Error sending support notification email", { 
+        visitorId, 
+        email, 
+        error: emailError instanceof Error ? emailError.message : String(emailError) 
+      });
+      // Don't fail the request if email fails
+    }
 
     const responseTime = Date.now() - startTime;
     logger.info("Visitor Info API: Visitor information saved successfully", { 

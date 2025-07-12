@@ -37,8 +37,28 @@
     isOpen: false,
     messages: [],
     inputMessage: '',
-    isLoading: false
+    isLoading: false,
+    visitorInfoSubmitted: false,
+    visitorInfo: null
   };
+
+  // Check if visitor info has been submitted for this visitor
+  function checkVisitorInfoSubmitted() {
+    const visitorId = localStorage.getItem('qurieus_visitor_id');
+    if (!visitorId) return false;
+    
+    const submittedVisitors = JSON.parse(localStorage.getItem('qurieus_submitted_visitors') || '[]');
+    return submittedVisitors.includes(visitorId);
+  }
+
+  // Mark visitor info as submitted
+  function markVisitorInfoSubmitted(visitorId) {
+    const submittedVisitors = JSON.parse(localStorage.getItem('qurieus_submitted_visitors') || '[]');
+    if (!submittedVisitors.includes(visitorId)) {
+      submittedVisitors.push(visitorId);
+      localStorage.setItem('qurieus_submitted_visitors', JSON.stringify(submittedVisitors));
+    }
+  }
 
   let widgetConfig = {};
   let widgetContainer = null;
@@ -47,6 +67,242 @@
   function setWidgetState(newState) {
     widgetState = { ...widgetState, ...newState };
     renderWidget();
+  }
+
+  // Render visitor info form
+  function renderVisitorInfoForm(chatWindow) {
+    chatWindow.innerHTML = '';
+    
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f9fafb'};
+      border-radius: 12px 12px 0 0;
+    `;
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Welcome!';
+    title.style.cssText = `
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
+    `;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '×';
+    closeBtn.style.cssText = `
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    `;
+    closeBtn.onmouseenter = () => closeBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? '#4b5563' : '#e5e7eb';
+    closeBtn.onmouseleave = () => closeBtn.style.backgroundColor = 'transparent';
+    closeBtn.onclick = () => setWidgetState({ isOpen: false });
+    
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    
+    // Form container
+    const formContainer = document.createElement('div');
+    formContainer.style.cssText = `
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    `;
+    
+    const formTitle = document.createElement('h4');
+    formTitle.textContent = "Let's get started";
+    formTitle.style.cssText = `
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
+      text-align: center;
+    `;
+    
+    const formSubtitle = document.createElement('p');
+    formSubtitle.textContent = 'Please provide your information to begin chatting';
+    formSubtitle.style.cssText = `
+      margin: 0 0 20px 0;
+      font-size: 12px;
+      color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+      text-align: center;
+    `;
+    
+    // Form
+    const form = document.createElement('form');
+    form.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    `;
+    
+    // Name field
+    const nameField = createFormField('name', 'Name', 'text', 'Enter your full name', true);
+    
+    // Email field
+    const emailField = createFormField('email', 'Email', 'email', 'Enter your email address', true);
+    
+    // Phone field
+    const phoneField = createFormField('phonenumber', 'Phone Number', 'tel', 'Enter your phone number (optional)', false);
+    
+    // Company field
+    const companyField = createFormField('company', 'Company', 'text', 'Enter your company name (optional)', false);
+    
+    // Submit button
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.textContent = 'Start Chat';
+    submitBtn.style.cssText = `
+      padding: 12px;
+      background-color: ${widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR};
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+      margin-top: 8px;
+    `;
+    submitBtn.onmouseenter = () => submitBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? '#7c3aed' : '#7c3aed';
+    submitBtn.onmouseleave = () => submitBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR;
+    
+    // Form submission handler
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(form);
+      const name = formData.get('name') || '';
+      const email = formData.get('email') || '';
+      const phone = formData.get('phonenumber') || '';
+      const company = formData.get('company') || '';
+      
+      // Basic validation
+      if (!name.trim() || !email.trim()) {
+        alert('Name and email are required');
+        return;
+      }
+      
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        alert('Please enter a valid email address');
+        return;
+      }
+      
+      try {
+        // Get or generate visitor ID from localStorage
+        let visitorId = localStorage.getItem('qurieus_visitor_id');
+        if (!visitorId) {
+          visitorId = 'v_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('qurieus_visitor_id', visitorId);
+        }
+        
+        // Save visitor information to backend with API key
+        const response = await fetch(widgetConfig.baseUrl + '/api/visitors/info', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': widgetConfig.apiKey
+          },
+          body: JSON.stringify({
+            visitorId: visitorId,
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim() || undefined,
+            company: company.trim() || undefined,
+            source: 'chat_widget'
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to save visitor information');
+        }
+        
+        // Mark visitor as submitted and store visitor info
+        markVisitorInfoSubmitted(visitorId);
+        setWidgetState({
+          visitorInfoSubmitted: true,
+          visitorInfo: {
+            visitorId,
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim() || undefined,
+            company: company.trim() || undefined
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error saving visitor information:', error);
+        alert('Failed to save information. Please try again.');
+      }
+    };
+    
+    form.appendChild(nameField);
+    form.appendChild(emailField);
+    form.appendChild(phoneField);
+    form.appendChild(companyField);
+    form.appendChild(submitBtn);
+    
+    formContainer.appendChild(formTitle);
+    formContainer.appendChild(formSubtitle);
+    formContainer.appendChild(form);
+    
+    chatWindow.appendChild(header);
+    chatWindow.appendChild(formContainer);
+  }
+  
+  // Helper function to create form fields
+  function createFormField(name, label, type, placeholder, required) {
+    const fieldContainer = document.createElement('div');
+    fieldContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    `;
+    
+    const labelElement = document.createElement('label');
+    labelElement.textContent = label + (required ? ' *' : '');
+    labelElement.style.cssText = `
+      font-size: 12px;
+      font-weight: 500;
+      color: ${widgetConfig.theme === 'dark' ? 'white' : '#374151'};
+    `;
+    
+    const input = document.createElement('input');
+    input.type = type;
+    input.name = name;
+    input.placeholder = placeholder;
+    input.required = required;
+    input.style.cssText = `
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      background-color: ${widgetConfig.theme === 'dark' ? '#374151' : 'white'};
+      color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
+      outline: none;
+      transition: border-color 0.2s ease;
+    `;
+    input.onfocus = () => input.style.borderColor = BRAND_COLOR;
+    input.onblur = () => input.style.borderColor = '#d1d5db';
+    
+    fieldContainer.appendChild(labelElement);
+    fieldContainer.appendChild(input);
+    
+    return fieldContainer;
   }
 
   // Render the widget
@@ -106,14 +362,21 @@
     `;
     
     // Add CSS animation
-    const style = document.createElement('style');
-    style.textContent = `
+    const slideInStyle = document.createElement('style');
+    slideInStyle.textContent = `
       @keyframes slideIn {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
       }
     `;
-    document.head.appendChild(style);
+    document.head.appendChild(slideInStyle);
+    
+    // Show visitor info form if not submitted yet for this visitor
+    if (!widgetState.visitorInfoSubmitted && !checkVisitorInfoSubmitted()) {
+      renderVisitorInfoForm(chatWindow);
+      widgetContainer.appendChild(chatWindow);
+      return;
+    }
     
     // Header
     const header = document.createElement('div');
@@ -168,14 +431,54 @@
     
     // Render messages
     widgetState.messages.forEach((msg, index) => {
-      const messageDiv = document.createElement('div');
-      messageDiv.style.cssText = `
-        align-self: ${msg.role === 'user' ? 'flex-end' : 'flex-start'};
-        max-width: 80%;
-        animation: fadeIn 0.3s ease;
+      const messageContainer = document.createElement('div');
+      messageContainer.style.cssText = `
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 12px;
+        ${msg.role === 'user' ? 'flex-direction: row-reverse;' : 'flex-direction: row;'}
+      `;
+      
+      // Icon container
+      const iconContainer = document.createElement('div');
+      iconContainer.style.cssText = `
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background-color: ${msg.role === 'user' 
+          ? (widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR)
+          : (widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6')};
+      `;
+      
+      // Icon
+      const icon = document.createElement('img');
+      if (msg.role === 'user') {
+        // User icon (SVG data URL for a simple user icon)
+        icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+      } else {
+        // Assistant icon (logo.svg)
+        icon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
+      }
+      icon.style.cssText = `
+        width: 20px;
+        height: 20px;
+        filter: ${msg.role === 'user' ? 'none' : 'brightness(0) invert(1)'};
+      `;
+      
+      iconContainer.appendChild(icon);
+      
+      // Message content container
+      const messageContentContainer = document.createElement('div');
+      messageContentContainer.style.cssText = `
         display: flex;
         flex-direction: column;
         gap: 4px;
+        max-width: calc(100% - 40px);
       `;
       
       const messageBubble = document.createElement('div');
@@ -191,6 +494,7 @@
         line-height: 1.4;
         word-wrap: break-word;
         text-align: left;
+        max-width: 100%;
       `;
       
       // Add timestamp
@@ -204,9 +508,12 @@
         margin-top: 2px;
       `;
       
-      messageDiv.appendChild(messageBubble);
-      messageDiv.appendChild(timestamp);
-      messagesContainer.appendChild(messageDiv);
+      messageContentContainer.appendChild(messageBubble);
+      messageContentContainer.appendChild(timestamp);
+      
+      messageContainer.appendChild(iconContainer);
+      messageContainer.appendChild(messageContentContainer);
+      messagesContainer.appendChild(messageContainer);
     });
     
     // Loading indicator with peeking character
@@ -393,14 +700,45 @@
       sendBtn.style.opacity = '0.5';
       
       // Add user message to UI directly
-      const messageDiv = document.createElement('div');
-      messageDiv.style.cssText = `
-        align-self: flex-end;
-        max-width: 80%;
-        animation: fadeIn 0.3s ease;
+      const messageContainer = document.createElement('div');
+      messageContainer.style.cssText = `
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-direction: row-reverse;
+      `;
+      
+      // Icon container for user
+      const iconContainer = document.createElement('div');
+      iconContainer.style.cssText = `
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background-color: ${widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR};
+      `;
+      
+      // User icon
+      const userIcon = document.createElement('img');
+      userIcon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+      userIcon.style.cssText = `
+        width: 20px;
+        height: 20px;
+      `;
+      
+      iconContainer.appendChild(userIcon);
+      
+      // Message content container
+      const messageContentContainer = document.createElement('div');
+      messageContentContainer.style.cssText = `
         display: flex;
         flex-direction: column;
         gap: 4px;
+        max-width: calc(100% - 40px);
       `;
       
       const messageBubble = document.createElement('div');
@@ -414,6 +752,7 @@
         line-height: 1.4;
         word-wrap: break-word;
         text-align: left;
+        max-width: 100%;
       `;
       
       // Add timestamp for user message
@@ -426,9 +765,12 @@
         margin-top: 2px;
       `;
       
-      messageDiv.appendChild(messageBubble);
-      messageDiv.appendChild(userTimestamp);
-      messagesContainer.appendChild(messageDiv);
+      messageContentContainer.appendChild(messageBubble);
+      messageContentContainer.appendChild(userTimestamp);
+      
+      messageContainer.appendChild(iconContainer);
+      messageContainer.appendChild(messageContentContainer);
+      messagesContainer.appendChild(messageContainer);
       
       // Add peeking character indicator
       const peekingContainer = document.createElement('div');
@@ -529,7 +871,8 @@
           },
           body: JSON.stringify({
             message: userMessage,
-            apiKey: widgetConfig.apiKey
+            apiKey: widgetConfig.apiKey,
+            visitorId: localStorage.getItem('qurieus_visitor_id')
           })
         });
         
@@ -576,20 +919,58 @@
           }];
           
           // Update or create assistant message in UI
-          let assistantDiv = messagesContainer.querySelector('.assistant-message');
-          if (!assistantDiv) {
-            assistantDiv = document.createElement('div');
-            assistantDiv.className = 'assistant-message';
-            assistantDiv.style.cssText = `
-              align-self: flex-start;
-              max-width: 80%;
-              animation: fadeIn 0.3s ease;
+          let assistantContainer = messagesContainer.querySelector('.assistant-message');
+          if (!assistantContainer) {
+            assistantContainer = document.createElement('div');
+            assistantContainer.className = 'assistant-message';
+            assistantContainer.style.cssText = `
+              display: flex;
+              align-items: flex-end;
+              gap: 8px;
+              margin-bottom: 12px;
+              flex-direction: row;
+            `;
+            
+            // Icon container for assistant
+            const assistantIconContainer = document.createElement('div');
+            assistantIconContainer.style.cssText = `
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+              background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
+            `;
+            
+            // Assistant icon (logo.svg)
+            const assistantIcon = document.createElement('img');
+            assistantIcon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
+            assistantIcon.style.cssText = `
+              width: 20px;
+              height: 20px;
+              filter: brightness(0) invert(1);
+            `;
+            
+            assistantIconContainer.appendChild(assistantIcon);
+            assistantContainer.appendChild(assistantIconContainer);
+            
+            // Message content container
+            const assistantContentContainer = document.createElement('div');
+            assistantContentContainer.style.cssText = `
               display: flex;
               flex-direction: column;
               gap: 4px;
+              max-width: calc(100% - 40px);
             `;
-            messagesContainer.appendChild(assistantDiv);
+            assistantContainer.appendChild(assistantContentContainer);
+            
+            messagesContainer.appendChild(assistantContainer);
           }
+          
+          // Get the content container
+          const assistantContentContainer = assistantContainer.querySelector('div:last-child');
           
           const assistantBubble = document.createElement('div');
           assistantBubble.textContent = assistantMessage;
@@ -602,6 +983,7 @@
             line-height: 1.4;
             word-wrap: break-word;
             text-align: left;
+            max-width: 100%;
           `;
           
           // Add timestamp for assistant message
@@ -614,9 +996,9 @@
             margin-top: 2px;
           `;
           
-          assistantDiv.innerHTML = '';
-          assistantDiv.appendChild(assistantBubble);
-          assistantDiv.appendChild(assistantTimestamp);
+          assistantContentContainer.innerHTML = '';
+          assistantContentContainer.appendChild(assistantBubble);
+          assistantContentContainer.appendChild(assistantTimestamp);
           
           // Auto-scroll to bottom
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -637,14 +1019,46 @@
           timestamp: new Date().toISOString()
         }];
         
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-          align-self: flex-start;
-          max-width: 80%;
-          animation: fadeIn 0.3s ease;
+        const errorContainer = document.createElement('div');
+        errorContainer.style.cssText = `
+          display: flex;
+          align-items: flex-end;
+          gap: 8px;
+          margin-bottom: 12px;
+          flex-direction: row;
+        `;
+        
+        // Icon container for assistant
+        const errorIconContainer = document.createElement('div');
+        errorIconContainer.style.cssText = `
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
+        `;
+        
+        // Assistant icon (logo.svg)
+        const errorIcon = document.createElement('img');
+        errorIcon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
+        errorIcon.style.cssText = `
+          width: 20px;
+          height: 20px;
+          filter: brightness(0) invert(1);
+        `;
+        
+        errorIconContainer.appendChild(errorIcon);
+        
+        // Message content container
+        const errorContentContainer = document.createElement('div');
+        errorContentContainer.style.cssText = `
           display: flex;
           flex-direction: column;
           gap: 4px;
+          max-width: calc(100% - 40px);
         `;
         
         const errorBubble = document.createElement('div');
@@ -658,6 +1072,7 @@
           line-height: 1.4;
           word-wrap: break-word;
           text-align: left;
+          max-width: 100%;
         `;
         
         // Add timestamp for error message
@@ -670,9 +1085,12 @@
           margin-top: 2px;
         `;
         
-        errorDiv.appendChild(errorBubble);
-        errorDiv.appendChild(errorTimestamp);
-        messagesContainer.appendChild(errorDiv);
+        errorContentContainer.appendChild(errorBubble);
+        errorContentContainer.appendChild(errorTimestamp);
+        
+        errorContainer.appendChild(errorIconContainer);
+        errorContainer.appendChild(errorContentContainer);
+        messagesContainer.appendChild(errorContainer);
         
         // Auto-scroll to bottom
         messagesContainer.scrollTop = messagesContainer.scrollHeight;

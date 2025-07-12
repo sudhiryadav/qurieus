@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Chat Visitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #3758f9;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .visitor-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3758f9;
+        }
+        .visitor-info h3 {
+            color: #3758f9;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-table td:first-child {
+            font-weight: 600;
+            color: #555;
+            width: 30%;
+        }
+        .info-table td:last-child {
+            color: #333;
+        }
+        .action-required {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3758f9;
+            margin: 20px 0;
+        }
+        .action-required p {
+            margin: 0;
+            color: #333;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .logo img {
+            height: 40px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <img src="{{logoUrl}}" alt="Qurieus" />
+        </div>
+        
+        <div class="header">
+            <h1>New Chat Visitor Started Conversation</h1>
+        </div>
+        
+        <div class="visitor-info">
+            <h3>Visitor Information</h3>
+            <table class="info-table">
+                <tr>
+                    <td>Name:</td>
+                    <td>{{name}}</td>
+                </tr>
+                <tr>
+                    <td>Email:</td>
+                    <td>{{email}}</td>
+                </tr>
+                {{#if phone}}
+                <tr>
+                    <td>Phone:</td>
+                    <td>{{phone}}</td>
+                </tr>
+                {{/if}}
+                {{#if company}}
+                <tr>
+                    <td>Company:</td>
+                    <td>{{company}}</td>
+                </tr>
+                {{/if}}
+                <tr>
+                    <td>Visitor ID:</td>
+                    <td>{{visitorId}}</td>
+                </tr>
+                <tr>
+                    <td>Source:</td>
+                    <td>{{source}}</td>
+                </tr>
+                <tr>
+                    <td>Time:</td>
+                    <td>{{timestamp}}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="action-required">
+            <p><strong>Action Required:</strong> A new visitor has started a chat conversation. You may want to monitor the conversation or reach out to them directly.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated notification from the Qurieus Chat Widget system.</p>
+            <p>&copy; {{year}} Qurieus. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html> 
