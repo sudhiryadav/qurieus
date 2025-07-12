@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://qurieus.com/sitemap.xml
+
+# Disallow admin and user areas
+Disallow: /admin/
+Disallow: /user/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+
+# Allow important pages
+Allow: /about
+Allow: /pricing
+Allow: /contact
+Allow: /how-it-works
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /refund-policy
+Allow: /legal-notice
+
+# Crawl delay (optional)
+Crawl-delay: 1 
