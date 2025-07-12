@@ -24,5 +24,5 @@ To generate PNG versions of the Open Graph images:
    - Implement lazy loading
 -->
 
-<!-- Current SVG-based OG image is at: /public/images/og-image.svg -->
+<!-- Current SVG-based OG image is at: /public/images/og-image.png -->
 <!-- Recommended PNG sizes: 1200x630, 1200x600, 1080x1080, 600x600 -->

@@ -18,7 +18,7 @@ export default function MetaTags({
   title = 'Qurieus - AI-Powered Document Conversations',
   description = 'Transform your documents into interactive conversations with Qurieus. Our AI-powered platform allows you to upload PDFs, train the AI, and let your users engage with your content through natural conversations.',
   keywords = 'AI, artificial intelligence, document processing, PDF, chatbot, conversation, SaaS, document management, natural language processing, machine learning',
-  image = '/images/og-image.svg',
+  image = '/images/og-image.png',
   url,
   type = 'website',
   author = 'Qurieus',

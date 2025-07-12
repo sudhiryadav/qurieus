@@ -32,7 +32,7 @@ To generate PNG versions of the Open Graph images:
    - Implement lazy loading
 -->
 
-<!-- Current SVG-based OG image is at: /public/images/og-image.svg -->
+<!-- Current SVG-based OG image is at: /public/images/og-image.png -->
 <!-- Recommended PNG sizes: 1200x630, 1200x600, 1080x1080, 600x600 -->
 `;
 
@@ -58,7 +58,7 @@ const testHTML = `
     <meta property="og:url" content="https://qurieus.com" />
     <meta property="og:title" content="Qurieus - AI-Powered Document Conversations" />
     <meta property="og:description" content="Transform your documents into interactive conversations with Qurieus. Our AI-powered platform allows you to upload PDFs, train the AI, and let your users engage with your content through natural conversations." />
-    <meta property="og:image" content="https://qurieus.com/images/og-image.svg" />
+    <meta property="og:image" content="https://qurieus.com/images/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Qurieus - AI-Powered Document Conversations" />
@@ -70,12 +70,12 @@ const testHTML = `
     <meta name="twitter:url" content="https://qurieus.com" />
     <meta name="twitter:title" content="Qurieus - AI-Powered Document Conversations" />
     <meta name="twitter:description" content="Transform your documents into interactive conversations with Qurieus. Our AI-powered platform allows you to upload PDFs, train the AI, and let your users engage with your content through natural conversations." />
-    <meta name="twitter:image" content="https://qurieus.com/images/og-image.svg" />
+    <meta name="twitter:image" content="https://qurieus.com/images/og-image.png" />
     <meta name="twitter:image:alt" content="Qurieus - AI-Powered Document Conversations" />
     
     <!-- WhatsApp -->
     <meta property="og:image:type" content="image/svg+xml" />
-    <meta property="og:image:secure_url" content="https://qurieus.com/images/og-image.svg" />
+    <meta property="og:image:secure_url" content="https://qurieus.com/images/og-image.png" />
     
     <!-- LinkedIn -->
     <meta property="linkedin:owner" content="qurieus" />
@@ -85,7 +85,7 @@ const testHTML = `
     <meta name="instagram:card" content="summary_large_image" />
     <meta name="instagram:title" content="Qurieus - AI-Powered Document Conversations" />
     <meta name="instagram:description" content="Transform your documents into interactive conversations with Qurieus. Our AI-powered platform allows you to upload PDFs, train the AI, and let your users engage with your content through natural conversations." />
-    <meta name="instagram:image" content="https://qurieus.com/images/og-image.svg" />
+    <meta name="instagram:image" content="https://qurieus.com/images/og-image.png" />
 </head>
 <body>
     <h1>Qurieus - AI-Powered Document Conversations</h1>
