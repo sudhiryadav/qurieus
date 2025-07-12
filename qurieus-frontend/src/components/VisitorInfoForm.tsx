@@ -100,7 +100,7 @@ export function VisitorInfoForm({ onSubmit, onCancel }: VisitorInfoFormProps) {
     <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
       <div className="text-center mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Welcome! Let's get started
+          Welcome! Let&apos;s get started
         </h3>
         <p className="text-sm text-gray-600">
           Please provide your information to begin chatting

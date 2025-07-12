@@ -60,7 +60,7 @@ export function IdentityProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
-  }, [status, session?.user?.id]);
+  }, [status, session?.user?.id, session?.user?.name, session?.user?.email]);
 
   return <>{children}</>;
 } 
