@@ -157,7 +157,7 @@ export async function POST(request: Request) {
 
     userId = session.user.id;
     const body = await request.json();
-    const { message, documentId: apiKey, visitorId } = body;
+    const { message, apiKey, visitorId } = body;
     
     logger.info("Query API: Processing query request", { 
       apiKey, 
@@ -250,8 +250,32 @@ export async function POST(request: Request) {
     const cachedResponse = await cacheGet(cacheKey);
     // (Cache logic can be re-enabled as needed)
 
-    // Get chat history
-    const effectiveVisitorId = visitorId || session.user.id;
+    // Get chat history and handle visitor ID
+    let effectiveVisitorId = visitorId;
+    
+    // If no visitor ID provided, create a temporary one for this session
+    if (!effectiveVisitorId) {
+      // Generate a temporary visitor ID for this session
+      effectiveVisitorId = `temp_${session.user.id}_${Date.now()}`;
+      
+      // Create a minimal visitor info record to satisfy foreign key constraint
+      await prisma.visitorInfo.upsert({
+        where: { visitorId: effectiveVisitorId },
+        update: {
+          lastSeen: new Date(),
+          totalVisits: { increment: 1 }
+        },
+        create: {
+          visitorId: effectiveVisitorId,
+          firstSeen: new Date(),
+          lastSeen: new Date(),
+          totalVisits: 1,
+          totalQueries: 0,
+          isConverted: false
+        }
+      });
+    }
+    
     const { data: history } = await axios.get(
       `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/chat/history`,
       {

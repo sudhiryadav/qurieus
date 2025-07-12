@@ -612,6 +612,24 @@ def init_download_model():
     """Download the LLM model to the Modal volume so it is ready before any endpoint is called."""
     download_model()
 
+@app.function(
+    image=image,
+    gpu="t4",
+    timeout=60,
+    memory=2048,
+    volumes={"/data": volume},
+    secrets=[modal.Secret.from_name("QURIEUS_KEY")]
+)
+@modal.fastapi_endpoint(docs=True, label="keep-warm")
+async def keep_warm_endpoint(x_api_key: str = Header(...)):
+    """Keep-warm endpoint to prevent cold starts. Call this periodically to keep instances hot."""
+    verify_api_key(x_api_key)
+    return {
+        "status": "warm",
+        "timestamp": time.time(),
+        "message": "Instance is warm and ready"
+    }
+
 if __name__ == "__main__":
     # For local testing of Modal functions
     print("Modal service functions ready for deployment")

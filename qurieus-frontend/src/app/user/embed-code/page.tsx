@@ -1,7 +1,6 @@
 "use client";
 
-import ChatWidget from "@/components/ChatWidget";
-import { Check, Copy, FileText, Upload } from "lucide-react";
+import { Check, Copy, Code, Upload, Eye } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,14 +9,13 @@ export default function EmbedCode() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewConfig, setPreviewConfig] = useState({
     theme: 'light',
     position: 'bottom-right',
-    initialMessage: 'Hello! How can I help you today?',
-    showSources: false,
-    inline: false
+    initialMessage: 'Hello! How can I help you today?'
   });
 
   useEffect(() => {
@@ -41,6 +39,51 @@ export default function EmbedCode() {
     fetchDocuments();
   }, [status, session?.user?.id,router]);
 
+  // Load and initialize the embed script for preview
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    if (showPreview) {
+      // Create and add the script tag to document head (like a user would do)
+      const script = document.createElement('script');
+      script.src = '/embed.js';
+      script.setAttribute('data-api-key', session.user.id);
+      script.setAttribute('data-initial-message', previewConfig.initialMessage);
+      script.setAttribute('data-position', previewConfig.position);
+      script.setAttribute('data-theme', previewConfig.theme);
+      script.setAttribute('data-show-sources', 'false');
+      script.async = true;
+      script.id = 'qurieus-preview-script'; // Add ID for easy removal
+      
+      // Add to document head
+      document.head.appendChild(script);
+    } else {
+      // Remove the script tag when preview is hidden
+      const existingScript = document.getElementById('qurieus-preview-script');
+      if (existingScript) {
+        existingScript.remove();
+      }
+      
+      // Also remove any existing chat widget elements
+      const existingWidget = document.getElementById('qurieus-chat-widget');
+      if (existingWidget) {
+        existingWidget.remove();
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      const existingScript = document.getElementById('qurieus-preview-script');
+      if (existingScript) {
+        existingScript.remove();
+      }
+      const existingWidget = document.getElementById('qurieus-chat-widget');
+      if (existingWidget) {
+        existingWidget.remove();
+      }
+    };
+  }, [showPreview, previewConfig, session?.user?.id]);
+
   if (status === "loading" || loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center pt-16">
@@ -55,7 +98,7 @@ export default function EmbedCode() {
         <div className="text-center">
           <div className="mb-6 flex justify-center">
             <div className="rounded-full bg-blue-100 p-4 dark:bg-blue-900/20">
-              <FileText className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+              <Code className="h-12 w-12 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           
@@ -96,8 +139,6 @@ export default function EmbedCode() {
   data-initial-message=\"${previewConfig.initialMessage}\"
   data-position=\"${previewConfig.position}\"
   data-theme=\"${previewConfig.theme}\"
-  data-show-sources=\"${previewConfig.showSources}\"
-  data-inline=\"${previewConfig.inline}\"
   async
 ></script>`;
 
@@ -109,6 +150,10 @@ export default function EmbedCode() {
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
+  };
+
+  const togglePreview = () => {
+    setShowPreview(!showPreview);
   };
 
   return (
@@ -155,61 +200,41 @@ export default function EmbedCode() {
                 placeholder="Enter initial message"
               />
             </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">Show Sources</label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={previewConfig.showSources}
-                  onChange={(e) => setPreviewConfig(prev => ({ ...prev, showSources: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-dark-3 dark:border-dark-3 dark:checked:bg-primary"
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-300">Display source documents for responses</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">Inline Mode</label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={previewConfig.inline}
-                  onChange={(e) => setPreviewConfig(prev => ({ ...prev, inline: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-dark-3 dark:border-dark-3 dark:checked:bg-primary"
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-300">Embed directly in page content (not floating)</span>
-              </div>
-            </div>
           </div>
         </div>
 
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold">Embed Code</h2>
-            <button
-              onClick={copyToClipboard}
-              className="flex items-center space-x-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  <span>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4" />
-                  <span>Copy Code</span>
-                </>
-              )}
-            </button>
-            <ChatWidget
-              apiKey={apiKey}
-              initialMessage={previewConfig.initialMessage}
-              position={previewConfig.position as 'bottom-right' | 'bottom-left'}
-              theme={previewConfig.theme as 'light' | 'dark'}
-              showSources={previewConfig.showSources}
-            />
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={togglePreview}
+                className={`flex items-center justify-center rounded-lg border px-4 py-2 transition-colors ${
+                  showPreview 
+                    ? 'border-primary bg-primary text-white hover:bg-primary/90' 
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-dark-3 dark:bg-dark-3 dark:text-white dark:hover:bg-dark-4'
+                }`}
+                title={showPreview ? 'Hide Preview' : 'Show Preview'}
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+              <button
+                onClick={copyToClipboard}
+                className="flex items-center space-x-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    <span>Copy Code</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
           
           <div className="relative">
@@ -217,7 +242,6 @@ export default function EmbedCode() {
               <code className="text-sm">{embedCode}</code>
             </pre>
           </div>
-
           <div className="mt-4 rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
             <h3 className="mb-2 font-semibold text-yellow-800 dark:text-yellow-200">Important Notes:</h3>
             <ul className="list-inside list-disc space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
