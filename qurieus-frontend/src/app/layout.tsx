@@ -11,10 +11,10 @@ import { ThemeProvider } from "next-themes";
 import { useEffect, useState } from "react";
 import "../styles/index.css";
 import "../styles/prism-vsc-dark-plus.css";
-import { SidebarProvider } from "@/contexts/SidebarContext";
-import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { Providers } from "@/lib/providers";
 import Head from "./head";
 import { usePathname } from "next/navigation";
+import { IdentityProvider } from "@/components/IdentityProvider";
 
 export default function RootLayout({
   children,
@@ -46,12 +46,12 @@ export default function RootLayout({
               defaultTheme="light"
             >
               <Toast />
-              <SidebarProvider>
-                <SubscriptionProvider>
+              <Providers>
+                <IdentityProvider>
                   <Header />
                   <main className="flex-1 pt-16">{children}</main>
-                </SubscriptionProvider>
-              </SidebarProvider>
+                </IdentityProvider>
+              </Providers>
               {shouldShowFooter && <Footer />}
               <ScrollToTop />
             </ThemeProvider>

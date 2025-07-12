@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useSidebar } from "@/contexts/SidebarContext";
+import { useSidebar } from "@/hooks/useSidebar";
 
 export const userNav = [
   { name: "Dashboard", href: "/user/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
@@ -24,7 +24,7 @@ const Sidebar = () => {
   const { data: session } = useSession();
   const [adminOpen, setAdminOpen] = useState(false);
   const pathname = usePathname();
-  const { sidebarOpen, setSidebarOpen } = useSidebar();
+  const { sidebarOpen, updateSidebarOpen } = useSidebar();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
 
@@ -38,12 +38,12 @@ const Sidebar = () => {
         // !sidebarRef.current.contains(target as Node) &&
         // !trigger.current.contains(target as Node)
       ) {
-        setSidebarOpen(false);
+        updateSidebarOpen(false);
       }
     };
     document.addEventListener("click", clickHandler);
     return () => document.removeEventListener("click", clickHandler);
-  }, [sidebarOpen, setSidebarOpen]);
+  }, [sidebarOpen, updateSidebarOpen]);
 
   return (
     <aside
@@ -55,7 +55,7 @@ const Sidebar = () => {
       <div className="pt-2 pr-2 flex items-center justify-end gap-2 px-6 py-5.5 lg:py-6.5">
         <button
           ref={trigger}
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+          onClick={() => updateSidebarOpen(!sidebarOpen)}
           aria-controls="sidebar"
           aria-expanded={sidebarOpen}
           className="block lg:hidden"
@@ -71,7 +71,7 @@ const Sidebar = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => updateSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
                   ${isActive ? "bg-primary/10 text-primary" : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"}`}
               >
@@ -99,7 +99,7 @@ const Sidebar = () => {
                       <Link
                         key={item.href}
                         href={item.href}
-                        onClick={() => setSidebarOpen(false)}
+                        onClick={() => updateSidebarOpen(false)}
                         className={`flex items-center px-2 py-1 text-sm rounded-md transition-colors
                           ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 dark:text-gray-300 hover:text-primary"}`}
                       >

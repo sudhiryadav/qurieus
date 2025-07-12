@@ -4,6 +4,8 @@ import axiosInstance from "@/lib/axios";
 import { AxiosProgressEvent } from "axios";
 import { showToast } from "@/components/Common/Toast";
 import { extractErrorMessage } from "@/utils/errorMessage";
+import { logger } from "@/lib/logger";
+import { getIdentityContext } from "@/utils/visitorId";
 import Image from "next/image";
 
 interface ChatWidgetProps {
@@ -15,15 +17,7 @@ interface ChatWidgetProps {
   showSources?: boolean;
 }
 
-const getVisitorId = () => {
-  if (typeof window === "undefined") return "";
-  let id = localStorage.getItem("qurieus_visitor_id");
-  if (!id) {
-    id = "v_" + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem("qurieus_visitor_id", id);
-  }
-  return id;
-};
+// Using the centralized getVisitorId from utils/visitorId
 
 // Add shimmer CSS
 const shimmerStyle = `
@@ -100,12 +94,22 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   // Add useEffect for document check
   useEffect(() => {
     const checkDocuments = async () => {
+      const identityContext = getIdentityContext();
+      const visitorId = identityContext.visitorId;
+      logger.info("ChatWidget: Checking documents", { apiKey, visitorId });
+      
       try {
         const response = await axiosInstance.get(
           `/api/documents/check/${apiKey}`,
         );
         const hasDocs = response.data.hasDocuments;
         setHasDocuments(hasDocs);
+
+        logger.info("ChatWidget: Documents check completed", { 
+          apiKey, 
+          visitorId, 
+          hasDocuments: hasDocs 
+        });
 
         if (!hasDocs) {
           setMessages([
@@ -118,7 +122,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
           setMessages([{ role: "assistant", content: initialMessage }]);
         }
       } catch (error) {
-        console.error("Error checking documents:", error);
+        logger.error("ChatWidget: Error checking documents", { 
+          apiKey, 
+          visitorId, 
+          error: error instanceof Error ? error.message : String(error) 
+        });
         setHasDocuments(false);
         setMessages([
           {
@@ -170,6 +178,16 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     if (!inputMessage.trim() || !hasDocuments) return;
 
     const userMessage = inputMessage;
+    const identityContext = getIdentityContext();
+    const visitorId = identityContext.visitorId;
+    const startTime = Date.now();
+    
+    logger.info("ChatWidget: Starting query", { 
+      apiKey, 
+      visitorId, 
+      messageLength: userMessage.length 
+    });
+    
     setInputMessage("");
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setMessageHistory((prev) => [...prev, userMessage]);
@@ -180,7 +198,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     setShowThinking(true);
     
     try {
-      const visitorId = getVisitorId();
       let gotFirstChunk = false;
       let accumulatedResponse = "";
       let processedLines = new Set<string>();
@@ -245,6 +262,15 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                   }
                   
                 if (data.done) {
+                  const responseTime = Date.now() - startTime;
+                  logger.info("ChatWidget: Query completed successfully", { 
+                    apiKey, 
+                    visitorId, 
+                    responseTime,
+                    responseLength: accumulatedResponse.length,
+                    hasSources: !!data.sources,
+                    sourceCount: data.sources?.length || 0
+                  });
                   setSources(data.sources);
                   }
                 } catch (parseError) {
@@ -258,8 +284,18 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
         },
       );
     } catch (error: any) {
-      setShowThinking(false);
+      const responseTime = Date.now() - startTime;
       const errorMsg = extractErrorMessage(error);
+      
+      logger.error("ChatWidget: Query failed", { 
+        apiKey, 
+        visitorId, 
+        error: errorMsg, 
+        responseTime,
+        stack: error.stack 
+      });
+      
+      setShowThinking(false);
       showToast.error(errorMsg);
       setMessages((prev) => [
         ...prev,

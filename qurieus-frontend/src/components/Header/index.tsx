@@ -8,13 +8,13 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Logo from "../Common/Logo";
 
-import { useSidebar } from "@/contexts/SidebarContext";
+import { useSidebar } from "@/hooks/useSidebar";
 import menuData from "./menuData";
 import { userNav } from "@/components/Sidebar";
 
 const Header: React.FC = () => {
   const { data: session } = useSession();
-  const { sidebarOpen, setSidebarOpen } = useSidebar();
+  const { sidebarOpen, updateSidebarOpen } = useSidebar();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -84,10 +84,10 @@ const Header: React.FC = () => {
       <div className="flex h-16 items-center justify-between px-2 sm:px-4">
         <div className="flex items-center">
           {/* Sidebar toggle button (mobile only) */}
-          {isUserRoute && setSidebarOpen && (
+          {isUserRoute && (
             <button
               type="button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              onClick={() => updateSidebarOpen(!sidebarOpen)}
               className="mr-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 sm:mr-4 lg:hidden"
             >
               <Menu className="h-6 w-6" />

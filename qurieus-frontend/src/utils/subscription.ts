@@ -1,4 +1,5 @@
 import { prisma } from "@/utils/prismaDB";
+import { logger } from "@/lib/logger";
 
 /**
  * Ensures only one subscription is active for a user at a time
@@ -29,7 +30,7 @@ export async function ensureSingleActiveSubscription(
     },
   });
 
-  console.log(`Deactivated ${result.count} other active subscriptions for user ${userId}`);
+  logger.info(`Deactivated ${result.count} other active subscriptions for user ${userId}`);
   return result;
 }
 

@@ -3,19 +3,30 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import { subDays, startOfDay, endOfDay, format } from 'date-fns';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
+      logger.warn("Analytics Detailed API: Unauthorized access attempt");
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    userId = session.user.id;
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '7d';
     const days = parseInt(timeRange.replace('d', ''));
 
-    const userId = session.user.id;
+    logger.info("Analytics Detailed API: Fetching detailed analytics", { 
+      userId, 
+      timeRange, 
+      days 
+    });
+
     const now = new Date();
     const startDate = startOfDay(subDays(now, days));
     const endDate = endOfDay(now);
@@ -155,6 +166,15 @@ export async function GET(request: Request) {
       return { os, count: stat._count };
     });
 
+    const responseTime = Date.now() - startTime;
+    logger.info("Analytics Detailed API: Detailed analytics retrieved successfully", { 
+      userId, 
+      timeRange,
+      totalQueries,
+      avgQueriesPerDay,
+      responseTime 
+    });
+
     return NextResponse.json({
       totalQueries,
       avgQueriesPerDay,
@@ -172,11 +192,15 @@ export async function GET(request: Request) {
       browserStats,
       osStats
     });
-  } catch (error) {
-    console.error('Error fetching detailed analytics:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch detailed analytics' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Analytics Detailed API: Error fetching detailed analytics", { 
+      userId, 
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    });
+    
+    return NextResponse.json({ error: 'Failed to fetch detailed analytics' }, { status: 500 });
   }
 } 

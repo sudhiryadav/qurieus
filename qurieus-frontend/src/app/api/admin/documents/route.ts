@@ -4,6 +4,7 @@ import { authOptions } from "@/utils/auth";
 import axiosInstance from "@/lib/axios";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/utils/prismaDB";
+import { logger } from "@/lib/logger";
 
 // Maximum file size (10MB)
 // Convert MB to bytes (1MB = 1024 * 1024 bytes)
@@ -66,13 +67,19 @@ async function validateMaxStorage(userId: string, files: File[]) {
 }
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
+      logger.warn("Documents API: Unauthorized GET attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    logger.info("Documents API: Fetching documents", { userId });
 
     // Only fetch documents from the local database
     const documents = await prisma.document.findMany({
@@ -81,8 +88,23 @@ export async function GET(request: Request) {
       },
     });
 
+    const responseTime = Date.now() - startTime;
+    logger.info("Documents API: Documents fetched successfully", { 
+      userId, 
+      documentCount: documents.length,
+      responseTime 
+    });
+
     return NextResponse.json({ documents });
   } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Documents API: Error fetching documents", { 
+      userId, 
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    });
+    
     console.error("Error fetching documents:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to fetch documents" },
@@ -92,35 +114,58 @@ export async function GET(request: Request) {
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
-    console.log("POST request received");
+    logger.info("Documents API: Processing file upload request");
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
+      logger.warn("Documents API: Unauthorized POST attempt");
       return NextResponse.json(
         { error: "Unauthorized. Please sign in." },
         { status: 401 },
       );
     }
 
+    userId = session.user.id;
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
     const description = formData.get("description") as string;
     const category = formData.get("category") as string;
 
+    logger.info("Documents API: File upload validation", { 
+      userId, 
+      fileCount: files.length,
+      fileNames: files.map(f => f.name),
+      totalSize: files.reduce((sum, f) => sum + f.size, 0)
+    });
+
     if (!files || files.length === 0) {
+      logger.warn("Documents API: No files provided", { userId });
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
     // Validate max docs
     const maxDocsError = await validateMaxDocs(session.user.id, files.length);
     if (maxDocsError) {
+      logger.warn("Documents API: Max docs validation failed", { 
+        userId, 
+        error: maxDocsError.error 
+      });
       return NextResponse.json({ error: maxDocsError.error }, { status: maxDocsError.status });
     }
 
     // Validate max storage
     const maxStorageError = await validateMaxStorage(session.user.id, files);
     if (maxStorageError) {
+      logger.warn("Documents API: Max storage validation failed", { 
+        userId, 
+        error: maxStorageError.error,
+        currentUsageMB: maxStorageError.currentUsageMB,
+        attemptedUploadMB: maxStorageError.attemptedUploadMB
+      });
       return NextResponse.json(
         {
           error: maxStorageError.error,
@@ -134,6 +179,12 @@ export async function POST(req: NextRequest) {
     // File validation
     for (const file of files) {
       if (file.size > MAX_FILE_SIZE) {
+        logger.warn("Documents API: File size exceeded limit", { 
+          userId, 
+          fileName: file.name, 
+          fileSize: file.size, 
+          maxSize: MAX_FILE_SIZE 
+        });
         return NextResponse.json(
           {
             error: `File ${file.name} exceeds the ${process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB}MB size limit`,
@@ -143,6 +194,11 @@ export async function POST(req: NextRequest) {
       }
 
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        logger.warn("Documents API: Unsupported file type", { 
+          userId, 
+          fileName: file.name, 
+          fileType: file.type 
+        });
         return NextResponse.json(
           { error: `File type ${file.type} is not supported` },
           { status: 400 },
@@ -154,12 +210,24 @@ export async function POST(req: NextRequest) {
     const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
     const modalApiUrl = process.env.MODAL_UPLOAD_DOCUMENT_URL;
 
+    logger.info("Documents API: Processing files", { 
+      userId, 
+      useModalPersistent, 
+      hasModalUrl: !!modalApiUrl 
+    });
+
     if (useModalPersistent && modalApiUrl) {
       // Process with Modal.com
       const modalResponse = await processWithModal(files, description, category, session.user);
       const data = await modalResponse.json();
       const errorResults = data.results.filter((result: any) => !result.success);
       if (errorResults.length > 0) {
+        logger.error("Documents API: Modal.com processing errors", { 
+          userId, 
+          errorCount: errorResults.length,
+          errors: errorResults.map((e: any) => ({ filename: e.filename, error: e.error }))
+        });
+        
         // Log errors in DB for each failed file
         for (const errorResult of errorResults) {
           await prisma.document.create({
@@ -185,13 +253,39 @@ export async function POST(req: NextRequest) {
           { status: 500 }
         );
       }
+      
+      const responseTime = Date.now() - startTime;
+      logger.info("Documents API: Modal.com processing completed successfully", { 
+        userId, 
+        fileCount: files.length,
+        totalChunks: data.total_chunks,
+        responseTime 
+      });
+      
       // All files succeeded
       return NextResponse.json(data);
     } else {
       // Process with backend FastAPI
-      return await processWithBackend(files, description, category, session.user, req);
+      const result = await processWithBackend(files, description, category, session.user, req);
+      
+      const responseTime = Date.now() - startTime;
+      logger.info("Documents API: Backend processing completed successfully", { 
+        userId, 
+        fileCount: files.length,
+        responseTime 
+      });
+      
+      return result;
     }
   } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Documents API: Error uploading files", { 
+      userId, 
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    });
+    
     console.error("Error uploading files:", {
       error: error.message,
       stack: error.stack,

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { prisma } from "@/utils/prismaDB";
 import { EventName, LogLevel, Environment, Paddle } from "@paddle/paddle-node-sdk";
+import { logger } from "@/lib/logger";
 
 const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
   environment:
@@ -38,7 +39,7 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
 
   // If not found by price ID, try to find by plan name
   if (!plan && paddleSub.items[0]?.price?.name) {
-    console.log("Plan not found by price ID, trying to find by name:", paddleSub.items[0].price.name);
+    logger.info("Plan not found by price ID, trying to find by name:", { priceName: paddleSub.items[0].price.name });
     plan = await prisma.subscriptionPlan.findFirst({
       where: {
         name: paddleSub.items[0].price.name,
@@ -47,15 +48,11 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
   }
 
   if (!plan) {
-    console.error("Plan not found for Paddle subscription:", {
-      priceId: paddleSub.items[0]?.price?.id,
-      priceName: paddleSub.items[0]?.price?.name,
-      subscriptionId: paddleSub.id
-    });
+    logger.error("Plan not found for Paddle subscription", { paddleSub });
     throw new Error(`Plan not found for Paddle subscription. Price ID: ${paddleSub.items[0]?.price?.id}, Price Name: ${paddleSub.items[0]?.price?.name}`);
   }
 
-  console.log("Found plan:", plan.name);
+  logger.info("Found plan", { planName: plan.name });
 
   // Create plan snapshot for new subscriptions
   const planSnapshot = {

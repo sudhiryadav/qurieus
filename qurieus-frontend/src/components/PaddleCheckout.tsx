@@ -20,6 +20,7 @@ import {
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import { logger } from "@/lib/logger";
 
 export type PaddleCheckoutProps = {
   mode?: "overlay" | "inline";
@@ -64,37 +65,48 @@ export const PaddleCheckout = forwardRef<
     const { email, id: applicationCustomerId, name } = session?.user || {}; // Use 'id' as applicationCustomerId
 
     useEffect(() => {
+      logger.info("PaddleCheckout: Initializing Paddle", { 
+        environment: process.env.NODE_ENV === "production" ? "production" : "sandbox",
+        hasToken: !!process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN 
+      });
+      
       initializePaddle({
         environment:
           process.env.NODE_ENV === "production" ? "production" : "sandbox",
         token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
         eventCallback: (event: PaddleEventData) => {
-          console.log("Paddle event received:", event.name, event.data);
+          logger.info("PaddleCheckout: Paddle event received", { 
+            eventName: event.name, 
+            eventData: event.data 
+          });
           
           if (event.name === CheckoutEventNames.CHECKOUT_COMPLETED) {
-            console.log("Checkout completed, closing immediately");
+            logger.info("PaddleCheckout: Checkout completed, closing immediately");
             onComplete?.(event.data);
             // Close checkout immediately when payment is completed
             paddle?.Checkout.close();
           }
           if (event.name === CheckoutEventNames.CHECKOUT_CLOSED) {
-            console.log("Checkout closed");
+            logger.info("PaddleCheckout: Checkout closed");
             onClose?.(event.data);
           }
           if (event.name === CheckoutEventNames.CHECKOUT_ERROR) {
-            console.log("Checkout error:", event.error);
+            logger.error("PaddleCheckout: Checkout error", { error: event.error });
             onError?.(event.error);
             paddle?.Checkout.close();
           }
           if (event.name === CheckoutEventNames.CHECKOUT_FAILED) {
-            console.log("Checkout failed");
+            logger.error("PaddleCheckout: Checkout failed", { eventData: event.data });
             onFailed?.(event.data);
             paddle?.Checkout.close();
           }
         },
       }).then((paddleInstance: Paddle | undefined) => {
         if (paddleInstance) {
+          logger.info("PaddleCheckout: Paddle initialized successfully");
           setPaddle(paddleInstance);
+        } else {
+          logger.error("PaddleCheckout: Failed to initialize Paddle");
         }
       });
     }, [onComplete, onClose, onError, onFailed, paddle]);
@@ -110,16 +122,22 @@ export const PaddleCheckout = forwardRef<
     }));  
 
     function openCheckout(priceId: string, planId: string) {
-      if (!paddle) return;
+      if (!paddle) {
+        logger.warn("PaddleCheckout: Attempted to open checkout without Paddle instance");
+        return;
+      }
       
       // Security validation
       if (!applicationCustomerId || !email) {
-        console.error("Missing required user data for checkout");
+        logger.error("PaddleCheckout: Missing required user data for checkout", { 
+          hasApplicationCustomerId: !!applicationCustomerId, 
+          hasEmail: !!email 
+        });
         toast.error("Authentication error. Please log in again.");
         return;
       }
       
-      console.log("Opening checkout for user:", {
+      logger.info("PaddleCheckout: Opening checkout", {
         userId: applicationCustomerId,
         email: email,
         name: name,
@@ -150,7 +168,18 @@ export const PaddleCheckout = forwardRef<
     }
 
     async function updatePlan(subscriptionId: string, priceId: string) {
-      if (!subscriptionId || !priceId) return;
+      if (!subscriptionId || !priceId) {
+        logger.warn("PaddleCheckout: Missing required data for plan update", { 
+          hasSubscriptionId: !!subscriptionId, 
+          hasPriceId: !!priceId 
+        });
+        return;
+      }
+
+      logger.info("PaddleCheckout: Starting plan update", { 
+        subscriptionId, 
+        priceId 
+      });
 
       setIsUpdatingPlan(true);
       try {
@@ -159,6 +188,10 @@ export const PaddleCheckout = forwardRef<
           priceId,
         });
         if (response.data.success) {
+          logger.info("PaddleCheckout: Plan updated successfully", { 
+            subscriptionId, 
+            priceId 
+          });
           toast.success("Plan upgraded successfully! Redirecting to subscription page...");
           onUpdatePlan?.(subscriptionId, priceId);
           // Redirect to subscription page after successful upgrade
@@ -166,9 +199,19 @@ export const PaddleCheckout = forwardRef<
             router.push('/user/subscription');
           }, 1500);
         } else {
+          logger.error("PaddleCheckout: Plan update failed", { 
+            subscriptionId, 
+            priceId, 
+            error: response.data.error 
+          });
           toast.error(response.data.error || "Failed to upgrade plan");
         }
-      } catch (error) {
+      } catch (error: any) {
+        logger.error("PaddleCheckout: Error updating plan", { 
+          subscriptionId, 
+          priceId, 
+          error: error.message 
+        });
         console.error("Error updating plan:", error);
         toast.error("Error updating plan. Please try again.");
       } finally {
@@ -179,10 +222,11 @@ export const PaddleCheckout = forwardRef<
     // New function to redirect to Paddle Customer Portal
     async function redirectToCustomerPortal(paddleCustomerId: string) {
       if (!paddleCustomerId) {
-        console.error("Paddle Customer ID is required to redirect to portal.");
-        // You might want to show a user-friendly error here
+        logger.error("PaddleCheckout: Paddle Customer ID is required to redirect to portal");
         return;
       }
+
+      logger.info("PaddleCheckout: Redirecting to customer portal", { paddleCustomerId });
 
       try {
         // Call your backend API to get the Customer Portal URL
@@ -192,11 +236,16 @@ export const PaddleCheckout = forwardRef<
         const { portalUrl } = response.data;
 
         if (portalUrl) {
+          logger.info("PaddleCheckout: Customer portal URL received", { paddleCustomerId });
           window.location.href = portalUrl; // Redirect the user
         } else {
-          console.error("No portal URL received from backend.");
+          logger.error("PaddleCheckout: No portal URL received from backend", { paddleCustomerId });
         }
-      } catch (error) {
+      } catch (error: any) {
+        logger.error("PaddleCheckout: Error redirecting to customer portal", { 
+          paddleCustomerId, 
+          error: error.message 
+        });
         console.error("Error redirecting to customer portal:", error);
         // Handle error, e.g., show a toast message
       }

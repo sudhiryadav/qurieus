@@ -3,21 +3,33 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
+      logger.warn("Analytics API: Unauthorized access attempt");
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
+    userId = session.user.id;
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get("timeRange") || "7d";
     const days = parseInt(timeRange.replace('d', ''));
+
+    logger.info("Analytics API: Fetching analytics data", { 
+      userId, 
+      timeRange, 
+      days 
+    });
 
     const startDate = startOfDay(subDays(new Date(), days));
     const endDate = endOfDay(new Date());
@@ -100,6 +112,15 @@ export async function GET(request: Request) {
     });
 
     // Format the response
+    const responseTime = Date.now() - startTime;
+    logger.info("Analytics API: Analytics data retrieved successfully", { 
+      userId, 
+      timeRange,
+      totalQueries,
+      successfulQueries,
+      responseTime 
+    });
+
     return NextResponse.json({
       timeRange,
       userId: session.user.id,
@@ -118,6 +139,14 @@ export async function GET(request: Request) {
       }))
     });
   } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Analytics API: Error fetching analytics", { 
+      userId, 
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    });
+    
     console.error("Error fetching analytics:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to fetch analytics" },
@@ -127,18 +156,42 @@ export async function GET(request: Request) {
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
+      logger.warn("Analytics API: Unauthorized POST attempt");
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const userId = session.user.id;
+    userId = session.user.id;
     const { type, data } = await req.json();
+
+    logger.info("Analytics API: Processing analytics update", { 
+      userId, 
+      type 
+    });
+
+    const responseTime = Date.now() - startTime;
+    logger.info("Analytics API: Analytics update completed", { 
+      userId, 
+      type, 
+      responseTime 
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Analytics API: Error updating analytics", { 
+      userId, 
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    });
+    
     console.error('Error updating analytics:', error);
     return new Response('Internal Server Error', { status: 500 });
   }

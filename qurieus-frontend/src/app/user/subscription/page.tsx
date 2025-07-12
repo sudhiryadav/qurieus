@@ -10,6 +10,7 @@ import { UserSubscription, SubscriptionPlan } from "@prisma/client";
 import { format, differenceInDays } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
+import { logger } from "@/lib/logger";
 
 const FullScreenPricing = ({
   showPricingModal,
@@ -66,7 +67,7 @@ export default function SubscriptionPage() {
         showToast.info(response.data === null ? "No subscription found" : "Subscription details updated");
       }
     } catch (error) {
-      console.error("Error fetching subscription:", error);
+      logger.error("Error fetching subscription:", error);
       showToast.error("Failed to load subscription details");
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { logger } from "../src/lib/logger";
 
 const prisma = new PrismaClient();
 
@@ -101,12 +102,12 @@ async function main() {
     });
   }
 
-  console.log({ admin, plansSeeded: plans.length });
+  logger.info('Seeded admin and plans', { admin, plansSeeded: plans.length });
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    logger.error(e);
     process.exit(1);
   })
   .finally(async () => {

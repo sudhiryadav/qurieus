@@ -4,6 +4,7 @@ import { prisma } from "@/utils/prismaDB";
 import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
 import { errorResponse } from "@/utils/responser";
 import { getServerSession } from "next-auth";
+import { logger } from "@/lib/logger";
 
 // Rate Limiting Setup
 const RATE_LIMIT = parseInt(process.env.QUERY_RATE_LIMIT || "100", 10);
@@ -136,6 +137,9 @@ async function queryWithBackend(message: string, userId: string, history: any[])
 }
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
     // Extract headers for restriction checks
     const origin = request.headers.get("origin") || "";
@@ -147,11 +151,23 @@ export async function POST(request: Request) {
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
+      logger.warn("Query API: Unauthorized access attempt", { origin, referer, ip });
       return errorResponse({ error: "Unauthorized", status: 401, errorCode: "UNAUTHORIZED" });
     }
 
+    userId = session.user.id;
     const body = await request.json();
     const { message, documentId: apiKey, visitorId } = body;
+    
+    logger.info("Query API: Processing query request", { 
+      apiKey, 
+      visitorId, 
+      messageLength: message?.length || 0,
+      origin,
+      referer,
+      ip 
+    }, { userId });
+
     if (!message)
       return errorResponse({ error: "Message is required", status: 400 });
     if (!apiKey)
@@ -159,8 +175,10 @@ export async function POST(request: Request) {
 
     // Rate Limiting
     const rateKey = `rate:${apiKey}:${ip}`;
-    if (await isRateLimited(rateKey))
+    if (await isRateLimited(rateKey)) {
+      logger.warn("Query API: Rate limit exceeded", { apiKey, ip, rateKey }, { userId });
       return errorResponse({ error: "Rate limit exceeded", status: 429 });
+    }
 
     // Fetch user and check domain/origin/referrer/ip restrictions
     const user = await prisma.user.findUnique({
@@ -244,11 +262,16 @@ export async function POST(request: Request) {
         },
       },
     );
-    const startTime = Date.now();
 
     // Query based on environment configuration
     const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
     const modalApiUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
+
+    logger.info("Query API: Executing query", { 
+      apiKey, 
+      useModalPersistent, 
+      hasModalUrl: !!modalApiUrl 
+    }, { userId });
 
     let response;
     if (useModalPersistent && modalApiUrl) {
@@ -297,6 +320,14 @@ export async function POST(request: Request) {
       },
     });
 
+    const responseTime = Date.now() - startTime;
+    logger.info("Query API: Query completed successfully", { 
+      apiKey, 
+      responseTime, 
+      responseLength: responseBuffer.length,
+      useModalPersistent 
+    }, { userId });
+
     return new Response(response.body?.pipeThrough(transformStream), {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
@@ -306,6 +337,13 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Query API: Error processing query", { 
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    }, { userId });
+    
     console.error("Query error:", error);
     return errorResponse({ 
       error: "An error occurred while processing your query", 

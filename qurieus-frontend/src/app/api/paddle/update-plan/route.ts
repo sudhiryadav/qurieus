@@ -3,16 +3,34 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import paddle from "@/lib/paddle";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
+      logger.warn("Paddle Update Plan API: Unauthorized access attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    userId = session.user.id;
     const { subscriptionId, priceId } = await req.json();
+    
+    logger.info("Paddle Update Plan API: Processing plan update", { 
+      userId, 
+      subscriptionId, 
+      priceId 
+    });
+
     if (!subscriptionId || !priceId) {
+      logger.warn("Paddle Update Plan API: Missing required fields", { 
+        userId, 
+        hasSubscriptionId: !!subscriptionId, 
+        hasPriceId: !!priceId 
+      });
       return NextResponse.json(
         { error: "Subscription ID and Price ID are required" },
         { status: 400 }
@@ -28,6 +46,10 @@ export async function POST(req: Request) {
     }) as any;
 
     if (!subscription) {
+      logger.warn("Paddle Update Plan API: Subscription not found", { 
+        userId, 
+        subscriptionId 
+      });
       return NextResponse.json(
         { error: "Subscription not found" },
         { status: 404 }
@@ -40,6 +62,12 @@ export async function POST(req: Request) {
     const isFreeTier = !subscription.paddleSubscriptionId || (planSnapshot && planSnapshot.price === 0);
     
     if (isTrialSubscription || isFreeTier) {
+      logger.warn("Paddle Update Plan API: Attempted to update trial/free subscription", { 
+        userId, 
+        subscriptionId,
+        isTrialSubscription,
+        isFreeTier 
+      });
       // For trial subscriptions or free tiers, redirect to Paddle checkout
       // This should not happen as the frontend should handle this case
       return NextResponse.json(
@@ -47,6 +75,11 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    logger.info("Paddle Update Plan API: Updating subscription status to in_progress", { 
+      userId, 
+      subscriptionId 
+    });
 
     // Update the subscription in our database to set that status as in progress    
     await prisma.userSubscription.update({
@@ -59,6 +92,12 @@ export async function POST(req: Request) {
     });
 
     // Call Paddle API to update the subscription using SDK
+    logger.info("Paddle Update Plan API: Calling Paddle API to update subscription", { 
+      userId, 
+      subscriptionId, 
+      priceId 
+    });
+    
     const response = await paddle.subscriptions.update(subscriptionId, {
       prorationBillingMode: "prorated_immediately",
         items: [
@@ -69,11 +108,27 @@ export async function POST(req: Request) {
         ]
     });
 
+    const responseTime = Date.now() - startTime;
+    logger.info("Paddle Update Plan API: Plan updated successfully", { 
+      userId, 
+      subscriptionId, 
+      responseTime 
+    });
+
     return NextResponse.json({ 
       success: true, 
       subscription: response 
     });
   } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Paddle Update Plan API: Error updating subscription", { 
+      userId, 
+      subscriptionId: error.config?.data?.subscriptionId,
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    });
+    
     console.error("Error updating subscription:", error);
     console.error("Error details:", {
       message: error.message,
