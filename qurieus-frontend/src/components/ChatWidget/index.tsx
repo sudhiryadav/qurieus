@@ -7,6 +7,7 @@ import { extractErrorMessage } from "@/utils/errorMessage";
 import { logger } from "@/lib/logger";
 import { getIdentityContext } from "@/utils/visitorId";
 import Image from "next/image";
+import { VisitorInfoForm } from "@/components/VisitorInfoForm";
 
 interface ChatWidgetProps {
   apiKey: string;
@@ -84,6 +85,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [historyIndex, setHistoryIndex] = useState(-1);
 
   const [hasDocuments, setHasDocuments] = useState<boolean | null>(false);
+  const [visitorInfoLoaded, setVisitorInfoLoaded] = useState(false);
+  const [showVisitorInfoForm, setShowVisitorInfoForm] = useState(false);
 
   // Auto-resize textarea function
   const autoResizeTextarea = (element: HTMLTextAreaElement) => {
@@ -139,6 +142,30 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 
     checkDocuments();
   }, [apiKey, initialMessage]);
+
+  useEffect(() => {
+    // On mount, check if visitor info exists
+    const checkVisitorInfo = async () => {
+      const { visitorId } = getIdentityContext();
+      if (!visitorId) {
+        setShowVisitorInfoForm(true);
+        setVisitorInfoLoaded(true);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/visitors/info?visitorId=${visitorId}`);
+        const data = await res.json();
+        if (!data.visitorInfo || !data.visitorInfo.name || !data.visitorInfo.email) {
+          setShowVisitorInfoForm(true);
+        }
+      } catch (e) {
+        setShowVisitorInfoForm(true);
+      } finally {
+        setVisitorInfoLoaded(true);
+      }
+    };
+    checkVisitorInfo();
+  }, []);
 
   useEffect(() => {
     if (!inline) {
@@ -314,6 +341,22 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       setIsLoading(false);
     }
   };
+
+  if (!visitorInfoLoaded) {
+    return (
+      <div className="flex items-center justify-center h-full p-8">
+        <span className="text-gray-500">Loading chat...</span>
+      </div>
+    );
+  }
+
+  if (showVisitorInfoForm) {
+    return (
+      <VisitorInfoForm
+        onSubmit={() => setShowVisitorInfoForm(false)}
+      />
+    );
+  }
 
   const positionClasses = {
     "bottom-right": "bottom-4 right-4",

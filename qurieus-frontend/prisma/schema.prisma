@@ -101,6 +101,7 @@ model User {
   logs                  Log[]
   queries               QueryAnalytics[]
   visitorSessions       VisitorSession[]
+  visitorInfo           VisitorInfo[] // one-to-many
 
   allowedOrigins        String[] // e.g. ["https://mydomain.com"]
   allowedReferrers      String[] // e.g. ["https://mydomain.com/page"]
@@ -207,6 +208,7 @@ model ChatConversation {
   totalMessages Int           @default(0)
   avgResponseTime Float?
   messages      ChatMessage[]
+  visitorInfo   VisitorInfo?  @relation(fields: [visitorId], references: [visitorId])
 
   @@unique([visitorId, userId])
 }
@@ -218,6 +220,31 @@ model ChatMessage {
   role           String          // 'user' or 'assistant'
   createdAt      DateTime        @default(now())
   conversation   ChatConversation @relation(fields: [conversationId], references: [id])
+}
+
+// New model for visitor information
+model VisitorInfo {
+  visitorId     String   @id
+  name          String?
+  email         String?
+  phone         String?
+  company       String?
+  source        String?  // e.g., "chat_widget", "contact_form", "signup"
+  firstSeen     DateTime @default(now())
+  lastSeen      DateTime @updatedAt
+  totalVisits   Int      @default(1)
+  totalQueries  Int      @default(0)
+  isConverted   Boolean  @default(false) // Whether they became a user
+  convertedAt   DateTime?
+  convertedUserId String?
+  convertedUser User?    @relation(fields: [convertedUserId], references: [id])
+  conversations ChatConversation[]
+  sessions      VisitorSession[]
+  analytics     QueryAnalytics[]
+  
+  @@index([email])
+  @@index([firstSeen])
+  @@index([isConverted])
 }
 
 model Document {
@@ -287,6 +314,7 @@ model QueryAnalytics {
   response    String
   responseTime Int
   visitorId   String
+  visitorInfo VisitorInfo? @relation(fields: [visitorId], references: [visitorId])
   success     Boolean  @default(true)
   error       String?
   createdAt   DateTime @default(now())
@@ -302,6 +330,7 @@ model VisitorSession {
   userId      String
   user        User     @relation(fields: [userId], references: [id])
   visitorId   String
+  visitorInfo VisitorInfo? @relation(fields: [visitorId], references: [visitorId])
   userAgent   String
   ipAddress   String
   startTime   DateTime

@@ -206,7 +206,7 @@ export default function EmbedCode() {
 
       <div className="mt-8 rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
         <h2 className="mb-4 text-xl font-semibold">Live Preview</h2>
-        <div className="relative h-[400px] rounded-lg border border-dashed border-gray-300 dark:border-dark-3 overflow-hidden">
+        <div className="relative min-h-[400px] max-h-[600px] rounded-lg border border-dashed border-gray-300 dark:border-dark-3 overflow-auto">
           {apiKey ? (
             <ChatWidget
               apiKey={apiKey}

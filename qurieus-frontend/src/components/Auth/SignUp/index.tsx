@@ -30,10 +30,14 @@ export default function SignUp({
   const [verificationCode, setVerificationCode] = useState("");
   const [resendDisabled, setResendDisabled] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
-  const [user, setUser] = useState({
+  const [user, setUser] = useState(process.env.NODE_ENV === "development" ? {
     name: "TechProSys User",
     email: "techprosys@gmail.com",
     password: "Sidrules@123",
+  } : {
+    name: "",
+    email: "",
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

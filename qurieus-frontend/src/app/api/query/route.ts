@@ -263,6 +263,41 @@ export async function POST(request: Request) {
       },
     );
 
+    // --- NEW: Store chat conversation and user message ---
+    // Find or create ChatConversation
+    let chatConversation = await prisma.chatConversation.findFirst({
+      where: {
+        visitorId: effectiveVisitorId,
+        userId: session.user.id,
+      },
+    });
+    if (!chatConversation) {
+      chatConversation = await prisma.chatConversation.create({
+        data: {
+          visitorId: effectiveVisitorId,
+          userId: session.user.id,
+          firstSeen: new Date(),
+          lastSeen: new Date(),
+          totalMessages: 0,
+        },
+      });
+    } else {
+      await prisma.chatConversation.update({
+        where: { id: chatConversation.id },
+        data: { lastSeen: new Date() },
+      });
+    }
+    // Store user message
+    await prisma.chatMessage.create({
+      data: {
+        conversationId: chatConversation.id,
+        content: message,
+        role: 'user',
+        createdAt: new Date(),
+      },
+    });
+    // --- END NEW ---
+
     // Query based on environment configuration
     const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
     const modalApiUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
@@ -300,6 +335,27 @@ export async function POST(request: Request) {
         try {
           // Cache the response
           await cacheSet(cacheKey, responseBuffer, 3600); // Cache for 1 hour
+
+          // --- NEW: Store assistant response as ChatMessage ---
+          if (responseBuffer.trim()) {
+            await prisma.chatMessage.create({
+              data: {
+                conversationId: chatConversation.id,
+                content: responseBuffer,
+                role: 'assistant',
+                createdAt: new Date(),
+              },
+            });
+            // Update conversation stats
+            await prisma.chatConversation.update({
+              where: { id: chatConversation.id },
+              data: {
+                totalMessages: { increment: 2 },
+                lastSeen: new Date(),
+              },
+            });
+          }
+          // --- END NEW ---
 
           // Track analytics
           const responseTime = Date.now() - startTime;

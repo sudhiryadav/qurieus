@@ -134,6 +134,7 @@ CREATE TABLE "UserSubscription" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "billingCycle" TEXT NOT NULL DEFAULT 'monthly',
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "planSnapshot" JSONB,
 
     CONSTRAINT "UserSubscription_pkey" PRIMARY KEY ("id")
 );
@@ -189,6 +190,25 @@ CREATE TABLE "ChatMessage" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ChatMessage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "VisitorInfo" (
+    "visitorId" TEXT NOT NULL,
+    "name" TEXT,
+    "email" TEXT,
+    "phone" TEXT,
+    "company" TEXT,
+    "source" TEXT,
+    "firstSeen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastSeen" TIMESTAMP(3) NOT NULL,
+    "totalVisits" INTEGER NOT NULL DEFAULT 1,
+    "totalQueries" INTEGER NOT NULL DEFAULT 0,
+    "isConverted" BOOLEAN NOT NULL DEFAULT false,
+    "convertedAt" TIMESTAMP(3),
+    "convertedUserId" TEXT,
+
+    CONSTRAINT "VisitorInfo_pkey" PRIMARY KEY ("visitorId")
 );
 
 -- CreateTable
@@ -317,13 +337,19 @@ CREATE UNIQUE INDEX "SubscriptionPlan_name_key" ON "SubscriptionPlan"("name");
 CREATE UNIQUE INDEX "PaddleConfig_subscriptionPlanId_key" ON "PaddleConfig"("subscriptionPlanId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserSubscription_userId_key" ON "UserSubscription"("userId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "UserSubscription_paddleSubscriptionId_key" ON "UserSubscription"("paddleSubscriptionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ChatConversation_visitorId_userId_key" ON "ChatConversation"("visitorId", "userId");
+
+-- CreateIndex
+CREATE INDEX "VisitorInfo_email_idx" ON "VisitorInfo"("email");
+
+-- CreateIndex
+CREATE INDEX "VisitorInfo_firstSeen_idx" ON "VisitorInfo"("firstSeen");
+
+-- CreateIndex
+CREATE INDEX "VisitorInfo_isConverted_idx" ON "VisitorInfo"("isConverted");
 
 -- CreateIndex
 CREATE INDEX "Document_userId_idx" ON "Document"("userId");
@@ -386,7 +412,13 @@ ALTER TABLE "Message" ADD CONSTRAINT "Message_userId_fkey" FOREIGN KEY ("userId"
 ALTER TABLE "ChatConversation" ADD CONSTRAINT "ChatConversation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "ChatConversation" ADD CONSTRAINT "ChatConversation_visitorId_fkey" FOREIGN KEY ("visitorId") REFERENCES "VisitorInfo"("visitorId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "ChatConversation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "VisitorInfo" ADD CONSTRAINT "VisitorInfo_convertedUserId_fkey" FOREIGN KEY ("convertedUserId") REFERENCES "Users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -407,4 +439,10 @@ ALTER TABLE "Log" ADD CONSTRAINT "Log_userId_fkey" FOREIGN KEY ("userId") REFERE
 ALTER TABLE "QueryAnalytics" ADD CONSTRAINT "QueryAnalytics_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "QueryAnalytics" ADD CONSTRAINT "QueryAnalytics_visitorId_fkey" FOREIGN KEY ("visitorId") REFERENCES "VisitorInfo"("visitorId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "VisitorSession" ADD CONSTRAINT "VisitorSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "VisitorSession" ADD CONSTRAINT "VisitorSession_visitorId_fkey" FOREIGN KEY ("visitorId") REFERENCES "VisitorInfo"("visitorId") ON DELETE RESTRICT ON UPDATE CASCADE;
