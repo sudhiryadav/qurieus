@@ -27,12 +27,16 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
   const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
+      logger.info("DocumentList: Fetching documents");
       const response = await axiosInstance.get('/api/admin/documents');
       setDocuments(response.data.documents);
       setSelectedDocuments(new Set()); // Reset selections after refresh
       onFetchDocuments(response.data.documents);
+      logger.info("DocumentList: Documents fetched successfully", { 
+        documentCount: response.data.documents.length 
+      });
     } catch (error) {
-      logger.error('Error fetching documents:', error);
+      logger.error('DocumentList: Error fetching documents:', error);
     } finally {
       setLoading(false);
     }
@@ -40,25 +44,39 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   useEffect(() => {
     if (session?.user?.id) {
+      logger.info("DocumentList: Component mounted, fetching documents", { 
+        userId: session.user.id 
+      });
       fetchDocuments();
     }
   }, [session?.user?.id, fetchDocuments]);
 
   const handleDelete = async (documentToDelete: string) => {
+    const document = documents.find(doc => doc.id === documentToDelete);
+    logger.info("DocumentList: Delete document requested", { 
+      documentId: documentToDelete,
+      fileName: document?.fileName 
+    });
     setDocumentToDelete(documentToDelete);
     setDeleteModalOpen(true);
   };
 
   const confirmDelete = async () => {
     try {
+      logger.info("DocumentList: Confirming document deletion", { 
+        documentId: documentToDelete 
+      });
       const response = await axiosInstance.delete(`/api/admin/documents/delete/${documentToDelete}`);
       if (response.status === 200) {
         setDocuments(documents.filter(doc => doc.id !== documentToDelete));
         showToast.success("Document deleted successfully");
+        logger.info("DocumentList: Document deleted successfully", { 
+          documentId: documentToDelete 
+        });
         fetchDocuments(); // Refresh the list
       }
     } catch (error) {
-      logger.error("Error deleting document:", error);
+      logger.error("DocumentList: Error deleting document:", error);
       showToast.error("Failed to delete document");
     } finally {
       setDeleteModalOpen(false);
@@ -71,14 +89,20 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
     
     try {
       setDeleteAllLoading(true);
+      logger.info("DocumentList: Deleting all documents", { 
+        documentCount: documents.length 
+      });
       const response = await axiosInstance.delete('/api/admin/documents/delete-all');
       if (response.status === 200) {
         setDocuments([]);
         showToast.success("All documents deleted successfully");
+        logger.info("DocumentList: All documents deleted successfully", { 
+          deletedCount: documents.length 
+        });
         fetchDocuments();
       }
     } catch (error) {
-      logger.error("Error deleting all documents:", error);
+      logger.error("DocumentList: Error deleting all documents:", error);
       showToast.error("Failed to delete all documents");
     } finally {
       setDeleteAllLoading(false);
@@ -87,6 +111,10 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   const handleDeleteSelected = async () => {
     try {
+      logger.info("DocumentList: Deleting selected documents", { 
+        selectedCount: selectedDocuments.size,
+        selectedIds: Array.from(selectedDocuments) 
+      });
       const response = await axiosInstance.delete('/api/admin/documents/delete-selected', {
         data: { documentIds: Array.from(selectedDocuments) }
       });
@@ -94,10 +122,13 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
         setDocuments(documents.filter(doc => !selectedDocuments.has(doc.id)));
         setSelectedDocuments(new Set());
         showToast.success("Selected documents deleted successfully");
+        logger.info("DocumentList: Selected documents deleted successfully", { 
+          deletedCount: selectedDocuments.size 
+        });
         fetchDocuments();
       }
     } catch (error) {
-      logger.error("Error deleting selected documents:", error);
+      logger.error("DocumentList: Error deleting selected documents:", error);
       showToast.error("Failed to delete selected documents");
     } finally {
       setDeleteSelectedModalOpen(false);
@@ -106,6 +137,10 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   const handleDownload = async (documentId: string, fileName: string) => {
     try {
+      logger.info("DocumentList: Downloading document", { 
+        documentId, 
+        fileName 
+      });
       const response = await axiosInstance.get(`/api/admin/documents/${documentId}/download`, {
         responseType: 'blob'
       });
@@ -121,27 +156,43 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       showToast.success("Document downloaded successfully");
+      logger.info("DocumentList: Document downloaded successfully", { 
+        documentId, 
+        fileName 
+      });
     } catch (error) {
-      logger.error('Error downloading document:', error);
+      logger.error('DocumentList: Error downloading document:', error);
       showToast.error('Failed to download document');
     }
   };
 
   const toggleDocumentSelection = (documentId: string) => {
     const newSelected = new Set(selectedDocuments);
-    if (newSelected.has(documentId)) {
+    const wasSelected = newSelected.has(documentId);
+    if (wasSelected) {
       newSelected.delete(documentId);
     } else {
       newSelected.add(documentId);
     }
     setSelectedDocuments(newSelected);
+    logger.info("DocumentList: Document selection toggled", { 
+      documentId, 
+      wasSelected, 
+      isSelected: !wasSelected,
+      totalSelected: newSelected.size 
+    });
   };
 
   const toggleSelectAll = () => {
-    if (selectedDocuments.size === documents.length) {
+    const wasAllSelected = selectedDocuments.size === documents.length;
+    if (wasAllSelected) {
       setSelectedDocuments(new Set());
+      logger.info("DocumentList: Deselecting all documents");
     } else {
       setSelectedDocuments(new Set(documents.map(doc => doc.id)));
+      logger.info("DocumentList: Selecting all documents", { 
+        documentCount: documents.length 
+      });
     }
   };
 

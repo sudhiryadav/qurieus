@@ -67,7 +67,18 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     const newFilesArray = Array.from(files);
     let currentValidationErrors: string[] = [];
 
+    logger.info("UploadDialog: Validating files", { 
+      fileCount: newFilesArray.length,
+      currentSelectedCount: selectedFiles.length,
+      isSuperAdmin 
+    });
+
     if (!isSuperAdmin && selectedFiles.length + newFilesArray.length > MAX_FILES_PER_UPLOAD) {
+      logger.warn("UploadDialog: File count limit exceeded", { 
+        currentCount: selectedFiles.length,
+        newCount: newFilesArray.length,
+        maxAllowed: MAX_FILES_PER_UPLOAD 
+      });
       showToast.error(`Cannot add more files. Maximum ${MAX_FILES_PER_UPLOAD} files allowed.`);
       return;
     }
@@ -81,14 +92,24 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       if (selectedFiles.some(sf => sf.file.name === file.name) || 
           filesToAdd.some(nf => nf.file.name === file.name)) {
         errorMsg = `File "${file.name}" is already selected.`;
+        logger.warn("UploadDialog: Duplicate file detected", { fileName: file.name });
       }
       // Check file size (only for non-super-admin users)
       else if (!isSuperAdmin && file.size > MAX_FILE_SIZE_BYTES) {
         errorMsg = `File "${file.name}" (${formatFileSize(file.size)}) exceeds the ${formatFileSize(MAX_FILE_SIZE_BYTES)} size limit.`;
+        logger.warn("UploadDialog: File size exceeded", { 
+          fileName: file.name, 
+          fileSize: file.size, 
+          maxSize: MAX_FILE_SIZE_BYTES 
+        });
       }
       // Check file type
       else if (!ALLOWED_MIME_TYPES.includes(file.type)) {
         errorMsg = `File "${file.name}" has an invalid type. Allowed types: ${ALLOWED_EXTENSIONS_DISPLAY}.`;
+        logger.warn("UploadDialog: Invalid file type", { 
+          fileName: file.name, 
+          fileType: file.type 
+        });
       }
       
       if(errorMsg) {
@@ -103,12 +124,23 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
 
     if (currentValidationErrors.length > 0) {
       const firstError = currentValidationErrors[0];
+      logger.warn("UploadDialog: File validation errors", { 
+        errorCount: currentValidationErrors.length,
+        firstError 
+      });
       showToast.error(firstError);
+    } else {
+      logger.info("UploadDialog: All files validated successfully", { 
+        addedCount: filesToAdd.length 
+      });
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
+      logger.info("UploadDialog: File input change", { 
+        fileCount: e.target.files.length 
+      });
       validateAndSetFiles(e.target.files);
       // Reset input to allow selecting the same file again if removed
       if(fileInputRef.current) fileInputRef.current.value = "";
@@ -118,6 +150,9 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files) {
+      logger.info("UploadDialog: File drop event", { 
+        fileCount: e.dataTransfer.files.length 
+      });
       validateAndSetFiles(e.dataTransfer.files);
     }
   };
@@ -127,10 +162,16 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
   };
 
   const removeFile = (fileId: string) => {
+    const fileToRemove = selectedFiles.find(f => f.id === fileId);
+    logger.info("UploadDialog: Removing file", { 
+      fileId, 
+      fileName: fileToRemove?.file.name 
+    });
     setSelectedFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
   const handleReset = () => {
+    logger.info("UploadDialog: Resetting form");
     setSelectedFiles([]);
     setDescription("");
     setCategory("");
@@ -141,7 +182,15 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
     e.preventDefault();
     const validFiles = selectedFiles.filter(f => !f.error);
 
+    logger.info("UploadDialog: Starting file upload", { 
+      totalFiles: selectedFiles.length,
+      validFiles: validFiles.length,
+      hasDescription: !!description,
+      hasCategory: !!category 
+    });
+
     if (validFiles.length === 0) {
+      logger.warn("UploadDialog: No valid files to upload");
       showToast.error("Please select at least one valid file to upload");
       return;
     }
@@ -155,6 +204,13 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
       formData.append("description", description);
       formData.append("category", category);
       formData.append("userId", session?.user?.id || "");
+      
+      logger.info("UploadDialog: Sending upload request", { 
+        fileCount: validFiles.length,
+        fileNames: validFiles.map(f => f.file.name),
+        totalSize: validFiles.reduce((sum, f) => sum + f.file.size, 0)
+      });
+      
       const { data } = await axiosInstance.post('/api/admin/documents', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -166,12 +222,24 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         const errorResults = data.results.filter((result: any) => !result.success);
         const errorCount = errorResults.length;
 
+        logger.info("UploadDialog: Modal processing results", { 
+          successCount, 
+          errorCount,
+          totalResults: data.results.length 
+        });
+
         if (successCount > 0 && errorCount === 0) {
+          logger.info("UploadDialog: All files uploaded successfully via Modal");
           showToast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`);
           onUploadSuccess();
           onClose();
           handleReset();
         } else if (successCount > 0 && errorCount > 0) {
+          logger.warn("UploadDialog: Partial upload success via Modal", { 
+            successCount, 
+            errorCount,
+            errors: errorResults.map((r: any) => ({ filename: r.filename, error: r.error }))
+          });
           showToast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}, ${errorCount} failed`);
           showToast.error(
             `Failed to upload: ${errorResults.map((r: any) => `${r.filename}: ${r.error || 'Unknown error'}`).join('; ')}`
@@ -180,6 +248,10 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
           onClose();
           handleReset();
         } else if (errorCount > 0) {
+          logger.error("UploadDialog: All files failed via Modal", { 
+            errorCount,
+            errors: errorResults.map((r: any) => ({ filename: r.filename, error: r.error }))
+          });
           showToast.error(
             `Failed to upload ${errorCount} file${errorCount !== 1 ? 's' : ''}: ${errorResults.map((r: any) => `${r.filename}: ${r.error || 'Unknown error'}`).join('; ')}`
           );
@@ -187,16 +259,22 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         }
       } 
       else if (data.results?.[0]?.success) {
+        logger.info("UploadDialog: All files uploaded successfully via backend");
         showToast.success("All files uploaded successfully");
         onUploadSuccess();
         onClose();
         handleReset();
       } else {
+        logger.error("UploadDialog: Upload completed with unclear results", { data });
         showToast.error(data.error || "Upload completed with unclear results");
         handleReset();
       }
     } catch (error: any) {
-      logger.error("Upload error details:", error);
+      logger.error("UploadDialog: Upload error", { 
+        error: error.message,
+        responseError: error.response?.data?.error,
+        status: error.response?.status 
+      });
       showToast.error(error.response?.data?.error || error.message || "Failed to upload files");
       handleReset();
     } finally {

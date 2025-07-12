@@ -3,15 +3,22 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import { subDays, startOfDay, endOfDay, format } from 'date-fns';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  let userId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
+      logger.warn("Analytics Dashboard API: Unauthorized access attempt");
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    userId = session.user.id;
+    logger.info("Analytics Dashboard API: Fetching dashboard data", { userId });
+
     const now = new Date();
     const sevenDaysAgo = subDays(now, 7);
 
@@ -105,6 +112,14 @@ export async function GET(request: Request) {
       details: activity.query.length > 50 ? activity.query.substring(0, 50) + '...' : activity.query
     }));
 
+    const responseTime = Date.now() - startTime;
+    logger.info("Analytics Dashboard API: Dashboard data retrieved successfully", { 
+      userId, 
+      totalQueries,
+      successfulQueries,
+      responseTime 
+    });
+
     return NextResponse.json({
       totalQueries,
       successfulQueries,
@@ -114,11 +129,15 @@ export async function GET(request: Request) {
       trendingQueries: formattedTrendingQueries,
       recentActivity: formattedRecentActivity
     });
-  } catch (error) {
-    console.error('Error fetching dashboard analytics:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch dashboard analytics' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    logger.error("Analytics Dashboard API: Error fetching dashboard data", { 
+      userId, 
+      error: error.message, 
+      responseTime,
+      stack: error.stack 
+    });
+    
+    return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });
   }
 } 
