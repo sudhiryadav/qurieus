@@ -109,6 +109,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please verify your email before signing in");
         }
 
+        if (!user.is_active) {
+          throw new Error("Your account has been deactivated. Please contact support.");
+        }
+
         // Special case for email verification
         if (credentials.password === "temp_password_for_verification") {
           return {
@@ -193,6 +197,15 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
       }
+      
+      // Check if user is still active on every JWT refresh
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({ where: { id: token.id } });
+        if (!dbUser?.is_active) {
+          throw new Error("Account deactivated");
+        }
+      }
+      
       return token;
     },
     

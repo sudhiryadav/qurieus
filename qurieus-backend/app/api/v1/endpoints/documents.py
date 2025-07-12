@@ -33,7 +33,7 @@ if backend_dir not in sys.path:
 # Now we can import from absolute paths
 from app.core.config import settings
 from app.database import get_db
-from models import Document as DBDocument, DocumentChunk, Embedding
+from models import Document as DBDocument, DocumentChunk, Embedding, Users
 
 # Initialize the embedding model with a smaller model
 try:
@@ -286,7 +286,10 @@ def decrypt_token(token: str) -> dict:
         print(traceback.format_exc())
         raise
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
     """Get current user from Next.js session token."""
     try:
         token = credentials.credentials
@@ -307,6 +310,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             payload = decrypt_token(token)
             print("Successfully decrypted token")
             print(f"Decoded payload: {json.dumps(payload, indent=2)}")
+            
+            # Check if user is active
+            user_id = payload.get("id")
+            if user_id:
+                user = db.query(Users).filter(Users.id == user_id).first()
+                if not user or not user.is_active:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Account has been deactivated"
+                    )
+            
             return payload
         except Exception as e:
             print(f"Token decryption error: {str(e)}")
