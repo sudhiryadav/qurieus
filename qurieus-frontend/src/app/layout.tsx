@@ -154,14 +154,6 @@ export default function RootLayout({
           )}
         </SessionProvider>
       </body>
-      <script 
-  src="http://localhost:8000/embed.js"
-  data-api-key="cmd052lie0000vj4kgg43y6yv"
-  data-initial-message="Hello! How can I help you today?"
-  data-position="bottom-right"
-  data-theme="dark"
-  async
-></script>
     </html>
   );
 }
