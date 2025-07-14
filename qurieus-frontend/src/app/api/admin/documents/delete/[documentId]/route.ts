@@ -4,59 +4,25 @@ import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
+// @ts-ignore: No type declarations for @qdrant/js-client-rest
+import { QdrantClient } from "@qdrant/js-client-rest";
 
-async function deleteWithModal(userId: string, documentId: string) {
-  // Look up the document to get modalDocumentId
-  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { modalDocumentId: true } });
-  if (!doc) {
-    throw new Error('Document not found');
-  }
-  const modalApiUrl = process.env.MODAL_DELETE_DOCUMENT_URL;
-  if (!modalApiUrl) {
-    throw new Error('Modal.com API URL not configured');
-  }
-  if (!doc.modalDocumentId) {
-    // If no modalDocumentId, skip Modal deletion
-    return { success: true, message: 'No Modal.com file to delete' };
-  }
+const QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
+const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || "user_embeddings";
+const qdrant = new QdrantClient({ url: QDRANT_URL });
 
-  const url = `${modalApiUrl}?user_id=${encodeURIComponent(userId)}&document_id=${encodeURIComponent(doc.modalDocumentId)}`;
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.MODAL_DOT_COM_X_API_KEY || '',
-    }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
-  }
-  return response.json();
-}
-
-async function deleteWithBackend(userId: string, documentId: string) {
-  // Delete from database
-  const deletedDocument = await prisma.document.deleteMany({
-    where: {
-      id: documentId,
-      userId: userId, // Ensure user owns the document
+async function deleteVectorsFromQdrant(userId: string, docId: string) {
+  await qdrant.delete(QDRANT_COLLECTION, {
+    filter: {
+      must: [
+        { key: "user_id", match: { value: userId } },
+        { key: "doc_id", match: { value: docId } },
+      ],
     },
   });
-
-  if (deletedDocument.count === 0) {
-    throw new Error('Document not found or you do not have permission to delete it');
-  }
-
-  return {
-    success: true,
-    message: `Document ${documentId} deleted successfully`,
-    documents_remaining: await prisma.document.count({ where: { userId } }),
-  };
 }
 
-export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(
+export const DELETE = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(
   async (request: NextRequest, { params }: { params: Promise<{ documentId: string }> }) => {
   const { documentId } = await params;
   try {
@@ -71,47 +37,38 @@ export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(
       );
     }
 
-    // Check if using Modal.com persistent storage
-    const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
-    const modalApiUrl = process.env.MODAL_DELETE_DOCUMENT_URL;
+    // Delete vectors from Qdrant
+    await deleteVectorsFromQdrant(userId, documentId);
+    
+    // Delete from database
+    const deletedDocument = await prisma.document.deleteMany({
+      where: {
+        id: documentId,
+        userId: userId, // Ensure user owns the document
+      },
+    });
 
-    let result;
-    if (useModalPersistent && modalApiUrl) {
-      // Delete with Modal.com
-      result = await deleteWithModal(userId, documentId);
-
-      // Also delete from database if it exists
-      try {
-        await prisma.document.deleteMany({
-          where: {
-            id: documentId,
-            userId: userId,
-          },
-        });
-      } catch (error) {
-        // Ignore database errors if document doesn't exist
-        console.log('Document not found in database (already deleted or Modal.com only)');
-      }
-    } else {
-      // Delete with backend
-      result = await deleteWithBackend(userId, documentId);
-    }
-
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        message: result.message,
-        documents_remaining: result.documents_remaining,
-      });
-    } else {
+    if (deletedDocument.count === 0) {
       return NextResponse.json(
-        { error: result.message || 'Failed to delete document' },
+        { error: 'Document not found or you do not have permission to delete it' },
         { status: 404 }
       );
     }
 
+    const result = {
+      success: true,
+      message: `Document ${documentId} deleted successfully`,
+      documents_remaining: await prisma.document.count({ where: { userId } }),
+    };
+
+    return NextResponse.json({
+      success: true,
+      message: result.message,
+      documents_remaining: result.documents_remaining,
+    });
+
   } catch (error) {
-    console.error('Error in unified delete:', error);
+    console.error('Error in delete:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred while deleting the document' },
       { status: 500 }

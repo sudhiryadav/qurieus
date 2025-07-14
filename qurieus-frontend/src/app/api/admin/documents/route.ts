@@ -7,6 +7,32 @@ import { prisma } from "@/utils/prismaDB";
 import { logger } from "@/lib/logger";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
+// @ts-ignore: No type declarations for @qdrant/js-client-rest
+import { QdrantClient } from "@qdrant/js-client-rest";
+
+// Qdrant config
+const QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
+const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || "user_embeddings";
+const qdrant = new QdrantClient({ url: QDRANT_URL });
+
+// Utility to upsert embeddings to Qdrant
+async function upsertEmbeddingsToQdrant(
+  userId: string,
+  docId: string,
+  chunks: string[],
+  embeddings: number[][]
+) {
+  const points = chunks.map((chunk: string, i: number) => ({
+    id: `${docId}_${i}`,
+    vector: embeddings[i],
+    payload: {
+      user_id: userId,
+      doc_id: docId,
+      chunk,
+    },
+  }));
+  await qdrant.upsert(QDRANT_COLLECTION, { points });
+}
 
 // Maximum file size (10MB)
 // Convert MB to bytes (1MB = 1024 * 1024 bytes)
@@ -110,7 +136,7 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (re
   }
 });
 
-export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
+export const POST = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (req: NextRequest) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
@@ -195,77 +221,22 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest
       }
     }
 
-    // Check if using Modal.com persistent storage
-    const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
-    const modalApiUrl = process.env.MODAL_UPLOAD_DOCUMENT_URL;
-
-    logger.info("Documents API: Processing files", { 
+    logger.info("Documents API: Processing files with backend (Qdrant integration)", { 
       userId, 
-      useModalPersistent, 
-      hasModalUrl: !!modalApiUrl 
+      fileCount: files.length
     });
 
-    if (useModalPersistent && modalApiUrl) {
-      // Process with Modal.com
-      const modalResponse = await processWithModal(files, description, category, session!.user!);
-      const data = await modalResponse.json();
-      const errorResults = data.results.filter((result: any) => !result.success);
-      if (errorResults.length > 0) {
-        logger.error("Documents API: Modal.com processing errors", { 
-          userId, 
-          errorCount: errorResults.length,
-          errors: errorResults.map((e: any) => ({ filename: e.filename, error: e.error }))
-        });
-        
-        // Log errors in DB for each failed file
-        for (const errorResult of errorResults) {
-          await prisma.document.create({
-            data: {
-              modalDocumentId: errorResult.document_id,
-              title: errorResult.filename.replace(/\.[^/.]+$/, ""),
-              fileName: errorResult.filename.replace(/\.[^/.]+$/, ""),
-              originalName: errorResult.filename,
-              fileType: errorResult.filename.split('.').pop()?.toLowerCase() || '',
-              fileSize: files.find(f => f.name === errorResult.filename)?.size || 0,
-              userId: session!.user!.id,
-              content: `Upload failed: ${errorResult.error}`,
-              description: description || "",
-              category: category || "",
-              uploadedAt: new Date(),
-              updatedAt: new Date(),
-            },
-          });
-        }
-        // Return generic error to frontend
-        return NextResponse.json(
-          { error: "One or more files failed to upload. Please try again or contact support." },
-          { status: 500 }
-        );
-      }
-      
-      const responseTime = Date.now() - startTime;
-      logger.info("Documents API: Modal.com processing completed successfully", { 
-        userId, 
-        fileCount: files.length,
-        totalChunks: data.total_chunks,
-        responseTime 
-      });
-      
-      // All files succeeded
-      return NextResponse.json(data);
-    } else {
-      // Process with backend FastAPI
-      const result = await processWithBackend(files, description, category, session!.user!, req);
-      
-      const responseTime = Date.now() - startTime;
-      logger.info("Documents API: Backend processing completed successfully", { 
-        userId, 
-        fileCount: files.length,
-        responseTime 
-      });
-      
-      return result;
-    }
+    // Process with backend (Qdrant integration)
+    const result = await processWithBackend(files, description, category, session!.user!, req);
+    
+    const responseTime = Date.now() - startTime;
+    logger.info("Documents API: Backend processing completed successfully", { 
+      userId, 
+      fileCount: files.length,
+      responseTime 
+    });
+    
+    return result;
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
     logger.error("Documents API: Error uploading files", { 
@@ -291,115 +262,7 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest
   }
 });
 
-async function processWithModal(files: File[], description: string, category: string, user: any) {
-  const modalApiUrl = process.env.MODAL_UPLOAD_DOCUMENT_URL!;
-  let totalChunks = 0;
-  const results = [];
-
-  // Process each file
-  for (const file of files) {
-    try {
-      // Convert file to base64
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64Content = buffer.toString('base64');
-
-      // Get file extension
-      const fileName = file.name;
-      const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
-
-      // Send to Modal.com persistent service
-      const response = await fetch(modalApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.MODAL_DOT_COM_X_API_KEY || '',
-        },
-        body: JSON.stringify({
-          file_content: base64Content,
-          file_extension: fileExtension,
-          original_filename: fileName,
-          user_id: user.id,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      totalChunks += result.chunks_processed || 0;
-
-      // Store file metadata in database for validation and tracking
-      await prisma.document.create({
-        data: {
-          modalDocumentId: result.document_id,
-          title: fileName.replace(fileExtension, ""),
-          fileName: fileName.replace(fileExtension, ""),
-          originalName: fileName,
-          fileType: fileExtension.toLowerCase().replace('.', ''),
-          fileSize: file.size,
-          userId: user.id,
-          content: `Processed by Modal.com - ${result.chunks_processed} chunks`,
-          description: description || "",
-          category: category || "",
-          uploadedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-
-      results.push({
-        filename: fileName,
-        success: true,
-        chunks_processed: result.chunks_processed,
-        document_id: result.document_id,
-      });
-
-    } catch (error) {
-      console.error(`Error processing file ${file.name}:`, error);
-      results.push({
-        filename: file.name,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }
-
-  const processedFiles = files.map((file) => ({
-    name: file.name,
-    size: file.size,
-    type: file.type,
-    uploadedAt: new Date().toISOString(),
-  }));
-
-  return NextResponse.json({
-    message: `Successfully processed ${files.length} files using Modal.com persistent storage`,
-    files: processedFiles,
-    total_chunks: totalChunks,
-    results,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    },
-  });
-}
-
 async function processWithBackend(files: File[], description: string, category: string, user: any, req: NextRequest) {
-  const token = await getToken({
-    req: req as any,
-    secret: process.env.NEXTAUTH_SECRET,
-    raw: true,
-  });
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "Authentication token not found" },
-      { status: 401 },
-    );
-  }
-
   const backendFormData = new FormData();
   files.forEach((file) => {
     // Create a new File object to ensure proper handling
@@ -416,7 +279,7 @@ async function processWithBackend(files: File[], description: string, category: 
     backendFormData,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        "X-API-Key": process.env.BACKEND_API_KEY!,
         "Content-Type": "multipart/form-data",
       },
       withCredentials: true,
@@ -424,15 +287,13 @@ async function processWithBackend(files: File[], description: string, category: 
   );
 
   if (backendResponse.status !== 200 || !backendResponse.data) {
-    const errorText = backendResponse.data.text();
-    let errorDetail;
+    let errorDetail = backendResponse.statusText;
 
     try {
-      const errorData = JSON.parse(errorText);
-      errorDetail =
-        errorData.detail || errorData.message || backendResponse.statusText;
+      const errorData = backendResponse.data;
+      errorDetail = errorData.detail || errorData.message || backendResponse.statusText;
     } catch (e) {
-      errorDetail = errorText || backendResponse.statusText;
+      errorDetail = backendResponse.statusText;
     }
 
     console.error("Upload error details:", {
@@ -462,9 +323,14 @@ async function processWithBackend(files: File[], description: string, category: 
   }));
 
   return NextResponse.json({
-    message: "Files uploaded successfully",
+    message: "Files uploaded successfully with Qdrant integration",
     files: processedFiles,
-    backendResponse: data,
+    totalChunks: data.total_chunks,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    },
   });
 }
 

@@ -5,95 +5,67 @@ import { prisma } from '@/utils/prismaDB';
 import axiosInstance from '@/lib/axios';
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
+// @ts-ignore: No type declarations for @qdrant/js-client-rest
+import { QdrantClient } from "@qdrant/js-client-rest";
 
-async function deleteAllWithModal(userId: string) {
-  const modalApiUrl = process.env.MODAL_DELETE_ALL_DOCUMENTS_URL;
-  if (!modalApiUrl) {
-    throw new Error('Modal.com API URL not configured');
-  }
+const QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
+const QDRANT_COLLECTION = "user_documents_embeddings"; // Fixed collection name
+const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
+// Initialize Qdrant client with API key if available
+const qdrant = new QdrantClient({ 
+  url: QDRANT_URL,
+  ...(QDRANT_API_KEY && { apiKey: QDRANT_API_KEY })
+});
+
+async function deleteAllVectorsForUser(userId: string) {
   try {
-    const response = await axiosInstance.delete(modalApiUrl, {
-      params: {
-        user_id: userId,
-      },
-      headers: {
-        'x-api-key': process.env.MODAL_DOT_COM_X_API_KEY || '',
+    await qdrant.delete(QDRANT_COLLECTION, {
+      filter: {
+        must: [
+          { key: "user_id", match: { value: userId } },
+        ],
       },
     });
-
-    return response.data;
-  } catch (error: any) {
-    if (error.response) {
-      throw new Error(`Modal.com service error: ${error.response.status} - ${error.response.data}`);
-    } else {
-      throw new Error(`Modal.com service error: ${error.message}`);
-    }
+    console.log(`Deleted all vectors for user ${userId} from Qdrant`);
+  } catch (error) {
+    console.error(`Error deleting vectors from Qdrant for user ${userId}:`, error);
+    throw error;
   }
 }
 
-async function deleteAllWithBackend(userId: string) {
-  // Get count before deletion
-  const documentCount = await prisma.document.count({
-    where: { userId },
-  });
-
-  // Delete all documents from database
-  await prisma.document.deleteMany({
-    where: { userId },
-  });
-
-  return {
-    success: true,
-    message: `All documents for user ${userId} deleted successfully`,
-    documents_deleted: documentCount,
-  };
-}
-
-export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(async (request: NextRequest) => {
+export const DELETE = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (request: NextRequest) => {
   try {
     // Get user session
     const session = await getServerSession(authOptions);
     const userId = session!.user!.id;
 
-    // Check if using Modal.com persistent storage
-    const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
-    const modalApiUrl = process.env.MODAL_DELETE_ALL_DOCUMENTS_URL;
+    // Delete all vectors from Qdrant
+    await deleteAllVectorsForUser(userId);
+    
+    // Delete all documents from database
+    const deletedCount = await prisma.document.count({
+      where: { userId },
+    });
+    
+    await prisma.document.deleteMany({
+      where: { userId },
+    });
 
-    let result;
-    if (useModalPersistent && modalApiUrl) {
-      // Delete all with Modal.com
-      result = await deleteAllWithModal(userId);
-      
-      // Also delete from database
-      try {
-        await prisma.document.deleteMany({
-          where: { userId },
-        });
-      } catch (error) {
-        // Ignore database errors
-        console.log('Error deleting from database (Modal.com only mode)');
-      }
-    } else {
-      // Delete all with backend
-      result = await deleteAllWithBackend(userId);
-    }
+    const result = {
+      success: true,
+      message: `All documents for user ${userId} deleted successfully`,
+      documents_deleted: deletedCount,
+    };
 
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        message: result.message,
-        documents_deleted: result.documents_deleted,
-      });
-    } else {
-      return NextResponse.json(
-        { error: result.message || 'Failed to delete all documents' },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({
+      success: true,
+      message: result.message,
+      documents_deleted: result.documents_deleted,
+    });
 
   } catch (error) {
-    console.error('Error in unified delete-all:', error);
+    console.error('Error in delete-all:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred while deleting all documents' },
       { status: 500 }

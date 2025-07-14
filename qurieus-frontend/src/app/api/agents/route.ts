@@ -27,23 +27,23 @@ export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN])(async (request
   // Create agent user and agent record in a transaction
   const result = await prisma.$transaction(async (tx) => {
     const agentUser = await tx.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: "AGENT" as any,
-        parentUserId: session!.user!.id,
-        is_active: true,
-        is_verified: true, // Optionally, set to false and send verification email
-      } as any,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        is_active: true,
-        created_at: true,
-      },
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+      role: "AGENT" as any,
+      parentUserId: session!.user!.id,
+      is_active: true,
+      is_verified: true, // Optionally, set to false and send verification email
+    } as any,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      is_active: true,
+      created_at: true,
+    },
     });
 
     // Create the corresponding Agent record

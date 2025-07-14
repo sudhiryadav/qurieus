@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -24,6 +24,8 @@ import datetime
 import pandas as pd
 import io
 from langdetect import detect
+import uuid
+import re
 
 # Add the root directory to Python path
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -33,7 +35,7 @@ if backend_dir not in sys.path:
 # Now we can import from absolute paths
 from app.core.config import settings
 from app.database import get_db
-from models import Document as DBDocument, DocumentChunk, Embedding, Users
+from models import Document as DBDocument, Users
 
 # Initialize the embedding model with a smaller model
 try:
@@ -41,6 +43,36 @@ try:
 except Exception as e:
     print(f"Warning: Could not initialize SentenceTransformer: {str(e)}")
     embedding_model = None
+
+# Initialize Qdrant client
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import PointStruct, Distance, VectorParams
+    
+    # Initialize Qdrant client with optional authentication
+    if settings.QDRANT_API_KEY:
+        qdrant_client = QdrantClient(
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY
+        )
+    else:
+        qdrant_client = QdrantClient(settings.QDRANT_URL)
+    
+    qdrant_collection = settings.QDRANT_COLLECTION
+    
+    # Ensure collection exists
+    try:
+        qdrant_client.get_collection(qdrant_collection)
+    except Exception:
+        # Create collection if it doesn't exist
+        qdrant_client.create_collection(
+            collection_name=qdrant_collection,
+            vectors_config=VectorParams(size=384, distance=Distance.COSINE)  # all-MiniLM-L6-v2 has 384 dimensions
+        )
+    
+except Exception as e:
+    print(f"Warning: Could not initialize Qdrant client: {str(e)}")
+    qdrant_client = None
 
 # Cache for embeddings using lru_cache
 @lru_cache(maxsize=1000)
@@ -117,6 +149,25 @@ def df_to_markdown(df: pd.DataFrame) -> str:
         # Fallback to CSV if markdown fails
         return df.to_csv(index=False)
 
+def clean_text_content(text: str) -> str:
+    """Clean text content by removing problematic characters."""
+    if not text:
+        return ""
+    
+    # Remove NUL characters (0x00)
+    text = text.replace('\x00', '')
+    
+    # Remove other control characters except newlines and tabs
+    text = re.sub(r'[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
+    
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove leading/trailing whitespace
+    text = text.strip()
+    
+    return text
+
 def process_file(
     file_content: bytes,
     file_extension: str,
@@ -124,7 +175,7 @@ def process_file(
     userId: str,
     db: Session
 ) -> dict:
-    """Process uploaded file with optimized chunking."""
+    """Process uploaded file with optimized chunking and Qdrant integration."""
     try:
         text_content = ""
         financial_analysis = {}
@@ -174,7 +225,7 @@ def process_file(
             userId=userId,
             uploadedAt=now,
             updatedAt=now,  # Set updatedAt to current time
-            content=text_content,
+            content=clean_text_content(text_content),
             description="",
             category="",
             keywords="",
@@ -183,40 +234,42 @@ def process_file(
         db.add(document)
         db.flush()
         
-        # Optimize chunks
-        chunks = optimize_chunk_size(text_content)
-        total_chunks = 0
+        # Commit the document record
+        db.commit()
         
-        # Process chunks in batches
-        batch_size = 10
-        for i in range(0, len(chunks), batch_size):
-            batch_chunks = chunks[i:i + batch_size]
-            
-            # Create chunks and embeddings in parallel
-            chunk_records = []
-            for idx, chunk_text in enumerate(batch_chunks):
-                chunk = DocumentChunk(
-                    content=chunk_text,
-                    documentId=document.id,
-                    chunkIndex=total_chunks + idx  # Set the chunk index
+        # Clean text content before chunking
+        cleaned_text_content = clean_text_content(text_content)
+        
+        # Optimize chunks
+        chunks = optimize_chunk_size(cleaned_text_content)
+        total_chunks = len(chunks)
+        
+        # Store chunks directly in Qdrant (no database storage for chunks)
+        if qdrant_client:
+            try:
+                points = []
+                for idx, chunk_text in enumerate(chunks):
+                    embedding = get_cached_embedding(chunk_text)
+                    points.append(PointStruct(
+                        id=str(uuid.uuid4()),
+                        vector=embedding,
+                        payload={
+                            "document_id": document.id,
+                            "user_id": userId,
+                            "content": chunk_text,
+                            "filename": original_filename,
+                            "chunk_index": idx
+                        }
+                    ))
+                
+                qdrant_client.upsert(
+                    collection_name=qdrant_collection,
+                    points=points
                 )
-                db.add(chunk)
-                chunk_records.append(chunk)
-            
-            db.flush()  # Get chunk IDs
-            
-            # Generate embeddings in batch
-            for chunk in chunk_records:
-                embedding = get_cached_embedding(chunk.content)
-                embedding_record = Embedding(
-                    vector=embedding,
-                    chunkId=chunk.id,
-                    userId=userId
-                )
-                db.add(embedding_record)
-            
-            total_chunks += len(batch_chunks)
-            db.commit()
+                print(f"Upserted {len(points)} chunks to Qdrant for document {document.id}")
+            except Exception as e:
+                print(f"Warning: Failed to upsert to Qdrant: {str(e)}")
+                # Continue processing even if Qdrant fails
         
         return {"chunks": total_chunks}
         
@@ -343,14 +396,27 @@ async def upload_files(
     userId: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
-    current_user: dict = Depends(get_current_user),
+    api_key: str = Header(..., alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
     """Upload one or more documents (PDF or DOC) for processing."""
     try:
-        # Use the authenticated user id from token
-        userId = current_user.get("id")
-        log_to_frontend("info", f"Processing upload for user: {userId}", user=current_user)
+        # Validate API key
+        if api_key != settings.BACKEND_API_KEY:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid API key"
+            )
+        
+        # For now, we'll need to get user ID from the request or use a default
+        # You might want to pass user ID in the form data or header
+        if not userId:
+            raise HTTPException(
+                status_code=400,
+                detail="User ID is required"
+            )
+        
+        log_to_frontend("info", f"Processing upload for user: {userId}")
         
         total_chunks = 0
         for file in files:
@@ -375,7 +441,7 @@ async def upload_files(
                 log_to_frontend("info", f"Processed {chunks.get('chunks')} chunks from {file.filename}")
             except Exception as e:
                 error_msg = f"Error processing file {file.filename}"
-                log_to_frontend("error", error_msg, user=current_user, error=e)
+                log_to_frontend("error", error_msg, error=e)
                 raise HTTPException(
                     status_code=500, 
                     detail="Error processing document"
@@ -386,14 +452,14 @@ async def upload_files(
             "total_chunks": total_chunks,
             "user": {
                 "id": userId,
-                "name": current_user.get("name"),
-                "email": current_user.get("email")
+                "name": "User",  # We don't have user details from API key auth
+                "email": "user@example.com"
             }
         }
     except HTTPException:
         raise
     except Exception as e:
-        log_to_frontend("error", "Unexpected error in upload_files", user=current_user, error=e)
+        log_to_frontend("error", "Unexpected error in upload_files", error=e)
         raise HTTPException(
             status_code=500,
             detail="An unexpected error occurred while processing your upload"
@@ -468,13 +534,20 @@ async def query_documents(
         )
 
 async def semantic_search_query(request: QueryRequest, db: Session, language_instruction: str = ""):
-    """Handle semantic search queries."""
+    """Handle semantic search queries using Qdrant."""
     try:
         if not embedding_model:
             log_to_frontend("error", "Embedding model not available")
             raise HTTPException(
                 status_code=503,
                 detail="Search service is currently unavailable"
+            )
+
+        if not qdrant_client:
+            log_to_frontend("error", "Qdrant client not available")
+            raise HTTPException(
+                status_code=503,
+                detail="Vector database is currently unavailable"
             )
 
         try:
@@ -486,26 +559,22 @@ async def semantic_search_query(request: QueryRequest, db: Session, language_ins
                 detail="Error processing your query"
             )
         
-        log_to_frontend("info", "Executing similarity search...")
+        log_to_frontend("info", "Executing Qdrant similarity search...")
         
-        # Get all embeddings for the user
-        embeddings = db.query(Embedding).filter(Embedding.userId == request.document_owner_id).all()
+        # Search Qdrant for similar vectors
+        search_results = qdrant_client.search(
+            collection_name=qdrant_collection,
+            query_vector=query_embedding,
+            query_filter={
+                "must": [
+                    {"key": "user_id", "match": {"value": request.document_owner_id}}
+                ]
+            },
+            limit=5,  # Get top 5 most similar chunks
+            with_payload=True
+        )
         
-        # Calculate cosine similarity for each embedding
-        similarities = []
-        for emb in embeddings:
-            # Calculate cosine similarity
-            dot_product = sum(a * b for a, b in zip(query_embedding, emb.vector))
-            norm_a = sum(a * a for a in query_embedding) ** 0.5
-            norm_b = sum(b * b for b in emb.vector) ** 0.5
-            similarity = dot_product / (norm_a * norm_b) if norm_a * norm_b != 0 else 0
-            similarities.append((emb, similarity))
-        
-        # Sort by similarity and get top 3
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        top_chunks = similarities[:3]
-        
-        if not top_chunks:
+        if not search_results:
             # Create a streaming response with the same structure
             async def no_docs_stream():
                 yield json.dumps({
@@ -515,19 +584,16 @@ async def semantic_search_query(request: QueryRequest, db: Session, language_ins
 
             return StreamingResponse(no_docs_stream(), media_type="application/x-ndjson")
 
-        # Get the chunks and their content
+        # Extract chunks and sources from Qdrant results
         chunks = []
         sources = []
-        for emb, similarity in top_chunks:
-            chunk = db.query(DocumentChunk).filter(DocumentChunk.id == emb.chunkId).first()
-            if chunk:
-                doc = db.query(DBDocument).filter(DBDocument.id == chunk.documentId).first()
-                if doc:
-                    chunks.append(chunk.content)
-                    sources.append({
-                        "document": doc.originalName,
-                        "similarity": float(similarity)
-                    })
+        for result in search_results:
+            if result.payload:
+                chunks.append(result.payload.get("content", ""))
+                sources.append({
+                    "document": result.payload.get("filename", "Unknown"),
+                    "similarity": float(result.score)
+                })
 
         # Clean and encode the text properly
         context = "\n".join([chunk.encode('utf-8', errors='ignore').decode('utf-8') for chunk in chunks])
@@ -537,7 +603,7 @@ async def semantic_search_query(request: QueryRequest, db: Session, language_ins
         # Continue with Ollama API call...
         return await generate_ollama_response(prompt, sources)
     except Exception as e:
-        log_to_frontend("error", f"Error in semantic search: {str(e)}")
+        log_to_frontend("error", f"Error in Qdrant semantic search: {str(e)}")
         log_to_frontend("error", traceback.format_exc())
         raise HTTPException(
             status_code=500,

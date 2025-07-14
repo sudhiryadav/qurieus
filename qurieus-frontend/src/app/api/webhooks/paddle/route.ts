@@ -167,10 +167,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: "Server misconfigured" }, { status: 500 });
       }
 
-      // Extract timestamp and signature from header
-      logger.info("🔍 Raw Paddle-Signature header:", paddleSignature);
-      
-      // Parse the signature header - it can have multiple parts
       const parts = paddleSignature.split(";");
       let timestamp: string | null = null;
       let signature: string | null = null;

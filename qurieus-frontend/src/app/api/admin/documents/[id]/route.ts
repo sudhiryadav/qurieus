@@ -4,8 +4,37 @@ import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
+// @ts-ignore: No type declarations for @qdrant/js-client-rest
+import { QdrantClient } from "@qdrant/js-client-rest";
 
-export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(
+const QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
+const QDRANT_COLLECTION = "user_documents_embeddings"; // Fixed collection name
+const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
+
+// Initialize Qdrant client with API key if available
+const qdrant = new QdrantClient({ 
+  url: QDRANT_URL,
+  ...(QDRANT_API_KEY && { apiKey: QDRANT_API_KEY })
+});
+
+async function deleteVectorsForDocument(userId: string, documentId: string) {
+  try {
+    await qdrant.delete(QDRANT_COLLECTION, {
+      filter: {
+        must: [
+          { key: "user_id", match: { value: userId } },
+          { key: "document_id", match: { value: documentId } },
+        ],
+      },
+    });
+    console.log(`Deleted vectors for document ${documentId} from Qdrant`);
+  } catch (error) {
+    console.error(`Error deleting vectors from Qdrant for document ${documentId}:`, error);
+    throw error;
+  }
+}
+
+export const DELETE = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
 
@@ -27,7 +56,10 @@ export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
-    // Delete the document
+    // Delete vectors from Qdrant first
+    await deleteVectorsForDocument(session!.user!.id, id);
+
+    // Delete the document from database
     await prisma.document.delete({
       where: {
         id,

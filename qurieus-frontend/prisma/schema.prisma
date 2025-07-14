@@ -102,7 +102,6 @@ model User {
   subscriptions         UserSubscription[] // one-to-many
   messages              Message[]
   documents             Document[]
-  embeddings            Embedding[]
   chatConversations     ChatConversation[]
   logs                  Log[]
   queries               QueryAnalytics[]
@@ -288,36 +287,11 @@ model Document {
   keywords     String?  // Comma-separated list of keywords extracted from the document
   uploadedAt   DateTime @default(now())
   metadata     String?
-  chunks       DocumentChunk[]
   modalDocumentId String?
   
   @@index([userId])
   @@index([category])
   @@index([keywords])
-}
-
-model DocumentChunk {
-  id          String   @id @default(cuid())
-  documentId  String
-  content     String   @db.Text
-  chunkIndex  Int
-  
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  embedding   Embedding?
-  
-  @@index([documentId])
-}
-
-model Embedding {
-  id        String   @id @default(cuid())
-  vector    Float[]  // Using array of floats instead of vector type
-  chunkId   String   @unique
-  userId    String
-  chunk     DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@index([userId])
 }
 
 model Log {

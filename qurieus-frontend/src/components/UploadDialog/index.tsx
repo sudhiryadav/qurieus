@@ -217,50 +217,10 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         }
       });
 
-      if(process.env.USE_MODAL_PERSISTENT_STORAGE === 'true'){
-        const successCount = data.results.filter((result: any) => result.success).length;
-        const errorResults = data.results.filter((result: any) => !result.success);
-        const errorCount = errorResults.length;
-
-        logger.info("UploadDialog: Modal processing results", { 
-          successCount, 
-          errorCount,
-          totalResults: data.results.length 
-        });
-
-        if (successCount > 0 && errorCount === 0) {
-          logger.info("UploadDialog: All files uploaded successfully via Modal");
-          showToast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`);
-          onUploadSuccess();
-          onClose();
-          handleReset();
-        } else if (successCount > 0 && errorCount > 0) {
-          logger.warn("UploadDialog: Partial upload success via Modal", { 
-            successCount, 
-            errorCount,
-            errors: errorResults.map((r: any) => ({ filename: r.filename, error: r.error }))
-          });
-          showToast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}, ${errorCount} failed`);
-          showToast.error(
-            `Failed to upload: ${errorResults.map((r: any) => `${r.filename}: ${r.error || 'Unknown error'}`).join('; ')}`
-          );
-          onUploadSuccess();
-          onClose();
-          handleReset();
-        } else if (errorCount > 0) {
-          logger.error("UploadDialog: All files failed via Modal", { 
-            errorCount,
-            errors: errorResults.map((r: any) => ({ filename: r.filename, error: r.error }))
-          });
-          showToast.error(
-            `Failed to upload ${errorCount} file${errorCount !== 1 ? 's' : ''}: ${errorResults.map((r: any) => `${r.filename}: ${r.error || 'Unknown error'}`).join('; ')}`
-          );
-          handleReset();
-        }
-      } 
-      else if (data.results?.[0]?.success) {
+      // Handle backend (Qdrant) response
+      if (data.message && data.files) {
         logger.info("UploadDialog: All files uploaded successfully via backend");
-        showToast.success("All files uploaded successfully");
+        showToast.success(`Successfully uploaded ${data.files.length} file${data.files.length !== 1 ? 's' : ''}`);
         onUploadSuccess();
         onClose();
         handleReset();

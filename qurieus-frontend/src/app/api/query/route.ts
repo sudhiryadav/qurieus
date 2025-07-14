@@ -92,20 +92,26 @@ async function trackAnalytics({
 }
 
 async function queryWithModal(message: string, userId: string, history: any[]) {
-  const modalApiUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
-  if (!modalApiUrl) {
-    throw new Error('Modal.com API URL not configured');
+  const modalUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
+  const modalApiKey = process.env.MODAL_DOT_COM_X_API_KEY;
+  
+  if (!modalUrl) {
+    throw new Error("Modal.com query URL not configured");
+  }
+  
+  if (!modalApiKey) {
+    throw new Error("Modal.com API key not configured");
   }
 
-  const response = await fetch(modalApiUrl, {
+  const response = await fetch(modalUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.MODAL_DOT_COM_X_API_KEY || '',
+      'x-api-key': modalApiKey,
     },
     body: JSON.stringify({
       query: message,
-      user_id: userId,
+      user_id: userId, // Changed from document_owner_id to user_id
       history: history || [],
     }),
   });
@@ -113,27 +119,6 @@ async function queryWithModal(message: string, userId: string, history: any[]) {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
-  }
-
-  return response;
-}
-
-async function queryWithBackend(message: string, userId: string, history: any[]) {
-  const response = await fetch(`${process.env.BACKEND_URL}/api/v1/admin/documents/query`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: message,
-      document_owner_id: userId,
-      history: history || [],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Backend service error: ${response.status} - ${errorText}`);
   }
 
   return response;
@@ -805,23 +790,13 @@ export async function POST(request: Request) {
     }
 
     // Query based on environment configuration
-    const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
-    const modalApiUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
-
     logger.info("Query API: Executing query", { 
-      apiKey, 
-      useModalPersistent, 
-      hasModalUrl: !!modalApiUrl 
+      apiKey
     }, { userId });
 
     let response;
-    if (useModalPersistent && modalApiUrl) {
-      // Query with Modal.com
-      response = await queryWithModal(message, apiKey, history);
-    } else {
-      // Query with backend
-      response = await queryWithBackend(message, apiKey, history);
-    }
+    // Query with Modal.com (Qdrant integration)
+    response = await queryWithModal(message, apiKey, history);
 
     if (!response.ok || !response.body)
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -938,7 +913,6 @@ export async function POST(request: Request) {
       apiKey, 
       responseTime, 
       responseLength: responseBuffer.length,
-      useModalPersistent 
     }, { userId });
 
     return new Response(response.body?.pipeThrough(transformStream), {
