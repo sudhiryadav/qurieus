@@ -65,10 +65,33 @@ try:
         qdrant_client.get_collection(qdrant_collection)
     except Exception:
         # Create collection if it doesn't exist
+        from qdrant_client.models import PayloadIndexParams, FieldCondition, MatchValue
+        
         qdrant_client.create_collection(
             collection_name=qdrant_collection,
             vectors_config=VectorParams(size=384, distance=Distance.COSINE)  # all-MiniLM-L6-v2 has 384 dimensions
         )
+        
+        # Create payload indexes for filtering
+        try:
+            qdrant_client.create_payload_index(
+                collection_name=qdrant_collection,
+                field_name="user_id",
+                field_schema="keyword"
+            )
+            print(f"Created payload index for user_id in collection {qdrant_collection}")
+        except Exception as e:
+            print(f"Warning: Could not create payload index for user_id: {e}")
+        
+        try:
+            qdrant_client.create_payload_index(
+                collection_name=qdrant_collection,
+                field_name="document_id",
+                field_schema="keyword"
+            )
+            print(f"Created payload index for document_id in collection {qdrant_collection}")
+        except Exception as e:
+            print(f"Warning: Could not create payload index for document_id: {e}")
     
 except Exception as e:
     print(f"Warning: Could not initialize Qdrant client: {str(e)}")
