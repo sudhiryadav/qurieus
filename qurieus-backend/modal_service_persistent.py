@@ -22,7 +22,7 @@ from pydantic import BaseModel
 import hashlib
 
 # Initialize Modal app with unique identifier to force rebuild
-app = modal.App("qurieus-app-v46")
+app = modal.App("qurieus-app-v47")
 
 API_KEY = os.environ.get("API_KEY")
 
@@ -51,6 +51,7 @@ image = (
         "xlrd",
         "numpy<2.0",
         "requests",
+        "qdrant-client",
 
         # --- CRITICAL FIX: Pin the llama-cpp-python version ---
         # Ensure this matches the version found in the cu121 index, e.g., 0.3.4 or the latest
@@ -269,7 +270,7 @@ async def query_documents_endpoint(request: QueryRequest, x_api_key: str = Heade
             from modal import Function
             
             # Call Modal.com's LLM function
-            llm_function = Function.lookup("qurieus-app-v45", "generate_response")
+            llm_function = Function.lookup("qurieus-app-v47", "generate_response")
             answer = llm_function.remote(prompt)
             
             print(f"PERFLOG: Total query time: {time.time() - start_time:.2f}s")
