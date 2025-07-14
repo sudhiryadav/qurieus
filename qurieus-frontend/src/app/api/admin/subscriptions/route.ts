@@ -1,20 +1,9 @@
-import prisma from "@/lib/prisma";
-import { authOptions } from "@/utils/auth";
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/utils/prismaDB";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-
-export async function GET(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (request: NextRequest) => {
     // Get all the subscriptions from the database
     const subscriptions = await prisma.userSubscription.findMany({
       include: {
@@ -24,11 +13,4 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(subscriptions);
-  } catch (error: any) {
-    console.error("Error fetching subscriptions:", error);
-    return NextResponse.json(
-      { error: error.response?.data?.error || "Failed to fetch subscriptions" },
-      { status: error.response?.status || 500 }
-    );
-  }
-}
+});

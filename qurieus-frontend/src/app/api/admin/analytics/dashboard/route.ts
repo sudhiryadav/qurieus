@@ -4,19 +4,16 @@ import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import { subDays, startOfDay, endOfDay, format } from 'date-fns';
 import { logger } from '@/lib/logger';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(request: Request) {
+export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (request: Request) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      logger.warn("Analytics Dashboard API: Unauthorized access attempt");
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    userId = session.user.id;
+    userId = session!.user!.id;
     logger.info("Analytics Dashboard API: Fetching dashboard data", { userId });
 
     const now = new Date();
@@ -140,4 +137,4 @@ export async function GET(request: Request) {
     
     return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });
   }
-} 
+}); 

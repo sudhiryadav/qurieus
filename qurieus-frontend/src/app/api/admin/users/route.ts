@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
+import { RequireRoles, invalidateUserCache } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-// Helper to check SUPER_ADMIN
-async function requireSuperAdmin(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
-  return null;
-}
-
-export async function GET(req: NextRequest) {
-  const guard = await requireSuperAdmin(req);
-  if (guard) return guard;
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
   const users = await prisma.user.findMany({
     include: {
       subscriptions: {
@@ -36,25 +27,26 @@ export async function GET(req: NextRequest) {
     };
   });
   return NextResponse.json(usersWithLatestSubscription);
-}
+});
 
-export async function PATCH(req: NextRequest) {
-  const guard = await requireSuperAdmin(req);
-  if (guard) return guard;
+export const PATCH = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
   const data = await req.json();
   const { id, ...update } = data;
   if (!id) return NextResponse.json({ error: "Missing user id" }, { status: 400 });
+  
   const user = await prisma.user.update({
     where: { id },
     data: update,
   });
+  
+  // Invalidate user cache after update
+  await invalidateUserCache(id);
+  
   return NextResponse.json(user);
-}
+});
 
-export async function POST(req: NextRequest) {
-  const guard = await requireSuperAdmin(req);
-  if (guard) return guard;
+export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
   const data = await req.json();
   const user = await prisma.user.create({ data });
   return NextResponse.json(user);
-} 
+}); 

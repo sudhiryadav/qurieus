@@ -18,6 +18,9 @@ COPY . .
 # Copy the Prisma schema to generate the client
 COPY prisma ./prisma/
 
+# Copy the custom server file
+COPY server.js ./
+
 # Generate the Prisma client
 RUN yarn prisma generate
 

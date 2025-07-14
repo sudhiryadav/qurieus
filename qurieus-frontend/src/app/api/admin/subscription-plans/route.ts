@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import paddle from "@/lib/paddle";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
 // Helper to sync a plan to Paddle (product + price)
 async function syncPlanToPaddle(planId: string, userId: string) {
@@ -320,22 +322,12 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
   }
 }
 
-export async function GET() {
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async () => {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    // Check if user is super admin
     const user = await prisma.user.findUnique({
-      where: { email: session.user?.email! },
+      where: { email: session!.user?.email! },
     });
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
     const plans = await prisma.subscriptionPlan?.findMany({
       include: {
         paddleConfig: true,
@@ -348,21 +340,14 @@ export async function GET() {
     console.error("Error fetching subscription plans:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
-}
+});
 
-export async function POST(req: Request) {
+export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request) => {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-    // Check if user is super admin
     const user = await prisma.user.findUnique({
-      where: { email: session.user?.email! },
+      where: { email: session!.user?.email! },
     });
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
     const body = await req.json();
     const { name, description, price, currency, features, isActive, idealFor, keyLimits, maxDocs, maxStorageMB, maxQueriesPerDay } = body;
     const plan = await prisma.subscriptionPlan.create({
@@ -382,7 +367,7 @@ export async function POST(req: Request) {
     });
     // Auto-sync to Paddle
     try {
-      await syncPlanToPaddle(plan.id, user.id);
+      await syncPlanToPaddle(plan.id, user!.id);
     } catch (syncError) {
       console.error("Paddle sync failed:", syncError);
       // Don't fail the entire request if Paddle sync fails
@@ -393,21 +378,14 @@ export async function POST(req: Request) {
     console.error("Error creating subscription plan:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
-}
+});
 
-export async function PATCH(req: Request) {
+export const PATCH = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request) => {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-    // Check if user is super admin
     const user = await prisma.user.findUnique({
-      where: { email: session.user?.email! },
+      where: { email: session!.user?.email! },
     });
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
     const body = await req.json();
     const { id, name, description, price, currency, features, isActive, idealFor, keyLimits, maxDocs, maxStorageMB, maxQueriesPerDay } = body;
     if (!id) return NextResponse.json({ error: "Missing plan id" }, { status: 400 });
@@ -440,7 +418,7 @@ export async function PATCH(req: Request) {
     
     // Auto-sync to Paddle
     try {
-      await syncPlanToPaddle(plan.id, user.id);
+      await syncPlanToPaddle(plan.id, user!.id);
     } catch (syncError) {
       console.error("Paddle sync failed:", syncError);
       // Don't fail the entire request if Paddle sync fails
@@ -450,7 +428,7 @@ export async function PATCH(req: Request) {
     // Handle Paddle product activation/deactivation if status changed
     if (isActiveChanged) {
       try {
-        await handlePaddleProductStatus(plan.id, isActive, user.id);
+        await handlePaddleProductStatus(plan.id, isActive, user!.id);
       } catch (statusError) {
         console.error("Paddle status update failed:", statusError);
         // Don't fail the request if status update fails
@@ -462,21 +440,14 @@ export async function PATCH(req: Request) {
     console.error("Error updating subscription plan:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: Request) {
+export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request) => {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-    // Check if user is super admin
     const user = await prisma.user.findUnique({
-      where: { email: session.user?.email! },
+      where: { email: session!.user?.email! },
     });
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: "Missing plan id" }, { status: 400 });
     
@@ -498,7 +469,7 @@ export async function DELETE(req: Request) {
 
     // Handle Paddle product deactivation
     try {
-      await handlePaddleProductStatus(id, false, user.id);
+      await handlePaddleProductStatus(id, false, user!.id);
     } catch (paddleError) {
       console.error("Error handling Paddle deactivation:", paddleError);
       // Don't fail the request if Paddle deactivation fails
@@ -509,4 +480,4 @@ export async function DELETE(req: Request) {
     console.error("Error deactivating subscription plan:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
-}
+});

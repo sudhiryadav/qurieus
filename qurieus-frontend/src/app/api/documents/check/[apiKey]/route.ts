@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/utils/prismaDB";
 import { sendConfigurationNotificationEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
+import { requireUser } from "@/utils/roleGuards";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ apiKey: string }> }
 ) {
+  return requireUser(request as any, async (request: Request) => {
   const startTime = Date.now();
   
   try {
@@ -15,12 +17,12 @@ export async function GET(
     logger.info("Documents Check API: Checking documents for API key", { apiKey });
 
     // Check if user exists
-    const user = await prisma.user.findUnique({
+    const userRecord = await prisma.user.findUnique({
       where: { id: apiKey },
       select: { email: true }
     });
 
-    if (!user) {
+    if (!userRecord) {
       logger.warn("Documents Check API: Invalid API key", { apiKey });
       return NextResponse.json(
         { error: "Invalid API Key" },
@@ -44,10 +46,10 @@ export async function GET(
     if (!hasDocuments) {
       // Send notification emails
       try {
-        if (user.email) {
+        if (userRecord.email) {
           logger.info("Documents Check API: Sending configuration notification email", { 
             apiKey, 
-            userEmail: user.email 
+            userEmail: userRecord.email 
           });
           
           await sendConfigurationNotificationEmail({
@@ -55,7 +57,7 @@ export async function GET(
             query: "No documents found",
               timestamp: new Date().toISOString(),
             adminEmail: process.env.ADMIN_EMAIL || '',
-            userEmail: user.email
+            userEmail: userRecord.email
           });
         }
       } catch (error) {
@@ -89,4 +91,5 @@ export async function GET(
       { status: 500 }
     );
   }
+  });
 } 

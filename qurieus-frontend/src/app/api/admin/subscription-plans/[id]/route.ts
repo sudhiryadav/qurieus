@@ -4,6 +4,8 @@ import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import paddle from "@/lib/paddle";
 import { logger } from "@/lib/logger";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
 // Helper to sync a plan to Paddle (product + price)
 async function syncPlanToPaddle(planId: string, userId: string) {
@@ -301,13 +303,10 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
   }
 }
 
-export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+export const PATCH = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const session = await getServerSession(authOptions);
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
-
-  const user = await prisma.user.findUnique({ where: { email: session.user?.email! } });
-  if (!user || user.role !== "SUPER_ADMIN") return new NextResponse("Forbidden", { status: 403 });
+  const user = await prisma.user.findUnique({ where: { email: session!.user?.email! } });
 
   const body = await req.json();
   const { name, description, price, currency, features, isActive, idealFor, keyLimits, maxDocs, maxStorageMB, maxQueriesPerDay } = body;
@@ -341,7 +340,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     
     // Auto-sync to Paddle
     try {
-      await syncPlanToPaddle(plan.id, user.id);
+      await syncPlanToPaddle(plan.id, user!.id);
     } catch (syncError) {
       logger.error("Paddle sync failed", syncError);
       // Don't fail the entire request if Paddle sync fails
@@ -351,7 +350,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     // Handle Paddle product activation/deactivation if status changed
     if (isActiveChanged) {
       try {
-        await handlePaddleProductStatus(plan.id, isActive, user.id);
+        await handlePaddleProductStatus(plan.id, isActive, user!.id);
       } catch (statusError) {
         logger.error("Paddle status update failed", statusError);
         // Don't fail the request if status update fails
@@ -363,15 +362,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     logger.error("Error updating subscription plan", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
+export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const session = await getServerSession(authOptions);
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
-
-  const user = await prisma.user.findUnique({ where: { email: session.user?.email! } });
-  if (!user || user.role !== "SUPER_ADMIN") return new NextResponse("Forbidden", { status: 403 });
+  const user = await prisma.user.findUnique({ where: { email: session!.user?.email! } });
 
   try {
     // Check if plan exists and get its Paddle config
@@ -392,7 +388,7 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
 
     // Handle Paddle product deactivation
     try {
-      await handlePaddleProductStatus(id, false, user.id);
+      await handlePaddleProductStatus(id, false, user!.id);
     } catch (paddleError) {
       logger.error("Error handling Paddle deactivation", paddleError);
       // Don't fail the request if Paddle deactivation fails
@@ -403,4 +399,4 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     logger.error("Error deactivating subscription plan", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
-} 
+}); 

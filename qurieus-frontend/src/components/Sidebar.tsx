@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X } from "lucide-react";
+import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X, Users as UsersIcon, MessageSquare } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/hooks/useSidebar";
 
 export const userNav = [
-  { name: "Dashboard", href: "/user/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
-  { name: "Profile", href: "/user/profile", icon: <User className="h-5 w-5" /> },
-  { name: "Subscription", href: "/user/subscription", icon: <CreditCard className="h-5 w-5" /> },
-  { name: "Knowledge Base", href: "/user/knowledge-base", icon: <Upload className="h-5 w-5" /> },
-  { name: "Analytics", href: "/user/analytics", icon: <BarChart3 className="h-5 w-5" /> },
-  { name: "Embed Code", href: "/user/embed-code", icon: <Code className="h-5 w-5" /> },
+  { name: "Dashboard", href: "/user/dashboard", icon: <LayoutDashboard className="h-5 w-5" />, hideForAgent: true },
+  { name: "Profile", href: "/user/profile", icon: <User className="h-5 w-5" />, hideForAgent: true },
+  { name: "Agents", href: "/user/agents", icon: <UsersIcon className="h-5 w-5" />, hideForAgent: true },
+  { name: "Agent Dashboard", href: "/agent/dashboard", icon: <MessageSquare className="h-5 w-5" />, agentOnly: true },
+  { name: "Subscription", href: "/user/subscription", icon: <CreditCard className="h-5 w-5" />, hideForAgent: true },
+  { name: "Knowledge Base", href: "/user/knowledge-base", icon: <Upload className="h-5 w-5" />, hideForAgent: true },
+  { name: "Analytics", href: "/user/analytics", icon: <BarChart3 className="h-5 w-5" />, hideForAgent: true },
+  { name: "Embed Code", href: "/user/embed-code", icon: <Code className="h-5 w-5" />, hideForAgent: true },
 ];
 
 const adminNav = [
@@ -66,6 +68,16 @@ const Sidebar = () => {
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
         <nav className="mt-0 px-2">
           {userNav.map((item) => {
+            // Skip agent-only items if user is not an agent
+            if (item.agentOnly && session?.user?.role !== "AGENT") {
+              return null;
+            }
+            
+            // Skip items that should be hidden for agents
+            if (item.hideForAgent && session?.user?.role === "AGENT") {
+              return null;
+            }
+            
             const isActive = pathname === item.href;
             return (
               <Link

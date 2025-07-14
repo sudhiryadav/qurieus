@@ -5,6 +5,8 @@ import axiosInstance from "@/lib/axios";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/utils/prismaDB";
 import { logger } from "@/lib/logger";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
 // Maximum file size (10MB)
 // Convert MB to bytes (1MB = 1024 * 1024 bytes)
@@ -66,18 +68,13 @@ async function validateMaxStorage(userId: string, files: File[]) {
   return null;
 }
 
-export async function GET(request: Request) {
+export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (request: Request) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
   try {
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      logger.warn("Documents API: Unauthorized GET attempt");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const userId = session!.user!.id;
 
     logger.info("Documents API: Fetching documents", { userId });
 
@@ -111,9 +108,9 @@ export async function GET(request: Request) {
       { status: error.response?.status || 500 },
     );
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
@@ -121,15 +118,7 @@ export async function POST(req: NextRequest) {
     logger.info("Documents API: Processing file upload request");
     const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
-      logger.warn("Documents API: Unauthorized POST attempt");
-      return NextResponse.json(
-        { error: "Unauthorized. Please sign in." },
-        { status: 401 },
-      );
-    }
-
-    userId = session.user.id;
+    userId = session!.user!.id;
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
     const description = formData.get("description") as string;
@@ -148,7 +137,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate max docs
-    const maxDocsError = await validateMaxDocs(session.user.id, files.length);
+    const maxDocsError = await validateMaxDocs(session!.user!.id, files.length);
     if (maxDocsError) {
       logger.warn("Documents API: Max docs validation failed", { 
         userId, 
@@ -158,7 +147,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate max storage
-    const maxStorageError = await validateMaxStorage(session.user.id, files);
+    const maxStorageError = await validateMaxStorage(session!.user!.id, files);
     if (maxStorageError) {
       logger.warn("Documents API: Max storage validation failed", { 
         userId, 
@@ -218,7 +207,7 @@ export async function POST(req: NextRequest) {
 
     if (useModalPersistent && modalApiUrl) {
       // Process with Modal.com
-      const modalResponse = await processWithModal(files, description, category, session.user);
+      const modalResponse = await processWithModal(files, description, category, session!.user!);
       const data = await modalResponse.json();
       const errorResults = data.results.filter((result: any) => !result.success);
       if (errorResults.length > 0) {
@@ -238,7 +227,7 @@ export async function POST(req: NextRequest) {
               originalName: errorResult.filename,
               fileType: errorResult.filename.split('.').pop()?.toLowerCase() || '',
               fileSize: files.find(f => f.name === errorResult.filename)?.size || 0,
-              userId: session.user.id,
+              userId: session!.user!.id,
               content: `Upload failed: ${errorResult.error}`,
               description: description || "",
               category: category || "",
@@ -266,7 +255,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(data);
     } else {
       // Process with backend FastAPI
-      const result = await processWithBackend(files, description, category, session.user, req);
+      const result = await processWithBackend(files, description, category, session!.user!, req);
       
       const responseTime = Date.now() - startTime;
       logger.info("Documents API: Backend processing completed successfully", { 
@@ -300,7 +289,7 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
 async function processWithModal(files: File[], description: string, category: string, user: any) {
   const modalApiUrl = process.env.MODAL_UPLOAD_DOCUMENT_URL!;

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import axiosInstance from '@/lib/axios';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
 async function deleteAllWithModal(userId: string) {
   const modalApiUrl = process.env.MODAL_DELETE_ALL_DOCUMENTS_URL;
@@ -48,15 +50,11 @@ async function deleteAllWithBackend(userId: string) {
   };
 }
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(async (request: NextRequest) => {
   try {
     // Get user session
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    const userId = session!.user!.id;
 
     // Check if using Modal.com persistent storage
     const useModalPersistent = process.env.USE_MODAL_PERSISTENT_STORAGE === 'true';
@@ -101,4 +99,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}); 

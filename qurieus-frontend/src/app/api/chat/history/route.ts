@@ -1,60 +1,90 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/utils/prismaDB';
-import { logger } from '@/lib/logger';
+import { NextResponse } from "next/server";
+import { authOptions } from "@/utils/auth";
+import { prisma } from "@/utils/prismaDB";
+import { errorResponse } from "@/utils/responser";
+import { getServerSession } from "next-auth";
+import { logger } from "@/lib/logger";
+import { OptionalAuth, RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from "@prisma/client";
 
-export async function GET(req: NextRequest) {
-  const startTime = Date.now();
-  
+export const GET = OptionalAuth("Chat History API")(async (request: Request) => {
   try {
-    const { searchParams } = new URL(req.url);
-    const visitorId = searchParams.get('visitorId');
+    const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const conversationId = searchParams.get('conversationId');
+    const visitorId = searchParams.get('visitorId');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = parseInt(searchParams.get('offset') || '0');
 
-    logger.info("Chat History API: Fetching chat history", { 
-      visitorId, 
-      userId, 
-      limit 
-    });
-
-    if (!visitorId || !userId) {
-      logger.warn("Chat History API: Missing required parameters", { visitorId, userId });
-      return NextResponse.json([], { status: 400 });
+    if (!conversationId && !visitorId) {
+      return errorResponse({ error: "conversationId or visitorId is required", status: 400 });
     }
 
-    const conversation = await prisma.chatConversation.findFirst({
-      where: { visitorId, userId },
-    });
-
-    if (!conversation) {
-      logger.info("Chat History API: No conversation found", { visitorId, userId });
-      return NextResponse.json([], { status: 200 });
+    // Build where clause
+    const whereClause: any = {};
+    if (conversationId) {
+      whereClause.conversationId = conversationId;
+    } else if (visitorId) {
+      // For visitorId queries, we need either a userId or to handle unauthenticated access
+      if (userId) {
+        whereClause.conversation = {
+          visitorId: visitorId,
+          userId: userId
+        };
+      } else {
+        // If no user is authenticated, just filter by visitorId
+        whereClause.conversation = {
+          visitorId: visitorId
+        };
+      }
     }
 
+    // Get messages
     const messages = await prisma.chatMessage.findMany({
-      where: { conversationId: conversation.id },
+      where: whereClause,
       orderBy: { createdAt: 'asc' },
       take: limit,
-      select: { role: true, content: true },
+      skip: offset,
+      include: {
+        agent: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
     });
 
-    const responseTime = Date.now() - startTime;
-    logger.info("Chat History API: Chat history retrieved successfully", { 
-      visitorId, 
-      userId, 
+    // Get total count for pagination
+    const totalCount = await prisma.chatMessage.count({
+      where: whereClause
+    });
+
+    logger.info("Chat History API: Retrieved chat history", { 
+      userId,
+      conversationId,
+      visitorId,
       messageCount: messages.length,
-      responseTime 
+      totalCount
     });
 
-    return NextResponse.json(messages, { status: 200 });
-  } catch (error: any) {
-    const responseTime = Date.now() - startTime;
-    logger.error("Chat History API: Error fetching chat history", { 
-      error: error.message, 
-      responseTime,
-      stack: error.stack 
+    return NextResponse.json({
+      messages,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + limit < totalCount
+      }
     });
-    
-    return NextResponse.json([], { status: 500 });
+
+  } catch (error) {
+    logger.error("Chat History API: Error retrieving chat history", { 
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return errorResponse({ 
+      error: "An error occurred while retrieving chat history", 
+      status: 500 
+    });
   }
-} 
+}); 

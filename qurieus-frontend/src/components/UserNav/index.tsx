@@ -9,7 +9,8 @@ import {
   BarChart3, 
   Menu, 
   X,
-  Code
+  Code,
+  MessageSquare
 } from "lucide-react";
 import React from "react";
 import Logo from "../Common/Logo";
@@ -48,33 +49,57 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
 
   logger.info("xxx session", { role: session?.user?.role });
 
-  const navItems = [
-    {
-      name: "Dashboard",
-      href: "/user/dashboard",
-      icon: <LayoutDashboard className="h-5 w-5" />,
-    },
-    {
-      name: "Profile",
-      href: "/user/profile",
-      icon: <User className="h-5 w-5" />,
-    },
-    {
-      name: "Knowledge Base",
-      href: "/user/knowledge-base",
-      icon: <Upload className="h-5 w-5" />,
-    },
-    {
-      name: "Analytics",
-      href: "/user/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
-      name: "Embed Code",
-      href: "/user/embed-code",
-      icon: <Code className="h-5 w-5" />,
-    },
-  ];
+  // Don't render anything for agents - they have their own navigation
+  if (session?.user?.role === "AGENT") {
+    return null;
+  }
+
+  const isAgent = session?.user?.role === "AGENT";
+
+  // Define navigation items based on user role
+  const getNavItems = () => {
+    if (isAgent) {
+      // For agents, only show agent dashboard
+      return [
+        {
+          name: "Agent Dashboard",
+          href: "/agent/dashboard",
+          icon: <MessageSquare className="h-5 w-5" />,
+        },
+      ];
+    } else {
+      // For regular users and admins, show all user pages
+      return [
+        {
+          name: "Dashboard",
+          href: "/user/dashboard",
+          icon: <LayoutDashboard className="h-5 w-5" />,
+        },
+        {
+          name: "Profile",
+          href: "/user/profile",
+          icon: <User className="h-5 w-5" />,
+        },
+        {
+          name: "Knowledge Base",
+          href: "/user/knowledge-base",
+          icon: <Upload className="h-5 w-5" />,
+        },
+        {
+          name: "Analytics",
+          href: "/user/analytics",
+          icon: <BarChart3 className="h-5 w-5" />,
+        },
+        {
+          name: "Embed Code",
+          href: "/user/embed-code",
+          icon: <Code className="h-5 w-5" />,
+        },
+      ];
+    }
+  };
+
+  const navItems = getNavItems();
 
   if (!session?.user) {
     return (

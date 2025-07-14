@@ -3,23 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import axios from "@/lib/axios";
 import { logger } from "@/lib/logger";
+import { RequireUser } from '@/utils/roleGuardsDecorator';
 
-export async function POST(request: Request) {
+export const POST = RequireUser("Chat API")(async (request: Request, user: any) => {
   const startTime = Date.now();
-  let userId: string | undefined;
+  const userId = user.id;
   
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      logger.warn("Chat API: Unauthorized access attempt");
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    userId = session.user.id;
     const body = await request.json();
     const { message, documentId } = body;
 
@@ -41,7 +31,7 @@ export async function POST(request: Request) {
       `${process.env.BACKEND_URL}/api/chat`,
       {
         message,
-        userId: session.user.id,
+        userId: userId,
         documentId,
       },
       {
@@ -56,7 +46,7 @@ export async function POST(request: Request) {
       responseTime 
     });
 
-    return new Response(response.data, {
+    return new NextResponse(response.data, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
@@ -78,4 +68,4 @@ export async function POST(request: Request) {
       { status: error.response?.status || 500 }
     );
   }
-} 
+}); 

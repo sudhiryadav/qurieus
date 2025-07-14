@@ -20,7 +20,7 @@ export default function UserLayoutContent({
 
   useEffect(() => {
     const checkSubscription = async () => {
-      if (!session?.user) return;
+      if (!session?.user || session?.user?.role === "AGENT") return;
       try {
         const response = await axiosInstance.get("/api/user/subscription");
         setSubscriptionPlan(response.data?.plan ?? null);
@@ -80,7 +80,9 @@ export default function UserLayoutContent({
     checkSubscription();
   }, [session, setSubscriptionPlan]);
 
-  if (!subscriptionPlan && !isAdmin) {
+  // Skip subscription check for admins and agents
+  const isAgent = session?.user?.role === "AGENT";
+  if (!subscriptionPlan && !isAdmin && !isAgent) {
     return <SubscriptionPage />;
   }
 

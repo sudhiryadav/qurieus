@@ -3,25 +3,24 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import bcrypt from "bcrypt";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function POST(request: Request) {
+export const POST = RequireRoles([UserRole.USER])(async (request: Request) => {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
   const { password } = await request.json();
   if (!password) {
     return NextResponse.json({ error: "Password is required" }, { status: 400 });
   }
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  const user = await prisma.user.findUnique({ where: { email: session!.user!.email! } });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
   const wasFirstPassword = !user.password;
   const hashed = await bcrypt.hash(password, 10);
   await prisma.user.update({
-    where: { email: session.user.email },
+    where: { email: session!.user!.email! },
     data: { password: hashed },
   });
   return NextResponse.json({ message: "Password set successfully", wasFirstPassword });
-} 
+}); 

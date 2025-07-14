@@ -4,19 +4,16 @@ import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import paddle from "@/lib/paddle";
 import { logger } from "@/lib/logger";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function POST(req: Request) {
+export const POST = RequireRoles([UserRole.USER])(async (req: Request) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      logger.warn("Paddle Update Plan API: Unauthorized access attempt");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    userId = session.user.id;
+    userId = session!.user!.id;
     const { subscriptionId, priceId } = await req.json();
     
     logger.info("Paddle Update Plan API: Processing plan update", { 
@@ -41,7 +38,7 @@ export async function POST(req: Request) {
     const subscription = await prisma.userSubscription.findFirst({
       where: {
         paddleSubscriptionId: subscriptionId,
-        userId: session.user.id,
+        userId: session!.user!.id,
       },
     }) as any;
 
@@ -164,4 +161,4 @@ export async function POST(req: Request) {
       { status: error.response?.status || 500 }
     );
   }
-} 
+}); 

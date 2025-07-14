@@ -2,21 +2,16 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/utils/prismaDB";
 import { authOptions } from "@/utils/auth";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET() {
+export const GET = RequireRoles([UserRole.USER])(async () => {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const subscription = await prisma.userSubscription.findFirst({
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
       },
       orderBy: {
         createdAt: "desc",
@@ -38,4 +33,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}); 

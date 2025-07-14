@@ -4,19 +4,16 @@ import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import { subDays, startOfDay, endOfDay, format } from 'date-fns';
 import { logger } from '@/lib/logger';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(request: Request) {
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (request: Request) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      logger.warn("Analytics Detailed API: Unauthorized access attempt");
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    userId = session.user.id;
+    userId = session!.user!.id;
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '7d';
     const days = parseInt(timeRange.replace('d', ''));
@@ -201,6 +198,10 @@ export async function GET(request: Request) {
       stack: error.stack 
     });
     
-    return NextResponse.json({ error: 'Failed to fetch detailed analytics' }, { status: 500 });
+    console.error("Error fetching detailed analytics:", error);
+    return NextResponse.json(
+      { error: error.response?.data?.error || "Failed to fetch detailed analytics" },
+      { status: error.response?.status || 500 }
+    );
   }
-} 
+}); 

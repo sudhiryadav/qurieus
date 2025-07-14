@@ -347,6 +347,7 @@ async def upload_document_endpoint(request: DocumentRequest, x_api_key: str = He
 )
 @modal.fastapi_endpoint(docs=True, label="query-documents", method="POST")
 async def query_documents_endpoint(request: QueryRequest, x_api_key: str = Header(...)):
+    start_time = time.time()
     try:
         print("=== Query Endpoint Started ===")
         print(f"API Key provided: {bool(x_api_key)}")
@@ -356,30 +357,30 @@ async def query_documents_endpoint(request: QueryRequest, x_api_key: str = Heade
     except Exception as e:
         print(f"API Key verification failed: {e}")
         raise
-    
     try:
         query = request.query
         user_id = request.user_id
         print(f"Processing query: '{query}' for user: {user_id}")
-        
+        t0 = time.time()
         user_docs_path = get_user_documents_path(user_id)
         user_embeddings_path = get_user_embeddings_path(user_id)
-        
-        print(f"Checking paths - docs: {os.path.exists(user_docs_path)}, embeddings: {os.path.exists(user_embeddings_path)}")
-        
+        print(f"PERFLOG: Checking paths - docs: {os.path.exists(user_docs_path)}, embeddings: {os.path.exists(user_embeddings_path)}")
         if not os.path.exists(user_docs_path) or not os.path.exists(user_embeddings_path):
-            print("No documents found for user")
+            print("PERFLOG: No documents found for user")
             return {
                 "response": "No documents found for this user.",
                 "sources": [],
                 "done": True
             }
+        t1 = time.time()
         with open(user_docs_path, 'r') as f:
             documents = json.load(f)
         with open(user_embeddings_path, 'rb') as f:
             embeddings_data = pickle.load(f)
+        print(f"PERFLOG: Loaded documents and embeddings in {time.time() - t1:.2f}s")
         embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
-        query_embedding = embedding_model.encode([query])
+        t2 = time.time()
+        # Only load embeddings for this user (already done, but log)
         all_chunks = []
         all_embeddings = []
         all_sources = []
@@ -390,41 +391,44 @@ async def query_documents_endpoint(request: QueryRequest, x_api_key: str = Heade
                 doc = next((d for d in documents if d["id"] == doc_embeddings["document_id"]), None)
                 if doc:
                     all_sources.extend([doc["filename"]] * len(doc_embeddings["chunks"]))
+        print(f"PERFLOG: Filtered user embeddings/chunks in {time.time() - t2:.2f}s. Chunks: {len(all_chunks)}")
         if not all_chunks:
-            print("No chunks found for user")
+            print("PERFLOG: No chunks found for user")
             return {
                 "response": "No documents found for this user.",
                 "sources": [],
                 "done": True
             }
-        
-        print(f"Found {len(all_chunks)} chunks, loading model...")
-        similarities = []
-        for i, chunk_embedding in enumerate(all_embeddings):
-            dot_product = sum(a * b for a, b in zip(query_embedding[0], chunk_embedding))
-            norm_a = sum(a * a for a in query_embedding[0]) ** 0.5
-            norm_b = sum(b * b for b in chunk_embedding) ** 0.5
-            similarity = dot_product / (norm_a * norm_b) if norm_a * norm_b != 0 else 0
-            similarities.append((i, similarity))
+        t3 = time.time()
+        # Vectorized similarity calculation
+        import numpy as np
+        emb_matrix = np.array(all_embeddings)
+        query_vec = np.array(embedding_model.encode([query])[0])
+        emb_matrix_norm = emb_matrix / np.linalg.norm(emb_matrix, axis=1, keepdims=True)
+        query_vec_norm = query_vec / np.linalg.norm(query_vec)
+        sims = emb_matrix_norm @ query_vec_norm
+        similarities = list(enumerate(sims))
+        print(f"PERFLOG: Vectorized similarity calculation in {time.time() - t3:.2f}s")
         similarities.sort(key=lambda x: x[1], reverse=True)
         top_indices = [idx for idx, _ in similarities[:10]]
         relevant_chunks = [all_chunks[i] for i in top_indices]
         relevant_sources = [all_sources[i] for i in top_indices]
         context = "\n".join(relevant_chunks)
         context = context[:4000]
-        print(f"Context length: {len(context)} characters")
-        
+        print(f"PERFLOG: Selected top {len(relevant_chunks)} chunks, context length: {len(context)}")
+        t4 = time.time()
+        # Model loading (singleton)
         try:
-            print("Loading LLM model...")
+            print("PERFLOG: Loading LLM model...")
             llm = get_llama_model()
-            print("LLM model loaded successfully")
+            print("PERFLOG: LLM model loaded (singleton):", llm is not None)
         except Exception as e:
-            print(f"Error loading LLM model: {e}")
+            print(f"PERFLOG: Error loading LLM model: {e}")
             raise RuntimeError(f"Failed to load LLM model: {e}")
-        
+        print(f"PERFLOG: Model load time: {time.time() - t4:.2f}s")
+        t5 = time.time()
         prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-        print(f"Generating response with prompt length: {len(prompt)}")
-        
+        print(f"PERFLOG: Generating response with prompt length: {len(prompt)}")
         try:
             output = llm(
                 prompt,
@@ -434,17 +438,28 @@ async def query_documents_endpoint(request: QueryRequest, x_api_key: str = Heade
                 stop=["</s>"]
             )
             answer = output["choices"][0]["text"].strip()
-            print(f"Generated answer length: {len(answer)}")
+            print(f"PERFLOG: Generated answer length: {len(answer)}")
         except Exception as e:
-            print(f"Error generating response: {e}")
+            print(f"PERFLOG: Error generating response: {e}")
             raise RuntimeError(f"Failed to generate response: {e}")
+        t6 = time.time()
+        print(f"PERFLOG: LLM inference time: {t6 - t5:.2f}s")
+        print(f"PERFLOG: Total query time: {time.time() - start_time:.2f}s")
+        print("PERFLOG: --- END OF REQUEST ---")
         return {
             "response": answer,
             "sources": relevant_sources,
             "done": True
         }
     except Exception as e:
+        print(f"PERFLOG: Exception in query_documents_endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- PERFORMANCE TUNING RECOMMENDATIONS ---
+# PERFLOG: To further improve performance at scale, consider using a vector database (Qdrant, Pinecone, FAISS) instead of loading all embeddings from disk.
+# PERFLOG: Use Modal's keep-warm endpoint and increase warm containers to reduce cold start latency.
+# PERFLOG: Use a smaller GGUF model if latency is more important than accuracy.
+# PERFLOG: Profile each step using the PERFLOG markers above.
 
 # Delete document endpoint
 @app.function(

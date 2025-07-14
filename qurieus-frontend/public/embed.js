@@ -8,7 +8,7 @@
 
   // Brand color variable
   const BRAND_COLOR = '#3758f9';
-  const DARK_BRAND_COLOR = '#8b5cf6';
+  const DARK_BRAND_COLOR = '#3758f9';
 
   // Get base URL from the current script's src attribute
   const getBaseUrl = () => {
@@ -1188,14 +1188,34 @@
       // Update state without triggering re-render
       widgetState.inputMessage = e.target.value;
       widgetState.isLoading = false;
-      
       // Auto-resize textarea
       autoResize();
-      
       // Update send button state directly
       sendBtn.disabled = widgetState.isLoading || !e.target.value.trim();
       sendBtn.style.opacity = widgetState.isLoading || !e.target.value.trim() ? '0.5' : '1';
     };
+
+    // Keyboard shortcuts: Cmd+Enter/Ctrl+Enter to send, Up Arrow to recall last message
+    input.addEventListener('keydown', function (e) {
+      // Cmd+Enter (Mac) or Ctrl+Enter (Win/Linux) to send
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+      // Up Arrow to recall last user message if input is empty
+      if (e.key === 'ArrowUp' && !input.value) {
+        // Find the last user message
+        const lastUserMsg = (widgetState.messages || []).slice().reverse().find(m => m.role === 'user');
+        if (lastUserMsg) {
+          input.value = lastUserMsg.content;
+          widgetState.inputMessage = lastUserMsg.content;
+          // Move cursor to end
+          setTimeout(() => {
+            input.selectionStart = input.selectionEnd = input.value.length;
+          }, 0);
+        }
+      }
+    });
     
     form.appendChild(input);
     form.appendChild(sendBtn);

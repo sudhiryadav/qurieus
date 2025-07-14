@@ -4,23 +4,16 @@ import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { logger } from '@/lib/logger';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(request: Request) {
+export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (request: Request) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      logger.warn("Analytics API: Unauthorized access attempt");
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    userId = session.user.id;
+    userId = session!.user!.id;
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get("timeRange") || "7d";
     const days = parseInt(timeRange.replace('d', ''));
@@ -37,7 +30,7 @@ export async function GET(request: Request) {
     // Get total queries
     const totalQueries = await prisma.queryAnalytics.count({
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
         createdAt: {
           gte: startDate,
           lte: endDate
@@ -48,7 +41,7 @@ export async function GET(request: Request) {
     // Get successful queries
     const successfulQueries = await prisma.queryAnalytics.count({
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
         success: true,
         createdAt: {
           gte: startDate,
@@ -60,7 +53,7 @@ export async function GET(request: Request) {
     // Get average response time
     const avgResponseTime = await prisma.queryAnalytics.aggregate({
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
         createdAt: {
           gte: startDate,
           lte: endDate
@@ -75,7 +68,7 @@ export async function GET(request: Request) {
     const queriesByDate = await prisma.queryAnalytics.groupBy({
       by: ['createdAt'],
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
         createdAt: {
           gte: startDate,
           lte: endDate
@@ -91,7 +84,7 @@ export async function GET(request: Request) {
     const visitorStats = await prisma.visitorSession.groupBy({
       by: ['visitorId'],
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
         startTime: {
           gte: startDate,
           lte: endDate
@@ -123,7 +116,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       timeRange,
-      userId: session.user.id,
+      userId: session!.user!.id,
       totalQueries,
       successfulQueries,
       successRate: totalQueries > 0 ? (successfulQueries / totalQueries) * 100 : 0,
@@ -153,21 +146,15 @@ export async function GET(request: Request) {
       { status: error.response?.status || 500 }
     );
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
   const startTime = Date.now();
   let userId: string | undefined;
   
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      logger.warn("Analytics API: Unauthorized POST attempt");
-      return new Response('Unauthorized', { status: 401 });
-    }
-
-    userId = session.user.id;
+    userId = session!.user!.id;
     const { type, data } = await req.json();
 
     logger.info("Analytics API: Processing analytics update", { 
@@ -193,6 +180,6 @@ export async function POST(req: NextRequest) {
     });
     
     console.error('Error updating analytics:', error);
-    return new Response('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-} 
+}); 

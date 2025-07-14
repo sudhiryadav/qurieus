@@ -3,22 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import { ensureSingleActiveSubscription } from "@/utils/subscription";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function POST(req: NextRequest) {
+export const POST = RequireRoles([UserRole.USER])(async (req: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
 
     // Check if user already has a subscription
     const existingSubscription = await prisma.userSubscription.findFirst({
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
       },
     });
 
@@ -50,14 +45,14 @@ export async function POST(req: NextRequest) {
     trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
     // Deactivate all other subscriptions for this user
-    await ensureSingleActiveSubscription(session.user.id);
+    await ensureSingleActiveSubscription(session!.user!.id);
 
     // Create trial subscription
     const trialSubscription = await prisma.userSubscription.create({
       data: {
-        userId: session.user.id,
+        userId: session!.user!.id,
         planId: freeTrialPlan.id,
-        paddleSubscriptionId: `trial_${session.user.id}_${Date.now()}`,
+        paddleSubscriptionId: `trial_${session!.user!.id}_${Date.now()}`,
         paddleCustomerId: "",
         status: "active",
         currentPeriodStart: new Date(),
@@ -90,8 +85,8 @@ export async function POST(req: NextRequest) {
     try {
       const { sendTrialStartedEmail } = await import("@/lib/email");
       await sendTrialStartedEmail({
-        email: session.user.email!,
-        name: session.user.name || session.user.email!,
+        email: session!.user!.email!,
+        name: session!.user!.name || session!.user!.email!,
         trial_days: trialDays,
         trial_end_date: trialEndDate.toLocaleDateString(),
         max_docs: freeTrialPlan.maxDocs || 5,
@@ -115,23 +110,16 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(req: NextRequest) {
+export const GET = RequireRoles([UserRole.USER])(async (req: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
 
     // Get current subscription
     const subscription = await prisma.userSubscription.findFirst({
       where: {
-        userId: session.user.id,
+        userId: session!.user!.id,
       },
       include: {
         plan: true,
@@ -168,4 +156,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}); 

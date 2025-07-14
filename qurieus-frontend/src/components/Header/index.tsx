@@ -11,6 +11,15 @@ import Logo from "../Common/Logo";
 import { useSidebar } from "@/hooks/useSidebar";
 import menuData from "./menuData";
 import { userNav } from "@/components/Sidebar";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MessageSquare } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header: React.FC = () => {
   const { data: session } = useSession();
@@ -68,6 +77,7 @@ const Header: React.FC = () => {
   const { theme, setTheme } = useTheme();
 
   const isUserRoute = pathUrl.startsWith("/user") || pathUrl.startsWith("/admin");
+  const isAgentRoute = pathUrl.startsWith("/agent");
 
   const handleSignOut = async () => {
     try {
@@ -75,6 +85,110 @@ const Header: React.FC = () => {
     } catch (error) {
       showToast.error("Failed to sign out");
     }
+  };
+
+  // Render agent navigation (simple dashboard link)
+  const renderAgentNav = () => {
+    if (session?.user?.role === "AGENT") {
+      return (
+        <div className="flex items-center space-x-4">
+          <Link href="/agent/dashboard">
+            <Button variant="ghost" className="flex items-center space-x-2">
+              <MessageSquare className="h-4 w-4" />
+              <span>Dashboard</span>
+            </Button>
+          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center space-x-3 cursor-pointer">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-foreground">{session.user.name}</p>
+                  <p className="text-xs text-muted-foreground">Agent</p>
+                </div>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
+                  <AvatarFallback className="bg-muted text-muted-foreground">{session.user.name?.[0] || "A"}</AvatarFallback>
+                </Avatar>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40 bg-neutral-50 dark:bg-neutral-900">
+              <DropdownMenuItem
+                className="text-red-600 cursor-pointer"
+                onClick={() => signOut({ callbackUrl: "/" })}
+              >
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Render regular user navigation (dropdown menu)
+  const renderUserNav = () => {
+    if (session?.user && session.user.role !== "AGENT") {
+      return (
+        <div className="flex items-center" ref={userMenuRef}>
+          <div className="relative">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className={`flex items-center space-x-1 px-1 sm:px-2 py-2 text-xs sm:text-base font-medium max-w-[80px] sm:max-w-none truncate text-dark dark:text-white`}
+            >
+              <span className="truncate">{session?.user?.name}</span>
+              <svg
+                className={`h-4 w-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 min-w-[10rem] w-max origin-top rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-dark-2 z-[200]">
+                <div className="py-1">
+                  {userNav.map((item) => {
+                    // Skip agent-only items if user is not an agent
+                    if (item.agentOnly && session?.user?.role !== "AGENT") {
+                      return null;
+                    }
+                    
+                    // Skip items that should be hidden for agents
+                    if (item.hideForAgent && session?.user?.role === "AGENT") {
+                      return null;
+                    }
+                    
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                      >
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                  <hr className="my-1 border-gray-200 dark:border-dark-3" />
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      handleSignOut();
+                    }}
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -100,7 +214,7 @@ const Header: React.FC = () => {
         </div>
         <div className="flex w-full items-center justify-end">
           {/* Desktop menu */}
-          {!isUserRoute && (
+          {!isUserRoute && !isAgentRoute && (
             <nav className="hidden pr-4 lg:flex">
               <ul className="flex gap-x-12">
                 {menuData.filter((menuItem) => menuItem.hidden !== true).map((menuItem, index) => (
@@ -172,52 +286,13 @@ const Header: React.FC = () => {
                 </svg>
               </span>
             </button>
-            {/* user dropdown and hamburger button (mobile) */}
+            
+            {/* User navigation - different for agents vs regular users */}
             {session?.user ? (
-              <div className="flex items-center" ref={userMenuRef}>
-                <div className="relative">
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className={`flex items-center space-x-1 px-1 sm:px-2 py-2 text-xs sm:text-base font-medium max-w-[80px] sm:max-w-none truncate text-dark dark:text-white`}
-                  >
-                    <span className="truncate">{session?.user?.name}</span>
-                    <svg
-                      className={`h-4 w-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 min-w-[10rem] w-max origin-top rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-dark-2 z-[200]">
-                      <div className="py-1">
-                        {userNav.map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setUserMenuOpen(false)}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                          >
-                            {item.name}
-                          </Link>
-                        ))}
-                        <hr className="my-1 border-gray-200 dark:border-dark-3" />
-                        <button
-                          onClick={() => {
-                            setUserMenuOpen(false);
-                            handleSignOut();
-                          }}
-                          className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
-                        >
-                          Sign Out
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <>
+                {renderAgentNav()}
+                {renderUserNav()}
+              </>
             ) : (
               <>
                 <Link
@@ -234,6 +309,7 @@ const Header: React.FC = () => {
                 </Link>
               </>
             )}
+            
             {/* Hamburger button - mobile only */}
             <button
               onClick={navbarToggleHandler}

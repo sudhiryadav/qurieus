@@ -2,23 +2,18 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import axios from "@/lib/axios";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(request: Request) {
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (request: Request) => {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
 
     const { data } = await axios.get(
       `${process.env.BACKEND_URL}/api/v1/admin/settings`,
       {
         params: {
-          userId: session.user.id,
+          userId: session!.user!.id,
         },
       }
     );
@@ -31,18 +26,11 @@ export async function GET(request: Request) {
       { status: error.response?.status || 500 }
     );
   }
-}
+});
 
-export async function PUT(request: Request) {
+export const PUT = RequireRoles([UserRole.SUPER_ADMIN])(async (request: Request) => {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
 
     const body = await request.json();
     const { settings } = body;
@@ -61,7 +49,7 @@ export async function PUT(request: Request) {
       },
       {
         params: {
-          userId: session.user.id,
+          userId: session!.user!.id,
         },
       }
     );
@@ -74,4 +62,4 @@ export async function PUT(request: Request) {
       { status: error.response?.status || 500 }
     );
   }
-} 
+}); 

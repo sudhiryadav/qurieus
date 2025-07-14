@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
 async function deleteWithModal(userId: string, documentId: string) {
   // Look up the document to get modalDocumentId
@@ -54,19 +56,13 @@ async function deleteWithBackend(userId: string, documentId: string) {
   };
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ documentId: string }> }
-) {
+export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(
+  async (request: NextRequest, { params }: { params: Promise<{ documentId: string }> }) => {
   const { documentId } = await params;
   try {
     // Get user session
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+      const userId = session!.user!.id;
 
     if (!documentId) {
       return NextResponse.json(
@@ -122,3 +118,4 @@ export async function DELETE(
     );
   }
 } 
+); 

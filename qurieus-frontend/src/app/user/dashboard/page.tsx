@@ -39,6 +39,7 @@ export default function Dashboard() {
   }, []);
 
   const fetchDashboardData = async () => {
+    if (session?.user?.role === "AGENT") return;
     try {
       const response = await fetch('/api/admin/analytics/dashboard');
       if (!response.ok) throw new Error('Failed to fetch dashboard data');

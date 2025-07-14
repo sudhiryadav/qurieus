@@ -18,7 +18,12 @@ export default function SetPasswordPage() {
     }
     // If user already has a password, redirect to dashboard
     if ((session.user as any)?.hasPassword) {
-      router.replace("/user/dashboard");
+      if(session?.user?.role === "AGENT") {
+        router.replace("/agent/dashboard");
+      }
+      else{
+        router.replace("/user/dashboard");
+      }
     }
   }, [session, status, router]);
 
@@ -33,11 +38,15 @@ export default function SetPasswordPage() {
         password,
       });
       setTimeout(() => {
-        if (data.wasFirstPassword) {
+        if(session?.user?.role === "AGENT") {
+          router.replace("/agent/dashboard");
+        }
+        else{
+          if (data.wasFirstPassword) {
           router.replace("/user/knowledge-base");
         } else {
           router.replace("/user/dashboard");
-        }
+        }}
       }, 1000);
     } catch (error: any) {
       showToast.error(error.response?.data?.error || "Failed to set password");

@@ -2,12 +2,16 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/utils/prismaDB";
 import { authOptions } from "@/utils/auth";
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
+export const GET = RequireRoles([UserRole.USER])(async (request: Request, { params }: { params: Promise<{ userId: string }> }) => {
   try {
     const session = await getServerSession(authOptions);
     const { userId } = await params;
-    if (!session?.user?.id || session.user.id !== userId) {
+    
+    // Additional check to ensure user can only access their own subscription
+    if (session!.user!.id !== userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -43,4 +47,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
       { status: 500 }
     );
   }
-} 
+}); 

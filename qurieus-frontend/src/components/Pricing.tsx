@@ -94,6 +94,7 @@ export default function Pricing({
   useEffect(() => {
     // Get current subscription
     const fetchCurrentSubscription = async () => {
+      if(session?.user?.role === "AGENT" || session?.user?.role === "SUPER_ADMIN") return Promise.resolve(null);
       return axios
         .get<UserSubscription>(`/api/user/subscription/${session?.user?.id}`)
         .then((res) => res.data);
@@ -101,6 +102,7 @@ export default function Pricing({
 
     //Get the plans
     const fetchPlans = async () => {
+      if(session?.user?.role === "AGENT" || session?.user?.role === "SUPER_ADMIN") return Promise.resolve([]);
       return axios
         .get<SubscriptionPlanWithPaddle[]>(
           "/api/subscription/plans",

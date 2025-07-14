@@ -33,6 +33,7 @@ enum UserRole {
   USER        @map("User")        /// Regular user with basic access
   ADMIN       @map("Admin")       /// Administrator with elevated privileges
   SUPER_ADMIN @map("Super Admin") /// Super administrator with full system access
+  AGENT       @map("Agent")       /// Human agent for chat escalation
 }
 
 model Account {
@@ -90,7 +91,12 @@ model User {
   jobTitle              String?
   bio                   String?
   phone                 String?
-  
+
+  // Agent/owner relationship
+  parentUserId          String?
+  parentUser            User?     @relation("UserAgents", fields: [parentUserId], references: [id])
+  agents                User[]    @relation("UserAgents")
+
   accounts              Account[]
   sessions              Session[]
   subscriptions         UserSubscription[] // one-to-many
@@ -102,6 +108,13 @@ model User {
   queries               QueryAnalytics[]
   visitorSessions       VisitorSession[]
   visitorInfo           VisitorInfo[] // one-to-many
+
+  // Agent-related fields
+  agent                 Agent?    // One-to-one relationship with Agent
+  assignedChats         AgentChat[] @relation("AssignedAgent")
+  createdTickets        SupportTicket[] @relation("TicketCreator")
+  assignedTickets       SupportTicket[] @relation("TicketAssignee")
+  agentMessages         ChatMessage[] @relation("AgentMessages")
 
   allowedOrigins        String[] // e.g. ["https://mydomain.com"]
   allowedReferrers      String[] // e.g. ["https://mydomain.com/page"]
@@ -210,6 +223,12 @@ model ChatConversation {
   messages      ChatMessage[]
   visitorInfo   VisitorInfo?  @relation(fields: [visitorId], references: [visitorId])
 
+  // Agent escalation fields
+  status        ChatStatus    @default(AI_CHAT)
+  escalatedAt   DateTime?
+  agentChat     AgentChat?
+  escalationReason String?
+
   @@unique([visitorId, userId])
 }
 
@@ -217,9 +236,13 @@ model ChatMessage {
   id             String          @id @default(cuid())
   conversationId String
   content        String
-  role           String          // 'user' or 'assistant'
+  role           String          // 'user' or 'assistant' or 'agent'
   createdAt      DateTime        @default(now())
   conversation   ChatConversation @relation(fields: [conversationId], references: [id])
+  
+  // Agent message fields
+  agentId        String?
+  agent          User?           @relation("AgentMessages", fields: [agentId], references: [id])
 }
 
 // New model for visitor information
@@ -241,6 +264,7 @@ model VisitorInfo {
   conversations ChatConversation[]
   sessions      VisitorSession[]
   analytics     QueryAnalytics[]
+  tickets       SupportTicket[]
   
   @@index([email])
   @@index([firstSeen])
@@ -351,4 +375,153 @@ model PendingSubscription {
   userId        String
   createdAt     DateTime @default(now())
   // Optionally, add more fields as needed (e.g., planId, status)
+}
+
+// Agent Management System
+model Agent {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Agent profile
+  displayName     String
+  bio             String?
+  avatar          String?
+  specialties     String[] // e.g., ["technical", "billing", "general"]
+  languages       String[] // e.g., ["en", "es", "fr"]
+  
+  // Agent status and availability
+  isOnline        Boolean  @default(false)
+  isAvailable     Boolean  @default(true)
+  maxConcurrentChats Int   @default(5)
+  currentChats    Int      @default(0)
+  
+  // Agent performance metrics
+  totalChatsHandled Int    @default(0)
+  avgResponseTime   Float?
+  satisfactionRating Float?
+  
+  // Agent settings
+  autoAcceptChats  Boolean @default(true)
+  workingHours     Json?   // Store working hours as JSON
+  timezone         String  @default("UTC")
+  
+  // Timestamps
+  lastActiveAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relationships
+  
+  @@index([isOnline, isAvailable])
+  @@index([specialties])
+}
+
+model AgentChat {
+  id              String   @id @default(cuid())
+  conversationId  String   @unique
+  conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  // Agent assignment
+  agentId         String
+  agent           User     @relation("AssignedAgent", fields: [agentId], references: [id])
+  
+  // Chat status
+  status          AgentChatStatus @default(ACTIVE)
+  assignedAt      DateTime @default(now())
+  startedAt       DateTime?
+  endedAt         DateTime?
+  
+  // Chat metadata
+  priority        ChatPriority @default(NORMAL)
+  tags            String[] // e.g., ["urgent", "technical", "billing"]
+  notes           String?  @db.Text
+  
+  // Performance tracking
+  firstResponseTime Int?   // in seconds
+  resolutionTime   Int?    // in seconds
+  satisfactionRating Int?  // 1-5 scale
+  
+  @@index([agentId, status])
+  @@index([status, priority])
+}
+
+model SupportTicket {
+  id              String   @id @default(cuid())
+  
+  // Ticket details
+  title           String
+  description     String   @db.Text
+  priority        TicketPriority @default(MEDIUM)
+  status          TicketStatus @default(OPEN)
+  category        String   // e.g., "technical", "billing", "general"
+  
+  // User information
+  visitorId       String?
+  visitorInfo     VisitorInfo? @relation(fields: [visitorId], references: [visitorId])
+  
+  // Assignment
+  createdById     String?
+  createdBy       User?    @relation("TicketCreator", fields: [createdById], references: [id])
+  assignedToId    String?
+  assignedTo      User?    @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  
+  // Contact information
+  contactName     String
+  contactEmail    String
+  contactPhone    String?
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  assignedAt      DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  
+  // Ticket metadata
+  source          String   @default("contact_form") // "contact_form", "chat_escalation", "email"
+  tags            String[]
+  notes           String?  @db.Text
+  
+  @@index([status, priority])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+// Enums for the new models
+enum ChatStatus {
+  AI_CHAT         @map("AI Chat")         /// Chat is being handled by AI
+  ESCALATED       @map("Escalated")       /// Chat has been escalated to human agent
+  RESOLVED        @map("Resolved")        /// Chat has been resolved
+  CLOSED          @map("Closed")          /// Chat has been closed
+}
+
+enum AgentChatStatus {
+  PENDING         @map("Pending")         /// Chat assigned but agent hasn't started
+  ACTIVE          @map("Active")          /// Agent is actively handling the chat
+  ON_HOLD         @map("On Hold")         /// Chat is on hold
+  RESOLVED        @map("Resolved")        /// Chat has been resolved
+  CLOSED          @map("Closed")          /// Chat has been closed
+}
+
+enum ChatPriority {
+  LOW             @map("Low")             /// Low priority chat
+  NORMAL          @map("Normal")          /// Normal priority chat
+  HIGH            @map("High")            /// High priority chat
+  URGENT          @map("Urgent")          /// Urgent priority chat
+}
+
+enum TicketPriority {
+  LOW             @map("Low")             /// Low priority ticket
+  MEDIUM          @map("Medium")          /// Medium priority ticket
+  HIGH            @map("High")            /// High priority ticket
+  URGENT          @map("Urgent")          /// Urgent priority ticket
+}
+
+enum TicketStatus {
+  OPEN            @map("Open")            /// Ticket is open
+  IN_PROGRESS     @map("In Progress")     /// Ticket is being worked on
+  PENDING         @map("Pending")         /// Ticket is pending customer response
+  RESOLVED        @map("Resolved")        /// Ticket has been resolved
+  CLOSED          @map("Closed")          /// Ticket has been closed
 }
