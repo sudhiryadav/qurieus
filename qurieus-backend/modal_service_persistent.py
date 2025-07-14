@@ -22,7 +22,7 @@ from pydantic import BaseModel
 import hashlib
 
 # Initialize Modal app with unique identifier to force rebuild
-app = modal.App("qurieus-app-v47")
+app = modal.App("qurieus-app-v48")
 
 API_KEY = os.environ.get("API_KEY")
 
@@ -262,16 +262,18 @@ async def query_documents_endpoint(request: QueryRequest, x_api_key: str = Heade
                 "done": True
             }
         
-        # Generate response using Modal.com's LLM service
-        prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-        print(f"PERFLOG: Generating response with prompt length: {len(prompt)}")
+        # Generate response using a simple approach for now
+        print(f"PERFLOG: Generating response with context length: {len(context)}")
         try:
-            # Use Modal.com's built-in LLM service
-            from modal import Function
-            
-            # Call Modal.com's LLM function
-            llm_function = Function.lookup("qurieus-app-v47", "generate_response")
-            answer = llm_function.remote(prompt)
+            # For now, return a simple response with the context
+            # You can integrate with any LLM service here (OpenAI, Anthropic, etc.)
+            answer = f"""Based on your documents, I found the following relevant information:
+
+{context[:1000]}{'...' if len(context) > 1000 else ''}
+
+This information should help answer your question: "{query}"
+
+Note: This is a basic response. For more sophisticated AI responses, you can integrate with OpenAI, Anthropic, or other LLM services."""
             
             print(f"PERFLOG: Total query time: {time.time() - start_time:.2f}s")
             print("PERFLOG: --- END OF REQUEST ---")
