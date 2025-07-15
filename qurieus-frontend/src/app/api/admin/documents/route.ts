@@ -15,16 +15,6 @@ const QDRANT_URL = process.env.QDRANT_URL;
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
-if (!QDRANT_COLLECTION) {
-  throw new Error("QDRANT_COLLECTION is not set");
-}
-if (!QDRANT_URL) {
-  throw new Error("QDRANT_URL is not set");
-}
-if (!QDRANT_API_KEY) {
-  throw new Error("QDRANT_API_KEY is not set");
-}
-
 const qdrant = new QdrantClient({ url: QDRANT_URL });
 
 // Utility to upsert embeddings to Qdrant
@@ -43,7 +33,7 @@ async function upsertEmbeddingsToQdrant(
       chunk,
     },
   }));
-  await qdrant.upsert(QDRANT_COLLECTION, { points });
+  await qdrant.upsert(QDRANT_COLLECTION as string, { points });
 }
 
 // Maximum file size (10MB)

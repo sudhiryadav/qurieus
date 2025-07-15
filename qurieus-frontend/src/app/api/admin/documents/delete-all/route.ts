@@ -20,6 +20,18 @@ const qdrant = new QdrantClient({
 
 async function deleteAllVectorsForUser(userId: string) {
   try {
+    if (!QDRANT_COLLECTION) {
+      console.log('QDRANT_COLLECTION not configured, skipping Qdrant deletion');
+      return;
+    }
+    if (!QDRANT_URL) {
+      console.log('QDRANT_URL not configured, skipping Qdrant deletion');
+      return;
+    }
+    if (!QDRANT_API_KEY) {
+      console.log('QDRANT_API_KEY not configured, skipping Qdrant deletion');
+      return;
+    }
     console.log(`Attempting to delete vectors for user ${userId} from Qdrant`);
     console.log(`Qdrant URL: ${QDRANT_URL}`);
     console.log(`Qdrant Collection: ${QDRANT_COLLECTION}`);
@@ -27,7 +39,7 @@ async function deleteAllVectorsForUser(userId: string) {
     
     // Check if collection exists first
     try {
-      const collectionInfo = await qdrant.getCollection(QDRANT_COLLECTION);
+      const collectionInfo = await qdrant.getCollection(QDRANT_COLLECTION as string);
       console.log(`Collection exists with ${collectionInfo.points_count} points`);
     } catch (collectionError) {
       console.log(`Collection ${QDRANT_COLLECTION} does not exist or is not accessible`);
@@ -35,7 +47,7 @@ async function deleteAllVectorsForUser(userId: string) {
       return;
     }
     
-    await qdrant.delete(QDRANT_COLLECTION, {
+    await qdrant.delete(QDRANT_COLLECTION as string, {
       filter: {
         must: [
           { key: "user_id", match: { value: userId } },
