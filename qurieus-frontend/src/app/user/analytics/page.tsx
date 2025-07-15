@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApexOptions } from "apexcharts";
+import axiosInstance from "@/lib/axios";
 
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -33,10 +34,8 @@ export default function AnalyticsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/admin/analytics?timeRange=${timeRange}`);
-        if (!response.ok) throw new Error("Failed to fetch analytics data");
-        const analyticsData = await response.json();
-        setData(analyticsData);
+        const response = await axiosInstance.get(`/api/admin/analytics?timeRange=${timeRange}`);
+        setData(response.data);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");

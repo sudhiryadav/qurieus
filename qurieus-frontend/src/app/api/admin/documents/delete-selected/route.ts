@@ -5,8 +5,8 @@ import { prisma } from "@/utils/prismaDB";
 // @ts-ignore: No type declarations for @qdrant/js-client-rest
 import { QdrantClient } from "@qdrant/js-client-rest";
 
-const QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
-const QDRANT_COLLECTION = "user_documents_embeddings"; // Fixed collection name
+const QDRANT_URL = process.env.QDRANT_URL;
+const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
 // Initialize Qdrant client with API key if available
@@ -17,6 +17,15 @@ const qdrant = new QdrantClient({
 
 async function deleteVectorsForDocuments(userId: string, documentIds: string[]) {
   try {
+    if (!QDRANT_COLLECTION) {
+      throw new Error("QDRANT_COLLECTION is not set");
+    }
+    if (!QDRANT_URL) {
+      throw new Error("QDRANT_URL is not set");
+    }
+    if (!QDRANT_API_KEY) {
+      throw new Error("QDRANT_API_KEY is not set");
+    }
     for (const docId of documentIds) {
       await qdrant.delete(QDRANT_COLLECTION, {
         filter: {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { showToast } from "@/components/Common/Toast";
+import axiosInstance from "@/lib/axios";
 
 interface Agent {
   id: string;
@@ -26,9 +27,8 @@ export default function AgentsPage() {
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/agents");
-      const data = await res.json();
-      setAgents(data.agents || []);
+      const response = await axiosInstance.get("/api/agents");
+      setAgents(response.data.agents || []);
     } catch (err) {
       showToast.error("Failed to load agents");
     } finally {
@@ -55,19 +55,13 @@ export default function AgentsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await fetch("/api/agents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(inviteForm),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create agent");
+      await axiosInstance.post("/api/agents", inviteForm);
       showToast.success("Agent created successfully");
       setInviteModalOpen(false);
       setInviteForm({ name: "", email: "", password: "" });
       fetchAgents();
     } catch (err: any) {
-      showToast.error(err.message || "Failed to create agent");
+      showToast.error(err.response?.data?.error || err.message || "Failed to create agent");
     } finally {
       setSubmitting(false);
     }
@@ -79,19 +73,13 @@ export default function AgentsPage() {
     if (!selectedAgent) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/agents/${selectedAgent.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update agent");
+      await axiosInstance.put(`/api/agents/${selectedAgent.id}`, editForm);
       showToast.success("Agent updated successfully");
       setEditModalOpen(false);
       setSelectedAgent(null);
       fetchAgents();
     } catch (err: any) {
-      showToast.error(err.message || "Failed to update agent");
+      showToast.error(err.response?.data?.error || err.message || "Failed to update agent");
     } finally {
       setSubmitting(false);
     }
@@ -100,15 +88,11 @@ export default function AgentsPage() {
   // Handle status toggle
   const handleToggleStatus = async (agent: Agent) => {
     try {
-      const res = await fetch(`/api/agents/${agent.id}/status`, {
-        method: "PATCH",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update status");
-      showToast.success(data.message);
+      const response = await axiosInstance.patch(`/api/agents/${agent.id}/status`);
+      showToast.success(response.data.message);
       fetchAgents();
     } catch (err: any) {
-      showToast.error(err.message || "Failed to update status");
+      showToast.error(err.response?.data?.error || err.message || "Failed to update status");
     }
   };
 
@@ -117,17 +101,13 @@ export default function AgentsPage() {
     if (!selectedAgent) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/agents/${selectedAgent.id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete agent");
+      await axiosInstance.delete(`/api/agents/${selectedAgent.id}`);
       showToast.success("Agent deleted successfully");
       setDeleteConfirmOpen(false);
       setSelectedAgent(null);
       fetchAgents();
     } catch (err: any) {
-      showToast.error(err.message || "Failed to delete agent");
+      showToast.error(err.response?.data?.error || err.message || "Failed to delete agent");
     } finally {
       setSubmitting(false);
     }

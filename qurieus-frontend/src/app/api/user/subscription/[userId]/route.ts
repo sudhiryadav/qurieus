@@ -5,10 +5,14 @@ import { authOptions } from "@/utils/auth";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
-export const GET = RequireRoles([UserRole.USER])(async (request: Request, { params }: { params: Promise<{ userId: string }> }) => {
+export const GET = RequireRoles([UserRole.USER])(async (request: Request, user?: any) => {
   try {
     const session = await getServerSession(authOptions);
-    const { userId } = await params;
+    
+    // Extract userId from the URL path
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const userId = pathParts[pathParts.length - 1]; // Get the last part of the path
     
     // Additional check to ensure user can only access their own subscription
     if (session!.user!.id !== userId) {

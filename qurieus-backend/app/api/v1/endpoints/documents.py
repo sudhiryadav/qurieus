@@ -53,49 +53,68 @@ try:
     if settings.QDRANT_API_KEY:
         qdrant_client = QdrantClient(
             url=settings.QDRANT_URL,
-            api_key=settings.QDRANT_API_KEY
+            api_key=settings.QDRANT_API_KEY,
+            check_compatibility=False  # Skip version compatibility check
         )
     else:
-        qdrant_client = QdrantClient(settings.QDRANT_URL)
+        qdrant_client = QdrantClient(
+            settings.QDRANT_URL,
+            check_compatibility=False  # Skip version compatibility check
+        )
     
     qdrant_collection = settings.QDRANT_COLLECTION
-    
-    # Ensure collection exists
-    try:
-        qdrant_client.get_collection(qdrant_collection)
-    except Exception:
-        # Create collection if it doesn't exist
-        from qdrant_client.models import PayloadIndexParams, FieldCondition, MatchValue
-        
-        qdrant_client.create_collection(
-            collection_name=qdrant_collection,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE)  # all-MiniLM-L6-v2 has 384 dimensions
-        )
-        
-        # Create payload indexes for filtering
-        try:
-            qdrant_client.create_payload_index(
-                collection_name=qdrant_collection,
-                field_name="user_id",
-                field_schema="keyword"
-            )
-            print(f"Created payload index for user_id in collection {qdrant_collection}")
-        except Exception as e:
-            print(f"Warning: Could not create payload index for user_id: {e}")
-        
-        try:
-            qdrant_client.create_payload_index(
-                collection_name=qdrant_collection,
-                field_name="document_id",
-                field_schema="keyword"
-            )
-            print(f"Created payload index for document_id in collection {qdrant_collection}")
-        except Exception as e:
-            print(f"Warning: Could not create payload index for document_id: {e}")
     
 except Exception as e:
     print(f"Warning: Could not initialize Qdrant client: {str(e)}")
     qdrant_client = None
+
+def ensure_qdrant_collection_exists():
+    """Ensure Qdrant collection exists, create if it doesn't."""
+    if not qdrant_client:
+        print("Warning: Qdrant client not available")
+        return False
+    
+    try:
+        print(f"Checking if Qdrant collection '{qdrant_collection}' exists...")
+        qdrant_client.get_collection(qdrant_collection)
+        print(f"✅ Collection '{qdrant_collection}' already exists")
+        return True
+    except Exception as e:
+        print(f"❌ Collection '{qdrant_collection}' does not exist. Creating it now...")
+        try:
+            # Create collection if it doesn't exist
+            qdrant_client.create_collection(
+                collection_name=qdrant_collection,
+                vectors_config=VectorParams(size=384, distance=Distance.COSINE)  # all-MiniLM-L6-v2 has 384 dimensions
+            )
+            print(f"✅ Successfully created collection '{qdrant_collection}'")
+            
+            # Create payload indexes for filtering
+            try:
+                qdrant_client.create_payload_index(
+                    collection_name=qdrant_collection,
+                    field_name="user_id",
+                    field_schema="keyword"
+                )
+                print(f"✅ Created payload index for user_id in collection {qdrant_collection}")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not create payload index for user_id: {e}")
+            
+            try:
+                qdrant_client.create_payload_index(
+                    collection_name=qdrant_collection,
+                    field_name="document_id",
+                    field_schema="keyword"
+                )
+                print(f"✅ Created payload index for document_id in collection {qdrant_collection}")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not create payload index for document_id: {e}")
+            
+            print(f"🎉 Collection '{qdrant_collection}' setup completed successfully!")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to create collection: {e}")
+            return False
 
 # Cache for embeddings using lru_cache
 @lru_cache(maxsize=1000)
@@ -440,6 +459,14 @@ async def upload_files(
             )
         
         log_to_frontend("info", f"Processing upload for user: {userId}")
+        
+        # Ensure Qdrant collection exists before processing files
+        if not ensure_qdrant_collection_exists():
+            log_to_frontend("error", "Failed to ensure Qdrant collection exists")
+            raise HTTPException(
+                status_code=500,
+                detail="Vector database setup failed"
+            )
         
         total_chunks = 0
         for file in files:

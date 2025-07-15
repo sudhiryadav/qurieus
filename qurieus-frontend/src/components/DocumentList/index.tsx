@@ -23,6 +23,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
   const [deleteSelectedModalOpen, setDeleteSelectedModalOpen] = useState(false);
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+  const [deleteSingleLoading, setDeleteSingleLoading] = useState(false);
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -63,6 +64,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   const confirmDelete = async () => {
     try {
+      setDeleteSingleLoading(true);
       logger.info("DocumentList: Confirming document deletion", { 
         documentId: documentToDelete 
       });
@@ -79,6 +81,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
       logger.error("DocumentList: Error deleting document:", error);
       showToast.error("Failed to delete document");
     } finally {
+      setDeleteSingleLoading(false);
       setDeleteModalOpen(false);
     }
   };
@@ -206,7 +209,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   return (
     <>
-      <LoadingOverlay loading={deleteAllLoading} htmlText="Deleting all documents..." />
+      <LoadingOverlay loading={deleteAllLoading || deleteSingleLoading} htmlText={deleteAllLoading ? "Deleting all documents..." : "Deleting document..."} />
       <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
         {documents.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400">
@@ -310,12 +313,14 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
       <Modal
         isOpen={deleteModalOpen}
         onClose={() => {
-          setDeleteModalOpen(false);
-          setDocumentToDelete(null);
+          if (!deleteSingleLoading) {
+            setDeleteModalOpen(false);
+            setDocumentToDelete(null);
+          }
         }}
         onConfirm={confirmDelete}
         title="Delete Document"
-        confirmText="Delete"
+        confirmText={deleteSingleLoading ? "Deleting..." : "Delete"}
       >
         <p>Are you sure you want to delete this document? This action cannot be undone.</p>
       </Modal>

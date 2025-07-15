@@ -987,9 +987,10 @@
             timestamp: new Date().toISOString() 
           }];
           
-          // Update or create assistant message in UI
+          // Find or create assistant message container
           let assistantContainer = messagesContainer.querySelector('.assistant-message');
           if (!assistantContainer) {
+            // Create new assistant message container
             assistantContainer = document.createElement('div');
             assistantContainer.className = 'assistant-message';
             assistantContainer.style.cssText = `
@@ -1038,7 +1039,7 @@
             messagesContainer.appendChild(assistantContainer);
           }
           
-          // Get the content container
+          // Get the content container and update it
           const assistantContentContainer = assistantContainer.querySelector('div:last-child');
           
           const assistantBubble = document.createElement('div');
@@ -1065,6 +1066,7 @@
             margin-top: 2px;
           `;
           
+          // Clear and update content
           assistantContentContainer.innerHTML = '';
           assistantContentContainer.appendChild(assistantBubble);
           assistantContentContainer.appendChild(assistantTimestamp);

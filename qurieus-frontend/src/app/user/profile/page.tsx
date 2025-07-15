@@ -4,6 +4,7 @@ import PasswordForm from "@/components/Auth/PasswordForm";
 import { showToast } from "@/components/Common/Toast";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import axiosInstance from "@/lib/axios";
 
 export default function Profile() {
   const { data: session, update } = useSession();
@@ -29,11 +30,8 @@ export default function Profile() {
     const fetchUserProfile = async () => {
     if (session?.user) {
         try {
-          const response = await fetch("/api/user/profile");
-          if (!response.ok) {
-            throw new Error("Failed to fetch profile");
-          }
-          const data = await response.json();
+          const response = await axiosInstance.get("/api/user/profile");
+          const data = response.data;
       setFormData({
             name: data.user.name || "",
             email: data.user.email || "",
@@ -66,17 +64,7 @@ export default function Profile() {
 
     try {
       // Call API to update profile
-      const response = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
+      await axiosInstance.put("/api/user/profile", formData);
 
       // Update session data
       await update({
@@ -97,23 +85,15 @@ export default function Profile() {
   };
 
   const handlePasswordChange = async (newPassword: string) => {
-    const response = await fetch("/api/user/change-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    try {
+      await axiosInstance.post("/api/user/change-password", {
         currentPassword: formData.currentPassword,
         newPassword,
-      }),
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || "Failed to change password");
+      });
+      showToast.success("Password changed successfully");
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || "Failed to change password");
     }
-
-    showToast.success("Password changed successfully");
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getIdentityContext } from '@/utils/visitorId';
+import axiosInstance from '@/lib/axios';
 
 interface VisitorInfoFormProps {
   onSubmit: (visitorInfo: {
@@ -53,24 +54,14 @@ export function VisitorInfoForm({ onSubmit, onCancel }: VisitorInfoFormProps) {
       const identityContext = getIdentityContext();
       
       // Save visitor information to backend
-      const response = await fetch('/api/visitors/info', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          visitorId: identityContext.visitorId,
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          phone: formData.phone.trim() || undefined,
-          company: formData.company.trim() || undefined,
-          source: 'chat_widget'
-        }),
+      await axiosInstance.post('/api/visitors/info', {
+        visitorId: identityContext.visitorId,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || undefined,
+        company: formData.company.trim() || undefined,
+        source: 'chat_widget'
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save visitor information');
-      }
 
       // Call the onSubmit callback with the form data
       onSubmit({

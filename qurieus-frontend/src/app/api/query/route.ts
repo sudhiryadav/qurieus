@@ -1,12 +1,8 @@
-import axios from "@/lib/axios";
-import { authOptions } from "@/utils/auth";
+import axiosInstance from "@/lib/axios";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/utils/prismaDB";
 import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
 import { errorResponse } from "@/utils/responser";
-import { getServerSession } from "next-auth";
-import { logger } from "@/lib/logger";
-import { UserRole } from "@prisma/client";
-import axiosInstance from "@/lib/axios";
 
 
 // Rate Limiting Setup
@@ -91,7 +87,7 @@ async function trackAnalytics({
   }
 }
 
-async function queryWithModal(message: string, userId: string, history: any[]) {
+async function queryWithModal(message: string, userId: string, history: any[], collectionName?: string) {
   const modalUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
   const modalApiKey = process.env.MODAL_DOT_COM_X_API_KEY;
   
@@ -103,16 +99,25 @@ async function queryWithModal(message: string, userId: string, history: any[]) {
     throw new Error("Modal.com API key not configured");
   }
 
+  // Prepare headers
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-api-key': modalApiKey,
+  };
+
+  // Add collection header if provided
+  if (collectionName) {
+    headers['x-collection'] = collectionName;
+  }
+
   const response = await fetch(modalUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': modalApiKey,
-    },
+    headers,
     body: JSON.stringify({
       query: message,
       user_id: userId, // Changed from document_owner_id to user_id
       history: history || [],
+      collection_name: collectionName, // Also pass in body as fallback
     }),
   });
 
@@ -780,11 +785,27 @@ export async function POST(request: Request) {
         startTime,
       });
 
-      // Return escalation response immediately (no API call to Modal.com)
-      return new Response(escalationMessage, {
+      // Return escalation response as streaming (embed.js expects streaming)
+      const encoder = new TextEncoder();
+      
+      const stream = new ReadableStream({
+        start(controller) {
+          const responseData = {
+            response: escalationMessage,
+            sources: [],
+            done: true
+          };
+          
+          controller.enqueue(encoder.encode(JSON.stringify(responseData)));
+          controller.close();
+        }
+      });
+
+      return new Response(stream, {
         headers: {
-          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Type": "application/json",
           "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
         },
       });
     }
@@ -796,128 +817,161 @@ export async function POST(request: Request) {
 
     let response;
     // Query with Modal.com (Qdrant integration)
-    response = await queryWithModal(message, apiKey, history);
+    // Use environment variable for collection name, fallback to default
+    const collectionName = process.env.QDRANT_COLLECTION;
+    
+    response = await queryWithModal(message, apiKey, history, collectionName);
 
-    if (!response.ok || !response.body)
+    if (!response.ok)
       throw new Error(`HTTP error! status: ${response.status}`);
 
-    // Create a transform stream to modify the response and cache it
-    let responseBuffer = "";
-    let success = true;
-    let errorMessage: string | null = null;
-
-    const transformStream = new TransformStream({
-      async transform(chunk, controller) {
-        const text = new TextDecoder().decode(chunk);
-        responseBuffer += text;
-        controller.enqueue(chunk);
-      },
-      async flush(controller) {
-        try {
-          // Cache the response
-          await cacheSet(cacheKey, responseBuffer, 3600); // Cache for 1 hour
-
-          // --- NEW: Store assistant response as ChatMessage ---
-          if (responseBuffer.trim()) {
-            await prisma.chatMessage.create({
-              data: {
-                conversationId: chatConversation.id,
-                content: responseBuffer,
-                role: 'assistant',
-                createdAt: new Date(),
-              },
-            });
-            // Update conversation stats
-            await prisma.chatConversation.update({
-              where: { id: chatConversation.id },
-              data: {
-                totalMessages: { increment: 2 },
-                lastSeen: new Date(),
-              },
-            });
-          }
-          // --- END NEW ---
-
-          // --- AI RESPONSE ESCALATION LOGIC (only for AI limitations) ---
-          // Check if AI response indicates escalation is needed (only for AI limitations, not user requests)
-          if (responseBuffer.trim() && shouldEscalateToAgent(responseBuffer, message)) {
-            logger.info("Query API: AI response escalation triggered", { 
-              conversationId: chatConversation.id,
-              responseLength: responseBuffer.length,
-              userMessage: message
-            }, { userId });
-
-            // Escalate the conversation
-            await escalateChatToAgent(chatConversation.id, apiKey);
-
-            // AI limitation escalation message
-            const escalationMessage = "I apologize, but I'm unable to provide a complete answer to your question. I've escalated your chat to one of our human agents, who will be with you shortly to assist you further.";
-            
-            // Emit Socket.IO event for escalation
-            try {
-              const io = (global as any).io;
-              if (io) {
-                io.to(chatConversation.id).emit('chat_status', {
-                  status: 'escalated',
-                  meta: { 
-                    reason: 'AI unable to provide satisfactory answer',
-                    escalatedAt: new Date(),
-                    isUserRequest: false
-                  }
-                });
-              }
-            } catch (socketError) {
-              logger.warn("Query API: Failed to emit escalation Socket.IO event", { 
-                error: socketError instanceof Error ? socketError.message : String(socketError)
-              });
+    // Handle streaming response from Modal
+    let aiResponse = "";
+    let sources: any[] = [];
+    
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No response body reader available");
+    }
+    
+    const decoder = new TextDecoder();
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
+            if (data.response !== undefined) {
+              aiResponse += data.response;
             }
-            
-            // Update the stored message with escalation message
-            await prisma.chatMessage.updateMany({
-              where: {
-                conversationId: chatConversation.id,
-                role: 'assistant',
-                createdAt: new Date() // This will match the message we just created
-              },
-              data: {
-                content: escalationMessage
-              }
-            });
-
-            // Update response buffer for analytics
-            responseBuffer = escalationMessage;
+            if (data.sources) {
+              sources = data.sources;
+            }
+            if (data.done) {
+              break;
+            }
+          } catch (e) {
+            // Skip invalid JSON lines
+            continue;
           }
-          // --- END AI RESPONSE ESCALATION LOGIC ---
-
-          // Track analytics
-          const responseTime = Date.now() - startTime;
-          await trackAnalytics({
-            apiKey,
-            message,
-            response: responseBuffer,
-            responseTime,
-            visitorId: effectiveVisitorId,
-            success,
-            error: errorMessage,
-            request: request,
-            startTime,
-          });
-        } catch (err) {
-          console.error("Error in transform stream flush:", err);
         }
-      },
+      }
+    }
+    
+    logger.info("Query API: Received Modal streaming response", { 
+      responseLength: aiResponse.length,
+      sourcesCount: sources.length
+    }, { userId });
+
+    // --- AI RESPONSE ESCALATION LOGIC (only for AI limitations) ---
+    // Check if AI response indicates escalation is needed (only for AI limitations, not user requests)
+    if (aiResponse.trim() && shouldEscalateToAgent(aiResponse, message)) {
+      logger.info("Query API: AI response escalation triggered", { 
+        conversationId: chatConversation.id,
+        responseLength: aiResponse.length,
+        userMessage: message
+      }, { userId });
+
+      // Escalate the conversation
+      await escalateChatToAgent(chatConversation.id, apiKey);
+
+      // AI limitation escalation message
+      const escalationMessage = "I apologize, but I'm unable to provide a complete answer to your question. I've escalated your chat to one of our human agents, who will be with you shortly to assist you further.";
+      
+      // Emit Socket.IO event for escalation
+      try {
+        const io = (global as any).io;
+        if (io) {
+          io.to(chatConversation.id).emit('chat_status', {
+            status: 'escalated',
+            meta: { 
+              reason: 'AI unable to provide satisfactory answer',
+              escalatedAt: new Date(),
+              isUserRequest: false
+            }
+          });
+        }
+      } catch (socketError) {
+        logger.warn("Query API: Failed to emit escalation Socket.IO event", { 
+          error: socketError instanceof Error ? socketError.message : String(socketError)
+        });
+      }
+      
+      // Update the response for storage and analytics
+      aiResponse = escalationMessage;
+    }
+    // --- END AI RESPONSE ESCALATION LOGIC ---
+
+    // Cache the response
+    await cacheSet(cacheKey, aiResponse, 3600); // Cache for 1 hour
+
+    // Store assistant response as ChatMessage
+    if (aiResponse.trim()) {
+      await prisma.chatMessage.create({
+        data: {
+          conversationId: chatConversation.id,
+          content: aiResponse,
+          role: 'assistant',
+          createdAt: new Date(),
+        },
+      });
+      // Update conversation stats
+      await prisma.chatConversation.update({
+        where: { id: chatConversation.id },
+        data: {
+          totalMessages: { increment: 2 },
+          lastSeen: new Date(),
+        },
+      });
+    }
+
+    // Track analytics
+    const responseTime = Date.now() - startTime;
+    await trackAnalytics({
+      apiKey,
+      message,
+      response: aiResponse,
+      responseTime,
+      visitorId: effectiveVisitorId,
+      success: true,
+      error: null,
+      request: request,
+      startTime,
     });
 
-    const responseTime = Date.now() - startTime;
     logger.info("Query API: Query completed successfully", { 
       apiKey, 
       responseTime, 
-      responseLength: responseBuffer.length,
+      responseLength: aiResponse.length,
     }, { userId });
 
-    return new Response(response.body?.pipeThrough(transformStream), {
+    // Return streaming response to client (embed.js expects streaming)
+    const encoder = new TextEncoder();
+    
+    const stream = new ReadableStream({
+      start(controller) {
+        // Send the complete response as a single chunk
+        // embed.js will try to parse as JSON first, then fall back to plain text
+        const responseData = {
+          response: aiResponse,
+          sources: sources,
+          done: true
+        };
+        
+        controller.enqueue(encoder.encode(JSON.stringify(responseData)));
+        controller.close();
+      }
+    });
+
+    return new Response(stream, {
       headers: {
-        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Type": "application/json",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
       },

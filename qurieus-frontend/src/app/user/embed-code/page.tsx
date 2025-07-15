@@ -4,6 +4,7 @@ import { Check, Copy, Code, Upload, Eye } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import axiosInstance from "@/lib/axios";
 
 export default function EmbedCode() {
   const { data: session, status } = useSession();
@@ -24,11 +25,8 @@ export default function EmbedCode() {
     }
     const fetchDocuments = async () => {
         try {
-          const response = await fetch('/api/admin/documents');
-          if (response.ok) {
-            const data = await response.json();
-            setDocuments(data.documents || []);
-          }
+          const response = await axiosInstance.get('/api/admin/documents');
+          setDocuments(response.data.documents || []);
         } catch (error) {
           console.error('Error fetching documents:', error);
         } finally {

@@ -1,4 +1,5 @@
 import React from "react";
+import axiosInstance from "@/lib/axios";
 
 // Visitor ID utility for consistent visitor tracking across the application
 
@@ -44,15 +45,9 @@ export const linkVisitorToUser = async (userId: string): Promise<void> => {
     }));
 
     // Send to backend to link visitor and user
-    await fetch("/api/analytics/link-visitor", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        visitorId,
-        userId,
-      }),
+    await axiosInstance.post("/api/analytics/link-visitor", {
+      visitorId,
+      userId,
     });
   } catch (error) {
     console.warn("Failed to link visitor to user:", error);

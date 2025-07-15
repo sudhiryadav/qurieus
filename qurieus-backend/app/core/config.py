@@ -47,12 +47,12 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = "noreply@qurieus.com"
     
     # Ollama settings
-    OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
+    OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral:latest").strip()  # Default to mistral:latest
     
     # Qdrant settings
-    QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "user_embeddings")
+    QDRANT_URL: str = os.getenv("QDRANT_URL")
+    QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION")
     QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
     
     # Backend API Key for authentication

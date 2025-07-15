@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import axiosInstance from "@/lib/axios";
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -41,10 +42,8 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     if (session?.user?.role === "AGENT") return;
     try {
-      const response = await fetch('/api/admin/analytics/dashboard');
-      if (!response.ok) throw new Error('Failed to fetch dashboard data');
-      const data = await response.json();
-      setDashboardData(data);
+      const response = await axiosInstance.get('/api/admin/analytics/dashboard');
+      setDashboardData(response.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {

@@ -22,6 +22,7 @@ import AgentChatList from '@/components/Agent/AgentChatList';
 import AgentChatWindow from '@/components/Agent/AgentChatWindow';
 import AgentStatusToggle from '@/components/Agent/AgentStatusToggle';
 import { toast } from 'react-toastify';
+import axiosInstance from '@/lib/axios';
 
 interface AgentChat {
   id: string;
@@ -77,12 +78,7 @@ export default function AgentDashboard() {
     // Verify user is an agent
     const checkAgentRole = async () => {
       try {
-        const response = await fetch('/api/agent/verify');
-        if (!response.ok) {
-          router.push('/dashboard');
-          toast.error('Access denied. Agent role required.');
-          return;
-        }
+        await axiosInstance.get('/api/agent/verify');
         setLoading(false);
       } catch (error) {
         console.error('Error verifying agent role:', error);
@@ -100,11 +96,8 @@ export default function AgentDashboard() {
 
     const loadAssignedChats = async () => {
       try {
-        const response = await fetch('/api/agent/chats');
-        if (response.ok) {
-          const data = await response.json();
-          setAssignedChats(data.chats);
-        }
+        const response = await axiosInstance.get('/api/agent/chats');
+        setAssignedChats(response.data.chats);
       } catch (error) {
         console.error('Error loading assigned chats:', error);
         toast.error('Failed to load assigned chats');
@@ -125,17 +118,10 @@ export default function AgentDashboard() {
   // Handle status updates
   const handleStatusUpdate = async (online: boolean, available: boolean) => {
     try {
-      const response = await fetch('/api/agent/status', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isOnline: online, isAvailable: available })
-      });
-
-      if (response.ok) {
-        setIsOnline(online);
-        setIsAvailable(available);
-        toast.success(`Status updated: ${online ? 'Online' : 'Offline'}, ${available ? 'Available' : 'Busy'}`);
-      }
+      await axiosInstance.put('/api/agent/status', { isOnline: online, isAvailable: available });
+      setIsOnline(online);
+      setIsAvailable(available);
+      toast.success(`Status updated: ${online ? 'Online' : 'Offline'}, ${available ? 'Available' : 'Busy'}`);
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');

@@ -11,8 +11,20 @@ import { UserRole } from '@prisma/client';
 import { QdrantClient } from "@qdrant/js-client-rest";
 
 // Qdrant config
-const QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || "user_embeddings";
+const QDRANT_URL = process.env.QDRANT_URL;
+const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
+const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
+
+if (!QDRANT_COLLECTION) {
+  throw new Error("QDRANT_COLLECTION is not set");
+}
+if (!QDRANT_URL) {
+  throw new Error("QDRANT_URL is not set");
+}
+if (!QDRANT_API_KEY) {
+  throw new Error("QDRANT_API_KEY is not set");
+}
+
 const qdrant = new QdrantClient({ url: QDRANT_URL });
 
 // Utility to upsert embeddings to Qdrant

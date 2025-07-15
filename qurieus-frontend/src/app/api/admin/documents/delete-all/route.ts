@@ -8,8 +8,8 @@ import { UserRole } from '@prisma/client';
 // @ts-ignore: No type declarations for @qdrant/js-client-rest
 import { QdrantClient } from "@qdrant/js-client-rest";
 
-const QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
-const QDRANT_COLLECTION = "user_documents_embeddings"; // Fixed collection name
+const QDRANT_URL = process.env.QDRANT_URL
+const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
 // Initialize Qdrant client with API key if available
@@ -20,6 +20,21 @@ const qdrant = new QdrantClient({
 
 async function deleteAllVectorsForUser(userId: string) {
   try {
+    console.log(`Attempting to delete vectors for user ${userId} from Qdrant`);
+    console.log(`Qdrant URL: ${QDRANT_URL}`);
+    console.log(`Qdrant Collection: ${QDRANT_COLLECTION}`);
+    console.log(`Qdrant API Key: ${QDRANT_API_KEY ? 'Set' : 'Not set'}`);
+    
+    // Check if collection exists first
+    try {
+      const collectionInfo = await qdrant.getCollection(QDRANT_COLLECTION);
+      console.log(`Collection exists with ${collectionInfo.points_count} points`);
+    } catch (collectionError) {
+      console.log(`Collection ${QDRANT_COLLECTION} does not exist or is not accessible`);
+      // If collection doesn't exist, there's nothing to delete
+      return;
+    }
+    
     await qdrant.delete(QDRANT_COLLECTION, {
       filter: {
         must: [
@@ -27,10 +42,11 @@ async function deleteAllVectorsForUser(userId: string) {
         ],
       },
     });
-    console.log(`Deleted all vectors for user ${userId} from Qdrant`);
+    console.log(`Successfully deleted all vectors for user ${userId} from Qdrant`);
   } catch (error) {
     console.error(`Error deleting vectors from Qdrant for user ${userId}:`, error);
-    throw error;
+    // Don't throw error, just log it and continue with database deletion
+    console.log(`Continuing with database deletion despite Qdrant error`);
   }
 }
 

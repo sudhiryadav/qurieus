@@ -125,22 +125,14 @@ export default function AgentChatWindow({ chatId, agentId, chat }: AgentChatWind
     setSending(true);
     try {
       // Send via API
-      const response = await fetch(`/api/agent/chats/${chatId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: message.trim() })
+      await axiosInstance.post(`/api/agent/chats/${chatId}/messages`, { 
+        content: message.trim() 
       });
-
-      if (response.ok) {
-        setMessage('');
-        toast.success('Message sent');
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to send message');
-      }
-    } catch (error) {
+      setMessage('');
+      toast.success('Message sent');
+    } catch (error: any) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      toast.error(error.response?.data?.error || 'Failed to send message');
     } finally {
       setSending(false);
     }
