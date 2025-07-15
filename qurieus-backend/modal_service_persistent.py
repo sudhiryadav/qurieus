@@ -297,10 +297,11 @@ async def query_documents_endpoint(
             if qdrant_api_key:
                 qdrant_client = QdrantClient(
                     url=qdrant_url,
+                    check_compatibility=False,
                     api_key=qdrant_api_key
                 )
             else:
-                qdrant_client = QdrantClient(qdrant_url)
+                qdrant_client = QdrantClient(qdrant_url, check_compatibility=False)
             
             print(f"Connected to Qdrant: {qdrant_url}")
         except Exception as e:
