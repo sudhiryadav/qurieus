@@ -15,7 +15,9 @@ const QDRANT_URL = process.env.QDRANT_URL;
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
-const qdrant = new QdrantClient({ url: QDRANT_URL });
+const qdrant = new QdrantClient({ url: QDRANT_URL, checkCompatibility: false ,
+  ...(QDRANT_API_KEY && { apiKey: QDRANT_API_KEY })
+});
 
 // Utility to upsert embeddings to Qdrant
 async function upsertEmbeddingsToQdrant(

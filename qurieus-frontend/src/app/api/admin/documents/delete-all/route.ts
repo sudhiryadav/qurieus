@@ -13,8 +13,7 @@ const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
 // Initialize Qdrant client with API key if available
-const qdrant = new QdrantClient({ 
-  url: QDRANT_URL,
+const qdrant = new QdrantClient({ url: QDRANT_URL, checkCompatibility: false ,
   ...(QDRANT_API_KEY && { apiKey: QDRANT_API_KEY })
 });
 

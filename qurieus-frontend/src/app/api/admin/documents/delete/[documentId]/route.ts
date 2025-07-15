@@ -10,8 +10,7 @@ import { QdrantClient } from "@qdrant/js-client-rest";
 const QDRANT_URL = process.env.QDRANT_URL;
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
-const qdrant = new QdrantClient({ 
-  url: QDRANT_URL,
+const qdrant = new QdrantClient({ url: QDRANT_URL, checkCompatibility: false ,
   ...(QDRANT_API_KEY && { apiKey: QDRANT_API_KEY })
 });
 
@@ -30,7 +29,7 @@ async function deleteVectorsFromQdrant(userId: string, docId: string) {
       if (!QDRANT_API_KEY) {
         throw new Error("QDRANT_API_KEY is not set");
       }
-      
+
       const collectionInfo = await qdrant.getCollection(QDRANT_COLLECTION);
       console.log(`Collection exists with ${collectionInfo.points_count} points`);
     } catch (collectionError) {
