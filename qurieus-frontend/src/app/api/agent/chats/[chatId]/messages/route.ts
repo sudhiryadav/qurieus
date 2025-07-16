@@ -8,14 +8,30 @@ import { RequireRoles } from "@/utils/roleGuardsDecorator";
 import { UserRole } from "@prisma/client";
 
 export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, context: { params: Promise<{ chatId: string }> }) => {
+  let agentId = '';
+  let chatId = '';
+  let content = '';
+  
   try {
     const session = await getServerSession(authOptions);
-    const agentId = session!.user!.id;
-    const { chatId } = await context.params;
+    agentId = session!.user!.id;
+    const params = await context.params;
+    chatId = params.chatId;
     const body = await request.json();
-    const { content } = body;
+    content = body.content;
     if (!content || typeof content !== 'string' || !content.trim()) {
       return errorResponse({ error: "Message content required", status: 400 });
+    }
+
+    // Verify conversation exists
+    const conversation = await prisma.chatConversation.findUnique({
+      where: { id: chatId },
+      select: { id: true }
+    });
+    
+    if (!conversation) {
+      logger.error("Agent Message API: Conversation not found", { chatId });
+      return errorResponse({ error: "Conversation not found", status: 404 });
     }
 
     // Verify agent is assigned to this chat
@@ -31,7 +47,30 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
       return errorResponse({ error: "Cannot post to a resolved or closed chat", status: 400 });
     }
 
+    // Verify agent exists in User table
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentId },
+      select: { id: true, role: true }
+    });
+    
+    if (!agentUser) {
+      logger.error("Agent Message API: Agent user not found", { agentId });
+      return errorResponse({ error: "Agent not found", status: 404 });
+    }
+    
+    if (agentUser.role !== "AGENT") {
+      logger.error("Agent Message API: User is not an agent", { agentId, role: agentUser.role });
+      return errorResponse({ error: "User is not an agent", status: 403 });
+    }
+
     // Create chat message as agent
+    logger.info("Agent Message API: Creating message", { 
+      conversationId: chatId,
+      content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+      role: 'agent',
+      agentId
+    });
+    
     const message = await prisma.chatMessage.create({
       data: {
         conversationId: chatId,
@@ -80,7 +119,11 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
     return NextResponse.json({ success: true, message });
   } catch (error) {
     logger.error("Agent Message API: Error posting message", { 
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      agentId,
+      chatId,
+      content: content?.substring(0, 100) + (content?.length > 100 ? '...' : '')
     });
     return errorResponse({ error: "An error occurred while posting message", status: 500 });
   }

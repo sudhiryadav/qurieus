@@ -289,7 +289,7 @@
         }
         
         // Save visitor information to backend with API key
-        const response = await fetch(widgetConfig.baseUrl + '/api/visitors/info', {
+        const response = await fetch(getBaseUrl() + '/api/visitors/info', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -373,7 +373,7 @@
     if (!widgetState.isOpen) {
       // Render chat button
       const button = document.createElement('button');
-      button.innerHTML = '<img src="http://localhost:8000/images/logo/logo.svg" alt="Qurieus" width="30" height="30" style="margin:auto" />';
+      button.innerHTML = '<img src="'+ widgetConfig.baseUrl +'/images/logo/logo.svg" alt="Qurieus" width="30" height="30" style="margin:auto" />';
       button.style.cssText = `
         width: 60px;
         height: 60px;
@@ -1112,9 +1112,11 @@
                 
                 if (data.sources) {
                   // Handle sources if needed
+                  console.log('🔍 [EMBED] Received sources:', data.sources);
                 }
                 
                 if (data.done) {
+                  console.log('🔍 [EMBED] Received done flag');
                   // Final update to state
                   widgetState.messages = [...widgetState.messages, { 
                     role: 'assistant', 
@@ -1509,6 +1511,8 @@
     theme: document.currentScript.getAttribute('data-theme'),
     showSources: document.currentScript.getAttribute('data-show-sources') === 'true',
   };
+
+  console.log('Config loaded:', config);
 
   if (config.apiKey) {
     // Initialize immediately

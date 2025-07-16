@@ -15,14 +15,14 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Qurieus API"
     VERSION: str = "1.0.0"
-    FAST_API_HOST: str = os.getenv("FAST_API_HOST", "0.0.0.0")
-    FAST_API_PORT: int = int(os.getenv("FAST_API_PORT", "8000"))
+    FAST_API_HOST: str = os.getenv("FAST_API_HOST")
+    FAST_API_PORT: int = int(os.getenv("FAST_API_PORT"))
     
     # Database Settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/qurieus")
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
     
     # Frontend URL for CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:8000")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL")
     
     # CORS settings
     CORS_ORIGINS: List[str] = [os.getenv("FRONTEND_URL")]
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     
     # Ollama settings
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral:latest").strip()  # Default to mistral:latest
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL").strip()  # Default to mistral:latest
     
     # Qdrant settings
     QDRANT_URL: str = os.getenv("QDRANT_URL")
