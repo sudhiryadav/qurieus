@@ -12,11 +12,46 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
   let chatId = '';
   let content = '';
   
+  logger.info("Agent Message API: Request received", { 
+    contextType: typeof context,
+    hasParams: !!context?.params,
+    paramsType: typeof context?.params
+  });
+  
   try {
     const session = await getServerSession(authOptions);
     agentId = session!.user!.id;
-    const params = await context.params;
-    chatId = params.chatId;
+    
+    // Safely extract params with error handling
+    let params;
+    try {
+      params = await context.params;
+    } catch (paramsError) {
+      logger.error("Agent Message API: Failed to extract params", { 
+        error: paramsError instanceof Error ? paramsError.message : String(paramsError)
+      });
+      return errorResponse({ error: "Invalid request parameters", status: 400 });
+    }
+    
+    if (!params || !params.chatId) {
+      // Fallback: try to extract chatId from URL
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const chatIdFromUrl = pathParts[pathParts.length - 2]; // /api/agent/chats/{chatId}/messages
+      
+      if (chatIdFromUrl && chatIdFromUrl !== 'messages') {
+        logger.warn("Agent Message API: Using chatId from URL as fallback", { 
+          params, 
+          chatIdFromUrl 
+        });
+        chatId = chatIdFromUrl;
+      } else {
+        logger.error("Agent Message API: Missing chatId in params and URL", { params, pathParts });
+        return errorResponse({ error: "Missing chat ID", status: 400 });
+      }
+    } else {
+      chatId = params.chatId;
+    }
     const body = await request.json();
     content = body.content;
     if (!content || typeof content !== 'string' || !content.trim()) {

@@ -15,7 +15,9 @@ import {
   CheckCircle, 
   XCircle,
   Building,
-  Mail
+  Mail,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -49,6 +51,7 @@ interface AgentChatWindowProps {
   chatId: string;
   agentId: string;
   chat?: AgentChat;
+  onStatusUpdate?: () => void;
 }
 
 interface ChatMessage {
@@ -59,7 +62,7 @@ interface ChatMessage {
   agentId?: string;
 }
 
-export default function AgentChatWindow({ chatId, agentId, chat }: AgentChatWindowProps) {
+export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate }: AgentChatWindowProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -142,6 +145,25 @@ export default function AgentChatWindow({ chatId, agentId, chat }: AgentChatWind
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleStatusUpdate = async (newStatus: 'RESOLVED' | 'CLOSED') => {
+    try {
+      const response = await axiosInstance.put(`/api/agent/chats/${chatId}/status`, {
+        status: newStatus
+      });
+      
+      if (response.data.success) {
+        toast.success(response.data.message);
+        // Call the callback to refresh the chat list
+        if (onStatusUpdate) {
+          onStatusUpdate();
+        }
+      }
+    } catch (error: any) {
+      console.error('Error updating chat status:', error);
+      toast.error(error.response?.data?.error || 'Failed to update chat status');
     }
   };
 
@@ -230,6 +252,30 @@ export default function AgentChatWindow({ chatId, agentId, chat }: AgentChatWind
             <Badge variant="outline" className={getStatusColor(status)}>
               {status}
             </Badge>
+            
+            {/* Status Management Buttons */}
+            {status !== 'RESOLVED' && status !== 'CLOSED' && (
+              <div className="flex items-center space-x-2 ml-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusUpdate('RESOLVED')}
+                  className="text-green-600 border-green-200 hover:bg-green-50"
+                >
+                  <CheckSquare className="w-4 h-4 mr-1" />
+                  Resolve
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusUpdate('CLOSED')}
+                  className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                >
+                  <Square className="w-4 h-4 mr-1" />
+                  Close
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>

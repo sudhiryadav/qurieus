@@ -91,18 +91,18 @@ export default function AgentDashboard() {
   }, [session, status, router]);
 
   // Load assigned chats
+  const loadAssignedChats = async () => {
+    try {
+      const response = await axiosInstance.get('/api/agent/chats');
+      setAssignedChats(response.data.chats);
+    } catch (error) {
+      console.error('Error loading assigned chats:', error);
+      toast.error('Failed to load assigned chats');
+    }
+  };
+
   useEffect(() => {
     if (!session?.user?.id) return;
-
-    const loadAssignedChats = async () => {
-      try {
-        const response = await axiosInstance.get('/api/agent/chats');
-        setAssignedChats(response.data.chats);
-      } catch (error) {
-        console.error('Error loading assigned chats:', error);
-        toast.error('Failed to load assigned chats');
-      }
-    };
 
     loadAssignedChats();
     // Refresh every 30 seconds
@@ -224,6 +224,7 @@ export default function AgentDashboard() {
               chatId={selectedChat}
               agentId={session.user.id}
               chat={assignedChats.find(c => c.conversationId === selectedChat)}
+              onStatusUpdate={loadAssignedChats}
             />
           ) : (
             <Card className="h-96">
