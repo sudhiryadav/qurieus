@@ -4,14 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "PORT=8000 node server.js",
-    "dev:debug": "cross-env NODE_OPTIONS='--inspect=0.0.0.0:9229' node server.js",
-    "debug:api": "cross-env NODE_OPTIONS='--inspect' node server.js",
     "build": "next build",
-    "start": "node server.js",
+    "start": "next start",
     "lint": "next lint",
-    "tunnel": "ngrok http 3000",
-    "build:widget": "node scripts/build-widget.js",
-    "seed": "ts-node --project prisma/tsconfig.json prisma/seed.ts",
+    "tunnel": "ngrok http 8000",
     "reset-db": "ts-node --project prisma/tsconfig.json scripts/reset-db.ts"
   },
   "dependencies": {

@@ -926,10 +926,22 @@
           throw new Error('API key is missing');
         }
         
-        console.log('Sending request with config:', {
+        console.log('🔍 [EMBED] Sending request with config:', {
           baseUrl: widgetConfig.baseUrl,
+          apiKey: widgetConfig.apiKey ? 'SET' : 'NOT SET',
+          message: userMessage.substring(0, 100) + (userMessage.length > 100 ? '...' : ''),
+          visitorId: localStorage.getItem('qurieus_visitor_id')
+        });
+        
+        const requestBody = {
+          message: userMessage,
           apiKey: widgetConfig.apiKey,
-          message: userMessage
+          visitorId: localStorage.getItem('qurieus_visitor_id')
+        };
+        
+        console.log('🔍 [EMBED] Request body:', {
+          bodyKeys: Object.keys(requestBody),
+          bodySize: JSON.stringify(requestBody).length
         });
         
         const response = await fetch(widgetConfig.baseUrl + '/api/query', {
@@ -938,18 +950,23 @@
             'Content-Type': 'application/json',
             'x-api-key': widgetConfig.apiKey
           },
-          body: JSON.stringify({
-            message: userMessage,
-            apiKey: widgetConfig.apiKey,
-            visitorId: localStorage.getItem('qurieus_visitor_id')
-          })
+          body: JSON.stringify(requestBody)
         });
         
-        console.log('Response status:', response.status);
+        console.log('🔍 [EMBED] Response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries())
+        });
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Query failed:', errorText);
+          console.error('❌ [EMBED] Query failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText
+          });
           throw new Error(`Query failed: ${response.status} ${errorText}`);
         }
         
@@ -959,123 +976,178 @@
           peekingIndicator.remove();
         }
         
+        console.log('🔍 [EMBED] Starting to process streaming response');
+        
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let assistantMessage = '';
         let fullResponse = '';
+        let chunkCount = 0;
         
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            console.log('🔍 [EMBED] Stream reading completed, chunks processed:', chunkCount);
+            break;
+          }
           
+          chunkCount++;
           const chunk = decoder.decode(value);
           fullResponse += chunk;
           
-          // Try to parse as JSON to extract just the response text
-          try {
-            const jsonResponse = JSON.parse(fullResponse);
-            assistantMessage = jsonResponse.response || fullResponse;
-          } catch (e) {
-            // If not valid JSON, use the raw response
-            assistantMessage = fullResponse;
+          console.log(`🔍 [EMBED] Received chunk ${chunkCount}:`, {
+            chunkLength: chunk.length,
+            fullResponseLength: fullResponse.length,
+            chunkPreview: chunk.substring(0, 200) + (chunk.length > 200 ? '...' : '')
+          });
+          
+          // Process each line for Server-Sent Events format
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.slice(6); // Remove 'data: ' prefix
+                const data = JSON.parse(jsonStr);
+                
+                console.log('🔍 [EMBED] Parsed SSE data:', {
+                  hasResponse: data.response !== undefined,
+                  responseLength: data.response?.length || 0,
+                  hasSources: !!data.sources,
+                  sourcesCount: data.sources?.length || 0,
+                  done: data.done
+                });
+                
+                if (data.response !== undefined && data.response !== "") {
+                  assistantMessage += data.response;
+                  console.log('🔍 [EMBED] Updated assistant message:', {
+                    messageLength: assistantMessage.length,
+                    messagePreview: assistantMessage.substring(0, 100) + (assistantMessage.length > 100 ? '...' : '')
+                  });
+                  
+                  // Update the UI immediately for streaming effect
+                  updateAssistantMessage(assistantMessage);
+                }
+                
+                if (data.sources) {
+                  // Handle sources if needed
+                  console.log('🔍 [EMBED] Received sources:', data.sources);
+                }
+                
+                if (data.done) {
+                  console.log('🔍 [EMBED] Received done flag');
+                  // Final update to state
+                  widgetState.messages = [...widgetState.messages, { 
+                    role: 'assistant', 
+                    content: assistantMessage, 
+                    timestamp: new Date().toISOString() 
+                  }];
+                  break;
+                }
+              } catch (e) {
+                console.warn('⚠️ [EMBED] Failed to parse SSE line:', {
+                  line: line.substring(0, 100),
+                  error: e instanceof Error ? e.message : String(e)
+                });
+              }
+            }
           }
           
-          // Update assistant message in state
-          widgetState.messages = [...widgetState.messages, { 
-            role: 'assistant', 
-            content: assistantMessage, 
-            timestamp: new Date().toISOString() 
-          }];
-          
-          // Find or create assistant message container
-          let assistantContainer = messagesContainer.querySelector('.assistant-message');
-          if (!assistantContainer) {
-            // Create new assistant message container
-            assistantContainer = document.createElement('div');
-            assistantContainer.className = 'assistant-message';
-            assistantContainer.style.cssText = `
-              display: flex;
-              align-items: flex-end;
-              gap: 8px;
-              margin-bottom: 12px;
-              flex-direction: row;
-            `;
+          // Helper function to update assistant message in real-time
+          function updateAssistantMessage(message) {
+            // Find or create assistant message container
+            let assistantContainer = messagesContainer.querySelector('.assistant-message');
+            if (!assistantContainer) {
+              // Create new assistant message container
+              assistantContainer = document.createElement('div');
+              assistantContainer.className = 'assistant-message';
+              assistantContainer.style.cssText = `
+                display: flex;
+                align-items: flex-end;
+                gap: 8px;
+                margin-bottom: 12px;
+                flex-direction: row;
+              `;
+              
+              // Icon container for assistant
+              const assistantIconContainer = document.createElement('div');
+              assistantIconContainer.style.cssText = `
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
+              `;
+              
+              // Assistant icon (logo.svg)
+              const assistantIcon = document.createElement('img');
+              assistantIcon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
+              assistantIcon.style.cssText = `
+                width: 20px;
+                height: 20px;
+                filter: brightness(0) invert(1);
+              `;
+              
+              assistantIconContainer.appendChild(assistantIcon);
+              assistantContainer.appendChild(assistantIconContainer);
+              
+              // Message content container
+              const assistantContentContainer = document.createElement('div');
+              assistantContentContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                max-width: calc(100% - 40px);
+              `;
+              assistantContainer.appendChild(assistantContentContainer);
+              
+              messagesContainer.appendChild(assistantContainer);
+            }
             
-            // Icon container for assistant
-            const assistantIconContainer = document.createElement('div');
-            assistantIconContainer.style.cssText = `
-              width: 32px;
-              height: 32px;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              flex-shrink: 0;
+            // Get the content container and update it
+            const assistantContentContainer = assistantContainer.querySelector('div:last-child');
+            
+            const assistantBubble = document.createElement('div');
+            assistantBubble.textContent = message;
+            assistantBubble.style.cssText = `
+              padding: 8px 12px;
+              border-radius: 12px;
               background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
+              color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
+              font-size: 14px;
+              line-height: 1.4;
+              word-wrap: break-word;
+              text-align: left;
+              max-width: 100%;
             `;
             
-            // Assistant icon (logo.svg)
-            const assistantIcon = document.createElement('img');
-            assistantIcon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
-            assistantIcon.style.cssText = `
-              width: 20px;
-              height: 20px;
-              filter: brightness(0) invert(1);
+            // Add timestamp for assistant message
+            const assistantTimestamp = document.createElement('div');
+            assistantTimestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            assistantTimestamp.style.cssText = `
+              font-size: 11px;
+              color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+              align-self: flex-start;
+              margin-top: 2px;
             `;
             
-            assistantIconContainer.appendChild(assistantIcon);
-            assistantContainer.appendChild(assistantIconContainer);
+            // Clear and update content
+            assistantContentContainer.innerHTML = '';
+            assistantContentContainer.appendChild(assistantBubble);
+            assistantContentContainer.appendChild(assistantTimestamp);
             
-            // Message content container
-            const assistantContentContainer = document.createElement('div');
-            assistantContentContainer.style.cssText = `
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-              max-width: calc(100% - 40px);
-            `;
-            assistantContainer.appendChild(assistantContentContainer);
-            
-            messagesContainer.appendChild(assistantContainer);
+            // Auto-scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }
-          
-          // Get the content container and update it
-          const assistantContentContainer = assistantContainer.querySelector('div:last-child');
-          
-          const assistantBubble = document.createElement('div');
-          assistantBubble.textContent = assistantMessage;
-          assistantBubble.style.cssText = `
-            padding: 8px 12px;
-            border-radius: 12px;
-            background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
-            color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
-            font-size: 14px;
-            line-height: 1.4;
-            word-wrap: break-word;
-            text-align: left;
-            max-width: 100%;
-          `;
-          
-          // Add timestamp for assistant message
-          const assistantTimestamp = document.createElement('div');
-          assistantTimestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          assistantTimestamp.style.cssText = `
-            font-size: 11px;
-            color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-            align-self: flex-start;
-            margin-top: 2px;
-          `;
-          
-          // Clear and update content
-          assistantContentContainer.innerHTML = '';
-          assistantContentContainer.appendChild(assistantBubble);
-          assistantContentContainer.appendChild(assistantTimestamp);
-          
-          // Auto-scroll to bottom
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     } catch (error) {
-        console.error('Chat error:', error);
+        console.error('❌ [EMBED] Chat error:', {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        });
         
         // Remove peeking character indicator
         const peekingIndicator = chatWindow.querySelector('[style*="position: absolute"][style*="bottom: 80px"]');

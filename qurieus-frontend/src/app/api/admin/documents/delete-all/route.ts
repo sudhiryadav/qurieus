@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
-import axiosInstance from '@/lib/axios';
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 // @ts-ignore: No type declarations for @qdrant/js-client-rest

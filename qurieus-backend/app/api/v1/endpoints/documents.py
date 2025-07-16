@@ -40,6 +40,7 @@ from models import Document as DBDocument, Users
 # Initialize the embedding model with a smaller model
 try:
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+    print("✅ Embedding model initialized successfully")
 except Exception as e:
     print(f"Warning: Could not initialize SentenceTransformer: {str(e)}")
     embedding_model = None
@@ -63,6 +64,7 @@ try:
         )
     
     qdrant_collection = settings.QDRANT_COLLECTION
+    print(f"✅ Qdrant client initialized successfully for collection: {qdrant_collection}")
     
 except Exception as e:
     print(f"Warning: Could not initialize Qdrant client: {str(e)}")
@@ -322,11 +324,7 @@ def process_file(
 router = APIRouter()
 security = HTTPBearer()
 
-# Add request model
-class QueryRequest(BaseModel):
-    query: str
-    document_owner_id: str
-    history: Optional[List[dict]] = None  # [{role: "user"/"assistant", content: "..."}]
+
 
 def derive_encryption_key(secret: str) -> bytes:
     """Derive the encryption key using HKDF, matching NextAuth.js implementation."""
@@ -515,247 +513,4 @@ async def upload_files(
             detail="An unexpected error occurred while processing your upload"
         )
 
-@router.post("/query")
-async def query_documents(
-    request: QueryRequest,
-    db: Session = Depends(get_db)
-):
-    """Query documents using semantic search and Ollama."""
-    try:
-        # Always fetch the most recent document for the user
-        query = text("""
-            SELECT d.content, d.metadata, d."originalName"
-            FROM "Document" d
-            WHERE d."userId" = :userId
-            ORDER BY d."uploadedAt" DESC
-            LIMIT 1
-        """)
-        result = db.execute(query, {"userId": request.document_owner_id}).fetchone()
-
-        # Detect the language of the user's question
-        try:
-            question_language = detect(request.query)
-        except Exception:
-            question_language = "en"
-        language_instructions = {
-            "hi": "उत्तर हिंदी में दें।",
-            "fr": "Veuillez répondre en français.",
-            "es": "Por favor, responda en español.",
-            "de": "Bitte antworten Sie auf Deutsch.",
-            "en": "Please answer in English.",
-        }
-        supported_languages = set(language_instructions.keys())
-        if question_language in supported_languages:
-            language_instruction = language_instructions[question_language]
-        else:
-            language_instruction = (
-                f"The detected language ('{question_language}') is not supported. Please answer in English."
-            )
-
-        if result:
-            content, metadata, filename = result
-            prompt = None
-            if metadata:
-                try:
-                    structured_data = json.loads(metadata)
-                    clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
-                    clean_structured_data = json.dumps(structured_data, ensure_ascii=False)
-                    prompt = f"{language_instruction}\n\nYou are an intelligent assistant. Answer the following question using all available data, including any structured tables or text.\n\nStructured Data (if any):\n{clean_structured_data}\n\nText Content:\n{clean_content}\n\nQuestion: {request.query}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
-                except json.JSONDecodeError:
-                    clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
-                    prompt = f"{language_instruction}\n\nYou are an intelligent assistant. Answer the following question using the provided context.\n\nContext:\n{clean_content}\n\nQuestion: {request.query}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
-            else:
-                clean_content = content.encode('utf-8', errors='ignore').decode('utf-8')
-                prompt = f"{language_instruction}\n\nYou are an intelligent assistant. Answer the following question using the provided context.\n\nContext:\n{clean_content}\n\nQuestion: {request.query}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
-        else:
-            # Fall back to semantic search if no document found
-            return await semantic_search_query(request, db, language_instruction)
-
-        # Continue with Ollama API call...
-        return await generate_ollama_response(prompt, [])
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_to_frontend("error", f"Unexpected error in query_documents: {str(e)}")
-        log_to_frontend("error", traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail="An unexpected error occurred"
-        )
-
-async def semantic_search_query(request: QueryRequest, db: Session, language_instruction: str = ""):
-    """Handle semantic search queries using Qdrant."""
-    try:
-        if not embedding_model:
-            log_to_frontend("error", "Embedding model not available")
-            raise HTTPException(
-                status_code=503,
-                detail="Search service is currently unavailable"
-            )
-
-        if not qdrant_client:
-            log_to_frontend("error", "Qdrant client not available")
-            raise HTTPException(
-                status_code=503,
-                detail="Vector database is currently unavailable"
-            )
-
-        try:
-            query_embedding = get_cached_embedding(request.query)
-        except Exception as e:
-            log_to_frontend("error", f"Error generating embedding: {str(e)}")
-            raise HTTPException(
-                status_code=500,
-                detail="Error processing your query"
-            )
-        
-        log_to_frontend("info", "Executing Qdrant similarity search...")
-        
-        # Search Qdrant for similar vectors
-        search_results = qdrant_client.search(
-            collection_name=qdrant_collection,
-            query_vector=query_embedding,
-            query_filter={
-                "must": [
-                    {"key": "user_id", "match": {"value": request.document_owner_id}}
-                ]
-            },
-            limit=5,  # Get top 5 most similar chunks
-            with_payload=True
-        )
-        
-        if not search_results:
-            # Create a streaming response with the same structure
-            async def no_docs_stream():
-                yield json.dumps({
-                    "response": "No relevant documents found.",
-                    "done": True
-                }).encode() + b"\n"
-
-            return StreamingResponse(no_docs_stream(), media_type="application/x-ndjson")
-
-        # Extract chunks and sources from Qdrant results
-        chunks = []
-        sources = []
-        for result in search_results:
-            if result.payload:
-                chunks.append(result.payload.get("content", ""))
-                sources.append({
-                    "document": result.payload.get("filename", "Unknown"),
-                    "similarity": float(result.score)
-                })
-
-        # Clean and encode the text properly
-        context = "\n".join([chunk.encode('utf-8', errors='ignore').decode('utf-8') for chunk in chunks])
-
-        prompt = f"{language_instruction}\n\nAnswer the following question based on the provided context. If the answer isn't in the context, say so.\n\nQuestion: {request.query}\n\nContext:\n{context}\n\nInstructions:\n- Provide a comprehensive answer based on the provided content\n- If the content is small, extract as much relevant information as possible\n- Be specific and detailed in your response\n- If the question cannot be answered from the content, clearly state this\n\nAnswer:"
-
-        # Continue with Ollama API call...
-        return await generate_ollama_response(prompt, sources)
-    except Exception as e:
-        log_to_frontend("error", f"Error in Qdrant semantic search: {str(e)}")
-        log_to_frontend("error", traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail="Error processing your query"
-        )
-
-async def generate_ollama_response(prompt: str, sources: list) -> StreamingResponse:
-    """Generate response from Ollama API with streaming."""
-    try:
-        print(f"[DEBUG] Ollama prompt: {repr(prompt)[:500]}")
-        if not prompt.strip():
-            print("[DEBUG] Prompt is empty!")
-            raise HTTPException(
-                status_code=400,
-                detail="Empty prompt provided"
-            )
-
-        # Validate Ollama API URL
-        if not settings.OLLAMA_API_URL:
-            raise HTTPException(
-                status_code=500,
-                detail="Ollama API URL not configured"
-            )
-
-        # Validate model name
-        model_name = settings.OLLAMA_MODEL.strip()
-        if not model_name:
-            raise HTTPException(
-                status_code=500,
-                detail="Ollama model not configured"
-            )
-
-        # First check if model exists
-        try:
-            model_check = requests.get(f"{settings.OLLAMA_API_URL}/api/tags")
-            if model_check.ok:
-                available_models = model_check.json().get("models", [])
-                model_exists = any(model["name"] == model_name for model in available_models)
-                if not model_exists:
-                    error_msg = f"Model '{model_name}' not found. Available models: {[m['name'] for m in available_models]}"
-                    log_to_frontend("error", error_msg, meta={"available_models": [m['name'] for m in available_models]})
-                    raise HTTPException(
-                        status_code=400,
-                        detail=error_msg
-                    )
-        except requests.RequestException as e:
-            log_to_frontend("error", "Failed to check available Ollama models", error=e)
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to check available Ollama models"
-            )
-
-        # Make the actual API call
-        response = requests.post(
-            f"{settings.OLLAMA_API_URL}/api/generate",
-            json={
-                "model": model_name,
-                "prompt": prompt,
-                "stream": True
-            },
-            stream=True
-        )
-
-        print(f"[DEBUG] Ollama API status: {response.status_code}")
-        if not response.ok:
-            error_text = response.text
-            print(f"[DEBUG] Ollama API error: {error_text}")
-            try:
-                error_json = response.json()
-                error_message = error_json.get("error", "Unknown error from Ollama API")
-            except:
-                error_message = error_text
-            log_to_frontend("error", "Error from Ollama API", meta={"error_message": error_message})
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error from Ollama API: {error_message}"
-            )
-
-        # Read all lines into a list
-        lines = [line for line in response.iter_lines() if line]
-        print(f"[DEBUG] Ollama response lines: {len(lines)}")
-        if lines:
-            print(f"[DEBUG] First response line: {lines[0][:200]}")
-        else:
-            log_to_frontend("error", "Empty response from Ollama API")
-            raise HTTPException(
-                status_code=500,
-                detail="Empty response from Ollama API"
-            )
-
-        # Stream from memory
-        async def line_stream():
-            for line in lines:
-                yield line + b"\n"
-
-        return StreamingResponse(line_stream(), media_type="application/x-ndjson")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_to_frontend("error", "Error generating response", error=e)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error generating response: {str(e)}"
-        ) 
+ 

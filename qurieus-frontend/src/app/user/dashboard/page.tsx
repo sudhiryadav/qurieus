@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
@@ -34,12 +34,7 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setMounted(true);
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     if (session?.user?.role === "AGENT") return;
     try {
       const response = await axiosInstance.get('/api/admin/analytics/dashboard');
@@ -49,7 +44,12 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.role]);
+
+  useEffect(() => {
+    setMounted(true);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   // Group and sum by day for weekly activity
   const weeklySums: Record<string, number> = {};

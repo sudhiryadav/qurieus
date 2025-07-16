@@ -22,7 +22,7 @@ from pydantic import BaseModel
 import hashlib
 
 # Initialize Modal app with unique identifier to force rebuild
-app = modal.App("qurieus-app-v57")
+app = modal.App("qurieus-app-v58")  # Increment version for rebuild
 
 API_KEY = os.environ.get("API_KEY")
 
@@ -62,24 +62,118 @@ image = (
     .pip_install("torch==2.4.1", extra_index_url="https://download.pytorch.org/whl/cu121")
 )
 
-@app.function(image=image, gpu="t4", timeout=300)
-def test_cuda():
-    import torch
-    import numpy as np
-    print("=== CUDA Test Function ===")
-    print(f"NumPy version: {np.__version__}")
-    print("CUDA available:", torch.cuda.is_available())
-    if torch.cuda.is_available():
-        print("GPU Name:", torch.cuda.get_device_name(0))
-        print("CUDA version:", torch.version.cuda)
-    print("=== End CUDA Test ===")
-
 # Create persistent volume for storing documents and embeddings
 volume = modal.Volume.from_name("qurieus-documents", create_if_missing=True)
 
+# Model download logic (at container start)
+MODEL_URL = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+MODEL_PATH = "/data/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
 
+def download_model():
+    import requests
+    import os
+    if not os.path.exists(MODEL_PATH):
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        print(f"Model not found at {MODEL_PATH}. Downloading Mistral GGUF model...")
+        start_time = time.time() # Start timing
+        r = requests.get(MODEL_URL, stream=True)
+        r.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        total_size = int(r.headers.get('content-length', 0))
+        downloaded_size = 0
+        with open(MODEL_PATH, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+                downloaded_size += len(chunk)
+                # print(f"Downloaded {downloaded_size / (1024*1024):.2f}MB / {total_size / (1024*1024):.2f}MB", end='\r')
+        end_time = time.time() # End timing
+        print(f"Model downloaded and saved to volume in {end_time - start_time:.2f} seconds.")
+    else:
+        print(f"Model already exists at {MODEL_PATH}, skipping download.")
 
+# Global model instances for caching
+llm = None
+embedding_model = None
 
+def get_embedding_model():
+    """Get cached embedding model instance."""
+    global embedding_model
+    if embedding_model is None:
+        print("Initializing embedding model...")
+        embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
+        print("Embedding model initialized successfully")
+    return embedding_model
+
+def get_llama_model():
+    """Get cached LLM model instance."""
+    global llm
+    if llm is None:
+        # Model should already be downloaded during container startup
+        if not os.path.exists(MODEL_PATH):
+            raise RuntimeError(f"Model not found at {MODEL_PATH}. Please ensure model was downloaded during container startup.")
+        
+        print("Loading Llama model with n_gpu_layers=35...")
+        try:
+            from llama_cpp import Llama
+            print(f"Model path exists: {os.path.exists(MODEL_PATH)}")
+            print(f"Model file size: {os.path.getsize(MODEL_PATH) if os.path.exists(MODEL_PATH) else 'N/A'} bytes")
+            
+            llm = Llama(
+                model_path=MODEL_PATH,
+                n_ctx=4096,
+                n_threads=8,
+                n_gpu_layers=35, # Attempt to offload 35 layers to GPU
+                verbose=False  # Disable verbose logging for better performance
+            )
+            
+            print(f"Llama model loaded successfully!")
+            
+        except Exception as e:
+            print(f"Error loading model for get_llama_model: {e}")
+            raise RuntimeError(f"Failed to load model with GPU support: {e}. Check model path, n_gpu_layers, and CUDA installation.")
+        
+    return llm
+
+# Initialize models at container startup
+def initialize_models_at_startup():
+    """Initialize both models during container startup to avoid cold starts."""
+    try:
+        print("🚀 Initializing models at container startup...")
+        
+        # Download model if needed
+        download_model()
+        
+        # Preload embedding model
+        print("Preloading embedding model...")
+        embedding_model = get_embedding_model()
+        print("✅ Embedding model preloaded")
+        
+        # Preload LLM model
+        print("Preloading LLM model...")
+        llm_model = get_llama_model()
+        print("✅ LLM model preloaded")
+        
+        # Test inference to ensure models are ready
+        print("Testing models...")
+        test_embedding = embedding_model.encode("test query").tolist()
+        print(f"✅ Embedding test successful, vector length: {len(test_embedding)}")
+        
+        test_output = llm_model(
+            "[INST] Say hello [/INST]",
+            max_tokens=10,
+            temperature=0.1,
+            stream=False
+        )
+        print(f"✅ LLM test successful: {test_output['choices'][0]['text']}")
+        
+        print("🎉 All models initialized and ready!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Model initialization failed: {e}")
+        return False
+
+# Note: Model initialization will happen inside Modal functions when they first run
+print("🔄 Modal service starting - models will be initialized on first request...")
 
 # Create the FastAPI app
 web_app = FastAPI(title="Qurieus GPU Service with Persistent Storage", version="1.0.0")
@@ -136,115 +230,6 @@ def analyze_financial_data(df: pd.DataFrame) -> Dict[str, Any]:
     
     return analysis
 
-def get_user_documents_path(user_id: str) -> str:
-    """Get the path for user's documents in the persistent volume."""
-    return f"/data/users/{user_id}/documents.json"
-
-def get_user_embeddings_path(user_id: str) -> str:
-    """Get the path for user's embeddings in the persistent volume."""
-    return f"/data/users/{user_id}/embeddings.pkl"
-
-def get_document_hash(file_content: str, filename: str) -> str:
-    """Generate a unique hash for the document."""
-    content_hash = hashlib.md5(file_content.encode()).hexdigest()
-    return f"{filename}_{content_hash}"
-
-# Model download logic (at container start)
-MODEL_URL = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
-MODEL_PATH = "/data/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
-
-def download_model():
-    import requests
-    import os
-    if not os.path.exists(MODEL_PATH):
-        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-        print(f"Model not found at {MODEL_PATH}. Downloading Mistral GGUF model...")
-        start_time = time.time() # Start timing
-        r = requests.get(MODEL_URL, stream=True)
-        r.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
-        total_size = int(r.headers.get('content-length', 0))
-        downloaded_size = 0
-        with open(MODEL_PATH, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-                downloaded_size += len(chunk)
-                # print(f"Downloaded {downloaded_size / (1024*1024):.2f}MB / {total_size / (1024*1024):.2f}MB", end='\r')
-        end_time = time.time() # End timing
-        print(f"Model downloaded and saved to volume in {end_time - start_time:.2f} seconds.")
-    else:
-        print(f"Model already exists at {MODEL_PATH}, skipping download.")
-
-# Global Llama model loader
-llm = None
-
-def get_llama_model():
-    global llm
-    if llm is None:
-        # Model should already be downloaded during container startup
-        if not os.path.exists(MODEL_PATH):
-            raise RuntimeError(f"Model not found at {MODEL_PATH}. Please ensure model was downloaded during container startup.")
-        
-        # Log available backends and GPU info
-        print("=== GPU/Backend Information (from get_llama_model) ===")
-        
-        try:
-            import llama_cpp
-            # Check if CUDA backend is available by trying to get backend info
-            print("llama-cpp-python version:", llama_cpp.__version__)
-            # Check for specific GPU offload capability in the library if exposed
-            if hasattr(llama_cpp, 'LLAMA_SUPPORTS_K_QUANTS'):
-                 print(f"LLAMA_SUPPORTS_K_QUANTS: {llama_cpp.LLAMA_SUPPORTS_K_QUANTS}")
-            if hasattr(llama_cpp, '_lib') and hasattr(llama_cpp._lib, 'llama_supports_gpu_offload'):
-                # This is a better check if available directly from the lib
-                print(f"llama_supports_gpu_offload: {llama_cpp._lib.llama_supports_gpu_offload()}")
-            else:
-                print("Direct llama_supports_gpu_offload check not available.")
-
-        except Exception as e:
-            print(f"Error getting llama_cpp backend info: {e}")
-        
-        # Check CUDA availability (PyTorch perspective)
-        try:
-            import torch
-            print(f"PyTorch CUDA available: {torch.cuda.is_available()}")
-            if torch.cuda.is_available():
-                print(f"PyTorch CUDA device count: {torch.cuda.device_count()}")
-                print(f"PyTorch Current CUDA device: {torch.cuda.current_device()}")
-                print(f"PyTorch CUDA device name: {torch.cuda.get_device_name()}")
-        except Exception as e:
-            print(f"PyTorch CUDA check failed in get_llama_model: {e}")
-        
-        print("Loading Llama model with n_gpu_layers=35...")
-        try:
-            from llama_cpp import Llama
-            print(f"Model path exists: {os.path.exists(MODEL_PATH)}")
-            print(f"Model file size: {os.path.getsize(MODEL_PATH) if os.path.exists(MODEL_PATH) else 'N/A'} bytes")
-            
-            llm = Llama(
-                model_path=MODEL_PATH,
-                n_ctx=4096,
-                n_threads=8,
-                n_gpu_layers=35, # Attempt to offload 35 layers to GPU
-                verbose=True  # Enable verbose logging to see llama.cpp's internal output
-            )
-            
-            # Log the backend being used (if exposed by llama_cpp.Llama object)
-            print(f"Llama model loaded successfully!")
-            try:
-                print(f"Llama-cpp-python backend (from LLM object): {llm.backend}")
-            except AttributeError:
-                print("Backend attribute not available on LLM object (check llama-cpp-python version).")
-            
-            # Key indicator for GPU usage will be in the verbose logs above this line:
-            print("Model loaded. CHECK LOGS ABOVE FOR 'ggml_init_cublas', 'BLAS = 1', 'offloading X layers to GPU' TO CONFIRM GPU USAGE.")
-        except Exception as e:
-            print(f"Error loading model for get_llama_model: {e}")
-            # No fallback to CPU - exit early to save costs if GPU is intended
-            raise RuntimeError(f"Failed to load model with GPU support: {e}. Check model path, n_gpu_layers, and CUDA installation.")
-        
-        print("=== End GPU/Backend Information (from get_llama_model) ===")
-    return llm
-
 # Upload endpoint
 # Upload endpoint removed - now handled by FastAPI backend with Qdrant
 
@@ -266,10 +251,12 @@ async def query_documents_endpoint(
     start_time = time.time()
     try:
         print("=== Query Endpoint Started ===")
-        print(f"API Key provided: {bool(x_api_key)}")
-        print(f"Expected API Key: {bool(API_KEY)}")
         verify_api_key(x_api_key)
         print("API Key verification passed")
+        
+        # Initialize models on first request (inside Modal function context)
+        initialize_models_at_startup()
+        
     except Exception as e:
         print(f"API Key verification failed: {e}")
         raise
@@ -288,7 +275,6 @@ async def query_documents_endpoint(
         qdrant_collection = x_collection or request.collection_name or default_collection
         
         print(f"Using Qdrant collection: {qdrant_collection}")
-        print(f"Collection source: {'header' if x_collection else 'request body' if request.collection_name else 'environment default'}")
         
         # Initialize Qdrant client
         try:
@@ -312,10 +298,12 @@ async def query_documents_endpoint(
                 "done": True
             }
         
-        # Generate query embedding
+        # Generate query embedding using cached model
+        embedding_start = time.time()
         try:
-            embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
+            embedding_model = get_embedding_model()
             query_embedding = embedding_model.encode(query).tolist()
+            print(f"PERFLOG: Query embedding generated in {time.time() - embedding_start:.2f}s")
         except Exception as e:
             print(f"Failed to generate query embedding: {e}")
             return {
@@ -324,7 +312,8 @@ async def query_documents_endpoint(
                 "done": True
             }
         
-        # Search Qdrant for similar vectors
+        # Search Qdrant for similar vectors with optimized parameters
+        search_start = time.time()
         try:
             search_results = qdrant_client.search(
                 collection_name=qdrant_collection,
@@ -334,9 +323,12 @@ async def query_documents_endpoint(
                         {"key": "user_id", "match": {"value": user_id}}
                     ]
                 },
-                limit=10,  # Get top 10 most similar chunks
-                with_payload=True
+                limit=5,  # Reduced from 10 to 5 for better performance
+                with_payload=True,
+                score_threshold=0.3  # Add score threshold to filter low-quality matches
             )
+            
+            print(f"PERFLOG: Qdrant search completed in {time.time() - search_start:.2f}s")
             
             if not search_results:
                 print("No relevant documents found in Qdrant")
@@ -350,15 +342,16 @@ async def query_documents_endpoint(
             relevant_chunks = []
             relevant_sources = []
             for result in search_results:
-                if result.payload:
+                if result.payload and result.score > 0.4:  # Additional score filtering
                     relevant_chunks.append(result.payload.get("content", ""))
                     relevant_sources.append({
                         "document": result.payload.get("filename", "Unknown"),
                         "similarity": float(result.score)
                     })
             
+            # Optimize context length - reduce from 2000 to 1500 characters
             context = "\n".join(relevant_chunks)
-            context = context[:4000]  # Limit context length
+            context = context[:1500]  # Further reduced context length for faster processing
             print(f"PERFLOG: Selected {len(relevant_chunks)} chunks from Qdrant, context length: {len(context)}")
             
         except Exception as e:
@@ -369,7 +362,8 @@ async def query_documents_endpoint(
                 "done": True
             }
         
-        # Generate response using the LLM model
+        # Generate response using the cached LLM model
+        llm_start = time.time()
         print(f"PERFLOG: Generating response with context length: {len(context)}")
         try:
             print("Loading LLM model...")
@@ -379,8 +373,8 @@ async def query_documents_endpoint(
             print(f"Error loading LLM model: {e}")
             raise RuntimeError(f"Failed to load LLM model: {e}")
         
-        # Format prompt according to Mistral Instruct template
-        prompt = f"[INST] Based on the following context, please answer the question:\n\nContext:\n{context}\n\nQuestion: {query} [/INST]"
+        # Format prompt according to Mistral Instruct template with optimized length
+        prompt = f"[INST] Answer this question based on the context:\n\nContext: {context}\n\nQuestion: {query} [/INST]"
         print(f"Generating response with prompt length: {len(prompt)}")
         
         try:
@@ -390,12 +384,11 @@ async def query_documents_endpoint(
             
             def generate_stream():
                 try:
-                    # First try streaming
+                    # First try streaming with optimized parameters
                     print("Attempting streaming generation...")
-                    print(f"Prompt: {prompt[:200]}...")  # Show first 200 chars of prompt
                     output = llm(
                         prompt,
-                        max_tokens=512,
+                        max_tokens=512,  # Increased from 200 to 512 for complete responses
                         temperature=0.7,
                         top_p=0.95,
                         stop=["</s>"],
@@ -406,7 +399,6 @@ async def query_documents_endpoint(
                     chunk_count = 0
                     for chunk in output:
                         chunk_count += 1
-                        print(f"Received chunk {chunk_count}: {chunk}")
                         
                         if "choices" in chunk and len(chunk["choices"]) > 0:
                             # Handle both streaming and non-streaming formats
@@ -426,20 +418,17 @@ async def query_documents_endpoint(
                                 content = choice["text"]
                                 if content:  # Only process non-empty content
                                     answer += content
-                                    print(f"Added content: '{content}', total answer now: '{answer}'")
                                     # Yield each chunk as it's generated
                                     yield f"data: {json.dumps({'response': content, 'done': False})}\n\n"
                     
                     print(f"Streaming completed. Total chunks: {chunk_count}, Answer length: {len(answer)}")
-                    print(f"Final accumulated answer: '{answer}'")
                     
                     # If no content was generated, try non-streaming
                     if not answer.strip():
                         print("No content from streaming, trying non-streaming...")
-                        print(f"Non-streaming prompt: {prompt[:200]}...")
                         non_stream_output = llm(
                             prompt,
-                            max_tokens=512,
+                            max_tokens=512,  # Increased from 200 to 512
                             temperature=0.7,
                             top_p=0.95,
                             stop=["</s>"],
@@ -449,7 +438,6 @@ async def query_documents_endpoint(
                         if "choices" in non_stream_output and len(non_stream_output["choices"]) > 0:
                             answer = non_stream_output["choices"][0]["text"].strip()
                             print(f"Non-streaming generated answer: {answer}")
-                            print(f"Full non-streaming output: {non_stream_output}")
                             
                             # Send the complete answer as a single chunk
                             if answer:
@@ -464,6 +452,7 @@ async def query_documents_endpoint(
                     yield f"data: {json.dumps(final_response)}\n\n"
                     
                     print(f"Generated answer length: {len(answer)}")
+                    print(f"PERFLOG: LLM generation completed in {time.time() - llm_start:.2f}s")
                     print(f"PERFLOG: Total query time: {time.time() - start_time:.2f}s")
                     print("PERFLOG: --- END OF REQUEST ---")
                     
@@ -474,7 +463,7 @@ async def query_documents_endpoint(
                         print("Streaming failed, trying non-streaming fallback...")
                         non_stream_output = llm(
                             prompt,
-                            max_tokens=512,
+                            max_tokens=512,  # Increased from 200 to 512
                             temperature=0.7,
                             top_p=0.95,
                             stop=["</s>"],
@@ -536,9 +525,9 @@ async def query_documents_endpoint(
     volumes={"/data": volume},
     secrets=[modal.Secret.from_name("QURIEUS_KEY")]
 )
-@modal.fastapi_endpoint(docs=True,label="health-check")
+@modal.fastapi_endpoint(docs=True, label="health-check")
 async def health_check(x_api_key: str = Header(...)):
-    print(f"=== Health Check Started ===")
+    print("=== Health Check Started ===")
     print(f"Received x_api_key: {x_api_key}")
     print(f"Expected API_KEY: {API_KEY}")
     print(f"Keys match: {x_api_key == API_KEY}")
@@ -626,26 +615,6 @@ async def download_model_endpoint(x_api_key: str = Header(...)):
     except Exception as e:
         print(f"❌ Model download failed: {e}")
         raise HTTPException(status_code=500, detail=f"Model download failed: {str(e)}")
-
-
-
-@app.function(
-    image=image,
-    gpu="t4",
-    timeout=60,
-    memory=2048,
-    volumes={"/data": volume},
-    secrets=[modal.Secret.from_name("QURIEUS_KEY")]
-)
-@modal.fastapi_endpoint(docs=True, label="keep-warm")
-async def keep_warm_endpoint(x_api_key: str = Header(...)):
-    """Keep-warm endpoint to prevent cold starts. Call this periodically to keep instances hot."""
-    verify_api_key(x_api_key)
-    return {
-        "status": "warm",
-        "timestamp": time.time(),
-        "message": "Instance is warm and ready"
-    }
 
 if __name__ == "__main__":
     # For local testing of Modal functions

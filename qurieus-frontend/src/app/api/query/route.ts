@@ -91,11 +91,22 @@ async function queryWithModal(message: string, userId: string, history: any[], c
   const modalUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
   const modalApiKey = process.env.MODAL_DOT_COM_X_API_KEY;
   
+  console.log('🔍 [QUERY API] queryWithModal called with:', {
+    message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+    userId,
+    historyLength: history?.length || 0,
+    collectionName,
+    modalUrl: modalUrl ? 'SET' : 'NOT SET',
+    modalApiKey: modalApiKey ? 'SET' : 'NOT SET'
+  });
+  
   if (!modalUrl) {
+    console.error('❌ [QUERY API] Modal.com query URL not configured');
     throw new Error("Modal.com query URL not configured");
   }
   
   if (!modalApiKey) {
+    console.error('❌ [QUERY API] Modal.com API key not configured');
     throw new Error("Modal.com API key not configured");
   }
 
@@ -110,22 +121,45 @@ async function queryWithModal(message: string, userId: string, history: any[], c
     headers['x-collection'] = collectionName;
   }
 
+  const requestBody = {
+    query: message,
+    user_id: userId, // Changed from document_owner_id to user_id
+    history: history || [],
+    collection_name: collectionName, // Also pass in body as fallback
+  };
+
+  console.log('🔍 [QUERY API] Making request to Modal.com:', {
+    url: modalUrl,
+    method: 'POST',
+    headers: Object.keys(headers),
+    bodyKeys: Object.keys(requestBody),
+    bodySize: JSON.stringify(requestBody).length
+  });
+
   const response = await fetch(modalUrl, {
     method: 'POST',
     headers,
-    body: JSON.stringify({
-      query: message,
-      user_id: userId, // Changed from document_owner_id to user_id
-      history: history || [],
-      collection_name: collectionName, // Also pass in body as fallback
-    }),
+    body: JSON.stringify(requestBody),
+  });
+
+  console.log('🔍 [QUERY API] Modal.com response received:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+    headers: Object.fromEntries(response.headers.entries())
   });
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error('❌ [QUERY API] Modal.com service error:', {
+      status: response.status,
+      statusText: response.statusText,
+      errorText
+    });
     throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
   }
 
+  console.log('✅ [QUERY API] Modal.com request successful');
   return response;
 }
 
@@ -825,157 +859,67 @@ export async function POST(request: Request) {
     if (!response.ok)
       throw new Error(`HTTP error! status: ${response.status}`);
 
-    // Handle streaming response from Modal
-    let aiResponse = "";
-    let sources: any[] = [];
+    // Forward Modal.com streaming response directly to frontend
+    console.log('🔍 [QUERY API] Forwarding Modal.com streaming response to frontend');
     
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("No response body reader available");
-    }
-    
-    const decoder = new TextDecoder();
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
-      
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
-            if (data.response !== undefined) {
-              aiResponse += data.response;
-            }
-            if (data.sources) {
-              sources = data.sources;
-            }
-            if (data.done) {
-              break;
-            }
-          } catch (e) {
-            // Skip invalid JSON lines
-            continue;
-          }
-        }
-      }
-    }
-    
-    logger.info("Query API: Received Modal streaming response", { 
-      responseLength: aiResponse.length,
-      sourcesCount: sources.length
-    }, { userId });
-
-    // --- AI RESPONSE ESCALATION LOGIC (only for AI limitations) ---
-    // Check if AI response indicates escalation is needed (only for AI limitations, not user requests)
-    if (aiResponse.trim() && shouldEscalateToAgent(aiResponse, message)) {
-      logger.info("Query API: AI response escalation triggered", { 
-        conversationId: chatConversation.id,
-        responseLength: aiResponse.length,
-        userMessage: message
-      }, { userId });
-
-      // Escalate the conversation
-      await escalateChatToAgent(chatConversation.id, apiKey);
-
-      // AI limitation escalation message
-      const escalationMessage = "I apologize, but I'm unable to provide a complete answer to your question. I've escalated your chat to one of our human agents, who will be with you shortly to assist you further.";
-      
-      // Emit Socket.IO event for escalation
-      try {
-        const io = (global as any).io;
-        if (io) {
-          io.to(chatConversation.id).emit('chat_status', {
-            status: 'escalated',
-            meta: { 
-              reason: 'AI unable to provide satisfactory answer',
-              escalatedAt: new Date(),
-              isUserRequest: false
-            }
-          });
-        }
-      } catch (socketError) {
-        logger.warn("Query API: Failed to emit escalation Socket.IO event", { 
-          error: socketError instanceof Error ? socketError.message : String(socketError)
-        });
-      }
-      
-      // Update the response for storage and analytics
-      aiResponse = escalationMessage;
-    }
-    // --- END AI RESPONSE ESCALATION LOGIC ---
-
-    // Cache the response
-    await cacheSet(cacheKey, aiResponse, 3600); // Cache for 1 hour
-
-    // Store assistant response as ChatMessage
-    if (aiResponse.trim()) {
-      await prisma.chatMessage.create({
-        data: {
-          conversationId: chatConversation.id,
-          content: aiResponse,
-          role: 'assistant',
-          createdAt: new Date(),
-        },
-      });
-      // Update conversation stats
-      await prisma.chatConversation.update({
-        where: { id: chatConversation.id },
-        data: {
-          totalMessages: { increment: 2 },
-          lastSeen: new Date(),
-        },
-      });
-    }
-
-    // Track analytics
-    const responseTime = Date.now() - startTime;
-    await trackAnalytics({
-      apiKey,
-      message,
-      response: aiResponse,
-      responseTime,
-      visitorId: effectiveVisitorId,
-      success: true,
-      error: null,
-      request: request,
-      startTime,
-    });
-
-    logger.info("Query API: Query completed successfully", { 
-      apiKey, 
-      responseTime, 
-      responseLength: aiResponse.length,
-    }, { userId });
-
-    // Return streaming response to client (embed.js expects streaming)
+    // Create a stream that forwards Modal.com chunks directly
     const encoder = new TextEncoder();
-    
     const stream = new ReadableStream({
       start(controller) {
-        // Send the complete response as a single chunk
-        // embed.js will try to parse as JSON first, then fall back to plain text
-        const responseData = {
-          response: aiResponse,
-          sources: sources,
-          done: true
+        const forwardStream = async () => {
+          try {
+            const reader = response.body?.getReader();
+            if (!reader) {
+              throw new Error("No response body reader available");
+            }
+            
+            const decoder = new TextDecoder();
+            let chunkCount = 0;
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                console.log('🔍 [QUERY API] Modal stream completed, chunks forwarded:', chunkCount);
+                break;
+              }
+              
+              chunkCount++;
+              const chunk = decoder.decode(value);
+              console.log(`🔍 [QUERY API] Forwarding chunk ${chunkCount} to frontend:`, {
+                chunkLength: chunk.length,
+                chunkPreview: chunk.substring(0, 100) + (chunk.length > 100 ? '...' : '')
+              });
+              
+              // Forward the chunk directly to frontend
+              controller.enqueue(encoder.encode(chunk));
+            }
+            
+            controller.close();
+            
+          } catch (error) {
+            console.error('❌ [QUERY API] Error forwarding stream:', error);
+            controller.error(error);
+          }
         };
         
-        controller.enqueue(encoder.encode(JSON.stringify(responseData)));
-        controller.close();
+        forwardStream();
       }
     });
-
+    
+    // Return the streaming response immediately
     return new Response(stream, {
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "text/plain", // Changed to text/plain for SSE
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
       },
     });
+
+    // Note: Since we're now streaming directly from Modal.com, 
+    // we can't do post-processing like escalation detection or caching.
+    // These features would need to be implemented differently for streaming.
+    
+    console.log('✅ [QUERY API] Request completed successfully - streaming response');
 
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
