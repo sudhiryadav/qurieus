@@ -63,6 +63,87 @@
   let widgetConfig = {};
   let widgetContainer = null;
 
+  // Helper function to format text with proper HTML formatting
+  function formatMessageText(text) {
+    // Escape HTML to prevent XSS
+    let formattedText = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    
+    // Split text into lines for better list processing
+    const lines = formattedText.split('\n');
+    const processedLines = [];
+    let inNumberedList = false;
+    let inBulletList = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Check for numbered list items
+      if (/^\d+\.\s+/.test(line)) {
+        if (!inNumberedList) {
+          processedLines.push('<ol>');
+          inNumberedList = true;
+        }
+        processedLines.push('<li>' + line.replace(/^\d+\.\s+/, '') + '</li>');
+      }
+      // Check for bullet list items
+      else if (/^[-*•]\s+/.test(line)) {
+        if (!inBulletList) {
+          processedLines.push('<ul>');
+          inBulletList = true;
+        }
+        processedLines.push('<li>' + line.replace(/^[-*•]\s+/, '') + '</li>');
+      }
+      // Regular line
+      else {
+        // Close any open lists
+        if (inNumberedList) {
+          processedLines.push('</ol>');
+          inNumberedList = false;
+        }
+        if (inBulletList) {
+          processedLines.push('</ul>');
+          inBulletList = false;
+        }
+        processedLines.push(line);
+      }
+    }
+    
+    // Close any remaining open lists
+    if (inNumberedList) {
+      processedLines.push('</ol>');
+    }
+    if (inBulletList) {
+      processedLines.push('</ul>');
+    }
+    
+    // Join lines back together
+    formattedText = processedLines.join('\n');
+    
+    // Format bold text (**text** or __text__)
+    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    formattedText = formattedText.replace(/__(.*?)__/g, '<strong>$1</strong>');
+    
+    // Format italic text (*text* or _text_)
+    formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    formattedText = formattedText.replace(/_(.*?)_/g, '<em>$1</em>');
+    
+    // Format code blocks (```code```)
+    formattedText = formattedText.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    // Format inline code (`code`)
+    formattedText = formattedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Format line breaks
+    formattedText = formattedText.replace(/\n/g, '<br>');
+    
+    return formattedText;
+  }
+
   // State management function
   function setWidgetState(newState) {
     widgetState = { ...widgetState, ...newState };
@@ -544,7 +625,12 @@
       `;
       
       const messageBubble = document.createElement('div');
-      messageBubble.textContent = msg.content;
+      // Use formatting for assistant messages, plain text for user messages
+      if (msg.role === 'assistant') {
+        messageBubble.innerHTML = formatMessageText(msg.content);
+      } else {
+        messageBubble.textContent = msg.content;
+      }
       messageBubble.style.cssText = `
         padding: 8px 12px;
         border-radius: 12px;
@@ -569,6 +655,46 @@
         align-self: ${msg.role === 'user' ? 'flex-end' : 'flex-start'};
         margin-top: 2px;
       `;
+      
+      // Add custom styles for formatted content in chat history
+      if (msg.role === 'assistant') {
+        const historyStyle = document.createElement('style');
+        historyStyle.textContent = `
+          .assistant-message ol, .assistant-message ul {
+            margin: 8px 0;
+            padding-left: 20px;
+          }
+          .assistant-message li {
+            margin: 4px 0;
+          }
+          .assistant-message strong {
+            font-weight: 600;
+          }
+          .assistant-message em {
+            font-style: italic;
+          }
+          .assistant-message code {
+            background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+          }
+          .assistant-message pre {
+            background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
+            padding: 8px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0;
+          }
+          .assistant-message pre code {
+            background: none;
+            padding: 0;
+            font-size: 12px;
+          }
+        `;
+        messageContentContainer.appendChild(historyStyle);
+      }
       
       messageContentContainer.appendChild(messageBubble);
       messageContentContainer.appendChild(timestamp);
@@ -1051,7 +1177,7 @@
                 });
               }
             }
-          }
+
           
           // Helper function to update assistant message in real-time
           function updateAssistantMessage(message) {
@@ -1111,7 +1237,7 @@
             const assistantContentContainer = assistantContainer.querySelector('div:last-child');
             
             const assistantBubble = document.createElement('div');
-            assistantBubble.textContent = message;
+            assistantBubble.innerHTML = formatMessageText(message);
             assistantBubble.style.cssText = `
               padding: 8px 12px;
               border-radius: 12px;
@@ -1122,6 +1248,43 @@
               word-wrap: break-word;
               text-align: left;
               max-width: 100%;
+            `;
+            
+            // Add custom styles for formatted content
+            const style = document.createElement('style');
+            style.textContent = `
+              .assistant-message ol, .assistant-message ul {
+                margin: 8px 0;
+                padding-left: 20px;
+              }
+              .assistant-message li {
+                margin: 4px 0;
+              }
+              .assistant-message strong {
+                font-weight: 600;
+              }
+              .assistant-message em {
+                font-style: italic;
+              }
+              .assistant-message code {
+                background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
+                padding: 2px 4px;
+                border-radius: 4px;
+                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                font-size: 12px;
+              }
+              .assistant-message pre {
+                background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
+                padding: 8px;
+                border-radius: 6px;
+                overflow-x: auto;
+                margin: 8px 0;
+              }
+              .assistant-message pre code {
+                background: none;
+                padding: 0;
+                font-size: 12px;
+              }
             `;
             
             // Add timestamp for assistant message
@@ -1136,6 +1299,7 @@
             
             // Clear and update content
             assistantContentContainer.innerHTML = '';
+            assistantContentContainer.appendChild(style);
             assistantContentContainer.appendChild(assistantBubble);
             assistantContentContainer.appendChild(assistantTimestamp);
             
@@ -1143,6 +1307,7 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }
         }
+      }
     } catch (error) {
         console.error('❌ [EMBED] Chat error:', {
           error: error instanceof Error ? error.message : String(error),
@@ -1205,7 +1370,7 @@
         `;
         
         const errorBubble = document.createElement('div');
-        errorBubble.textContent = 'Sorry, I encountered an error. Please try again.';
+        errorBubble.innerHTML = formatMessageText('Sorry, I encountered an error. Please try again.');
         errorBubble.style.cssText = `
           padding: 8px 12px;
           border-radius: 12px;
@@ -1228,6 +1393,44 @@
           margin-top: 2px;
         `;
         
+        // Add custom styles for formatted content in error message
+        const errorStyle = document.createElement('style');
+        errorStyle.textContent = `
+          .assistant-message ol, .assistant-message ul {
+            margin: 8px 0;
+            padding-left: 20px;
+          }
+          .assistant-message li {
+            margin: 4px 0;
+          }
+          .assistant-message strong {
+            font-weight: 600;
+          }
+          .assistant-message em {
+            font-style: italic;
+          }
+          .assistant-message code {
+            background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+          }
+          .assistant-message pre {
+            background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
+            padding: 8px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0;
+          }
+          .assistant-message pre code {
+            background: none;
+            padding: 0;
+            font-size: 12px;
+          }
+        `;
+        
+        errorContentContainer.appendChild(errorStyle);
         errorContentContainer.appendChild(errorBubble);
         errorContentContainer.appendChild(errorTimestamp);
         
