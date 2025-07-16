@@ -1,0 +1,72 @@
+{{> partials/header}}
+
+<div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <img src="{{logoUrl}}" alt="Qurieus Logo" style="height: 50px;">
+  </div>
+
+  <div style="background-color: #fff3e0; padding: 30px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #ff9800;">
+    <h1 style="color: #333; margin-bottom: 20px; font-size: 24px;">⚠️ Chat Escalation Alert</h1>
+    
+    <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+      A chat conversation has been escalated but no agents are currently available to handle it. This requires immediate attention.
+    </p>
+
+    <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+      <h3 style="color: #333; margin-bottom: 15px; font-size: 18px;">Conversation Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; color: #666; font-weight: bold; width: 120px;">User ID:</td>
+          <td style="padding: 8px 0; color: #333;">{{userId}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #666; font-weight: bold;">Visitor ID:</td>
+          <td style="padding: 8px 0; color: #333;">{{visitorId}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #666; font-weight: bold;">Conversation ID:</td>
+          <td style="padding: 8px 0; color: #333;">{{conversationId}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #666; font-weight: bold;">Escalated At:</td>
+          <td style="padding: 8px 0; color: #333;">{{escalatedAt}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #666; font-weight: bold;">Reason:</td>
+          <td style="padding: 8px 0; color: #333;">{{escalationReason}}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4caf50;">
+      <h3 style="color: #2e7d32; margin-bottom: 10px; font-size: 18px;">User's Message:</h3>
+      <p style="color: #666; line-height: 1.6; margin: 0; font-style: italic;">
+        "{{userMessage}}"
+      </p>
+    </div>
+
+    <div style="background-color: #f3e5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #9c27b0;">
+      <h3 style="color: #7b1fa2; margin-bottom: 10px; font-size: 18px;">Required Action:</h3>
+      <ul style="color: #666; line-height: 1.6; margin: 0; padding-left: 20px;">
+        <li>Review the conversation and user's request</li>
+        <li>Contact the user as soon as possible</li>
+        <li>Provide comprehensive assistance for their needs</li>
+        <li>Update the conversation status once resolved</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="{{dashboardUrl}}" style="background-color: #2196f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 30px;">
+    <p style="color: #999; font-size: 14px;">
+      This is an automated notification. Please respond to the user promptly.
+    </p>
+  </div>
+</div>
+
+{{> partials/footer}} 

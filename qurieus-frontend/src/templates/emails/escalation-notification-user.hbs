@@ -1,0 +1,41 @@
+{{> partials/header}}
+
+<div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <img src="{{logoUrl}}" alt="Qurieus Logo" style="height: 50px;">
+  </div>
+
+  <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+    <h1 style="color: #333; margin-bottom: 20px; font-size: 24px;">We've Received Your Request</h1>
+    
+    <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+      Hi there! We've received your chat request and understand you need assistance. While our AI was able to help with some aspects of your query, we've escalated your conversation to ensure you get the best possible support.
+    </p>
+
+    <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3; margin-bottom: 20px;">
+      <h3 style="color: #1976d2; margin-bottom: 10px; font-size: 18px;">What happens next?</h3>
+      <ul style="color: #666; line-height: 1.6; margin: 0; padding-left: 20px;">
+        <li>Our support team has been notified of your request</li>
+        <li>You'll receive a response within the next few hours</li>
+        <li>We'll provide you with detailed assistance for your specific needs</li>
+      </ul>
+    </div>
+
+    <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+      <strong>Your original message:</strong><br>
+      <em style="color: #888; font-style: italic;">"{{userMessage}}"</em>
+    </p>
+
+    <p style="color: #666; line-height: 1.6;">
+      Thank you for your patience. We're committed to providing you with the best possible support experience.
+    </p>
+  </div>
+
+  <div style="text-align: center; margin-top: 30px;">
+    <p style="color: #999; font-size: 14px;">
+      If you have any urgent questions, please don't hesitate to reach out to us directly.
+    </p>
+  </div>
+</div>
+
+{{> partials/footer}} 

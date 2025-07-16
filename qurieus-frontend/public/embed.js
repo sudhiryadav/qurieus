@@ -17,18 +17,14 @@
       return scripts[scripts.length - 1];
     })();
     
-    console.log('Current script:', currentScript);
-    
     if (currentScript && currentScript.src) {
       const url = new URL(currentScript.src);
       const baseUrl = `${url.protocol}//${url.host}`;
-      console.log('Base URL from script:', baseUrl);
       return baseUrl;
     }
     
     // Fallback to current page URL
     const fallbackUrl = `${window.location.protocol}//${window.location.host}`;
-    console.log('Base URL fallback:', fallbackUrl);
     return fallbackUrl;
   };
 
@@ -327,8 +323,8 @@
         });
         
       } catch (error) {
-        console.error('Error saving visitor information:', error);
-        alert('Failed to save information. Please try again.');
+        console.error('❌ [EMBED] Error saving visitor information:', error);
+        alert('❌ [EMBED] Failed to save information. Please try again.');
       }
     };
     
@@ -1052,23 +1048,11 @@
           throw new Error('API key is missing');
         }
         
-        console.log('🔍 [EMBED] Sending request with config:', {
-          baseUrl: widgetConfig.baseUrl,
-          apiKey: widgetConfig.apiKey ? 'SET' : 'NOT SET',
-          message: userMessage.substring(0, 100) + (userMessage.length > 100 ? '...' : ''),
-          visitorId: localStorage.getItem('qurieus_visitor_id')
-        });
-        
         const requestBody = {
           message: userMessage,
           apiKey: widgetConfig.apiKey,
           visitorId: localStorage.getItem('qurieus_visitor_id')
         };
-        
-        console.log('🔍 [EMBED] Request body:', {
-          bodyKeys: Object.keys(requestBody),
-          bodySize: JSON.stringify(requestBody).length
-        });
         
         const response = await fetch(widgetConfig.baseUrl + '/api/query', {
           method: 'POST',
@@ -1077,13 +1061,6 @@
             'x-api-key': widgetConfig.apiKey
           },
           body: JSON.stringify(requestBody)
-        });
-        
-        console.log('🔍 [EMBED] Response received:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          headers: Object.fromEntries(response.headers.entries())
         });
         
         if (!response.ok) {
@@ -1102,8 +1079,6 @@
           peekingIndicator.remove();
         }
         
-        console.log('🔍 [EMBED] Starting to process streaming response');
-        
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let assistantMessage = '';
@@ -1113,19 +1088,12 @@
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            console.log('🔍 [EMBED] Stream reading completed, chunks processed:', chunkCount);
             break;
           }
           
           chunkCount++;
           const chunk = decoder.decode(value);
           fullResponse += chunk;
-          
-          console.log(`🔍 [EMBED] Received chunk ${chunkCount}:`, {
-            chunkLength: chunk.length,
-            fullResponseLength: fullResponse.length,
-            chunkPreview: chunk.substring(0, 200) + (chunk.length > 200 ? '...' : '')
-          });
           
           // Process each line for Server-Sent Events format
           const lines = chunk.split('\n');
@@ -1136,32 +1104,17 @@
                 const jsonStr = line.slice(6); // Remove 'data: ' prefix
                 const data = JSON.parse(jsonStr);
                 
-                console.log('🔍 [EMBED] Parsed SSE data:', {
-                  hasResponse: data.response !== undefined,
-                  responseLength: data.response?.length || 0,
-                  hasSources: !!data.sources,
-                  sourcesCount: data.sources?.length || 0,
-                  done: data.done
-                });
-                
                 if (data.response !== undefined && data.response !== "") {
                   assistantMessage += data.response;
-                  console.log('🔍 [EMBED] Updated assistant message:', {
-                    messageLength: assistantMessage.length,
-                    messagePreview: assistantMessage.substring(0, 100) + (assistantMessage.length > 100 ? '...' : '')
-                  });
-                  
                   // Update the UI immediately for streaming effect
                   updateAssistantMessage(assistantMessage);
                 }
                 
                 if (data.sources) {
                   // Handle sources if needed
-                  console.log('🔍 [EMBED] Received sources:', data.sources);
                 }
                 
                 if (data.done) {
-                  console.log('🔍 [EMBED] Received done flag');
                   // Final update to state
                   widgetState.messages = [...widgetState.messages, { 
                     role: 'assistant', 
@@ -1556,8 +1509,6 @@
     theme: document.currentScript.getAttribute('data-theme'),
     showSources: document.currentScript.getAttribute('data-show-sources') === 'true',
   };
-
-  console.log('Config loaded:', config);
 
   if (config.apiKey) {
     // Initialize immediately

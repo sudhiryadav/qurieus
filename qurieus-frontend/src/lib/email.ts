@@ -155,4 +155,40 @@ export async function sendTrialExpiredEmail(data: {
   });
 }
 
+export async function sendEscalationNotificationToUser(data: {
+  userEmail: string;
+  userMessage: string;
+}) {
+  return sendEmail({
+    to: data.userEmail,
+    subject: "We've Received Your Request - Support Team Notified",
+    template: "escalation-notification-user",
+    context: { ...data, ...footerData },
+  });
+}
+
+export async function sendEscalationNotificationToAgents(data: {
+  agentEmails: string[];
+  userId: string;
+  visitorId: string;
+  conversationId: string;
+  userMessage: string;
+  escalationReason: string;
+  escalatedAt: string;
+}) {
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/agent/dashboard`;
+  
+  // Send to all agents
+  const emailPromises = data.agentEmails.map(email => 
+    sendEmail({
+      to: email,
+      subject: "⚠️ Chat Escalation Alert - No Agents Available",
+      template: "escalation-notification-agent",
+      context: { ...data, dashboardUrl, ...footerData },
+    })
+  );
+  
+  return Promise.all(emailPromises);
+}
+
 export { transporter }; 

@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/utils/prismaDB";
 import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
 import { errorResponse } from "@/utils/responser";
+import { sendEscalationNotificationToUser, sendEscalationNotificationToAgents } from "@/lib/email";
 
 
 // Rate Limiting Setup
@@ -91,15 +92,6 @@ async function queryWithModal(message: string, userId: string, history: any[], c
   const modalUrl = process.env.MODAL_QUERY_DOCUMENTS_URL;
   const modalApiKey = process.env.MODAL_DOT_COM_X_API_KEY;
   
-  console.log('🔍 [QUERY API] queryWithModal called with:', {
-    message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
-    userId,
-    historyLength: history?.length || 0,
-    collectionName,
-    modalUrl: modalUrl ? 'SET' : 'NOT SET',
-    modalApiKey: modalApiKey ? 'SET' : 'NOT SET'
-  });
-  
   if (!modalUrl) {
     console.error('❌ [QUERY API] Modal.com query URL not configured');
     throw new Error("Modal.com query URL not configured");
@@ -128,25 +120,10 @@ async function queryWithModal(message: string, userId: string, history: any[], c
     collection_name: collectionName, // Also pass in body as fallback
   };
 
-  console.log('🔍 [QUERY API] Making request to Modal.com:', {
-    url: modalUrl,
-    method: 'POST',
-    headers: Object.keys(headers),
-    bodyKeys: Object.keys(requestBody),
-    bodySize: JSON.stringify(requestBody).length
-  });
-
   const response = await fetch(modalUrl, {
     method: 'POST',
     headers,
     body: JSON.stringify(requestBody),
-  });
-
-  console.log('🔍 [QUERY API] Modal.com response received:', {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok,
-    headers: Object.fromEntries(response.headers.entries())
   });
 
   if (!response.ok) {
@@ -159,7 +136,6 @@ async function queryWithModal(message: string, userId: string, history: any[], c
     throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
   }
 
-  console.log('✅ [QUERY API] Modal.com request successful');
   return response;
 }
 
@@ -475,8 +451,8 @@ async function findAvailableAgent(userId: string): Promise<string | null> {
   }
 }
 
-// Enhanced escalation function with agent assignment
-async function escalateChatToAgent(conversationId: string, userId: string) {
+// Enhanced escalation function with agent assignment and email notifications
+async function escalateChatToAgent(conversationId: string, userId: string, userMessage: string, visitorId: string) {
   try {
     // Find an available agent
     const agentId = await findAvailableAgent(userId);
@@ -517,13 +493,16 @@ async function escalateChatToAgent(conversationId: string, userId: string) {
         agentId
       });
     } else {
-      // No available agents - just mark as escalated without assignment
+      // No available agents - mark as escalated without assignment and send email notifications
+      const escalatedAt = new Date();
+      const escalationReason = "AI unable to provide satisfactory answer - No agents available";
+      
       await prisma.chatConversation.update({
         where: { id: conversationId },
         data: {
           status: "ESCALATED" as any,
-          escalatedAt: new Date(),
-          escalationReason: "AI unable to provide satisfactory answer - No agents available"
+          escalatedAt,
+          escalationReason
         } as any
       });
 
@@ -531,6 +510,62 @@ async function escalateChatToAgent(conversationId: string, userId: string) {
         conversationId,
         userId
       });
+
+      // Send email notifications
+      try {
+        // Get user email
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true }
+        });
+
+        // Get all agents for this user
+        const agents = await prisma.user.findMany({
+          where: {
+            parentUserId: userId,
+            role: "AGENT" as any,
+            is_active: true
+          },
+          select: { email: true }
+        });
+
+        const agentEmails = agents.map(agent => agent.email).filter(Boolean);
+
+        // Send email to user
+        if (user?.email) {
+          await sendEscalationNotificationToUser({
+            userEmail: user.email,
+            userMessage
+          });
+          logger.info("Query API: Escalation notification sent to user", { 
+            userEmail: user.email,
+            conversationId
+          });
+        }
+
+        // Send email to agents
+        if (agentEmails.length > 0) {
+          await sendEscalationNotificationToAgents({
+            agentEmails,
+            userId,
+            visitorId,
+            conversationId,
+            userMessage,
+            escalationReason,
+            escalatedAt: escalatedAt.toISOString()
+          });
+          logger.info("Query API: Escalation notifications sent to agents", { 
+            agentEmails,
+            conversationId
+          });
+        }
+      } catch (emailError) {
+        logger.error("Query API: Error sending escalation emails", { 
+          conversationId,
+          userId,
+          error: emailError instanceof Error ? emailError.message : String(emailError)
+        });
+      }
     }
   } catch (error) {
     logger.error("Query API: Error escalating chat", { 
@@ -762,10 +797,10 @@ export async function POST(request: Request) {
       }, { userId });
 
       // Escalate the conversation
-      await escalateChatToAgent(chatConversation.id, apiKey);
+      await escalateChatToAgent(chatConversation.id, apiKey, message, effectiveVisitorId);
 
       // Create escalation message
-      const escalationMessage = "I understand you'd like to speak with a human agent. I've connected you to one of our support representatives who will be with you shortly to assist you further.";
+      const escalationMessage = "I understand you'd like to speak with a human agent. I've escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.";
       
       // Store escalation message as assistant response
       await prisma.chatMessage.create({
@@ -824,20 +859,23 @@ export async function POST(request: Request) {
       
       const stream = new ReadableStream({
         start(controller) {
+          // Send the escalation message in SSE format that embed.js expects
           const responseData = {
             response: escalationMessage,
             sources: [],
             done: true
           };
           
-          controller.enqueue(encoder.encode(JSON.stringify(responseData)));
+          // Format as SSE with data: prefix
+          const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+          controller.enqueue(encoder.encode(sseData));
           controller.close();
         }
       });
 
       return new Response(stream, {
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "text/plain", // Changed to text/plain for SSE
           "Cache-Control": "no-cache",
           "Connection": "keep-alive",
         },
@@ -859,9 +897,7 @@ export async function POST(request: Request) {
     if (!response.ok)
       throw new Error(`HTTP error! status: ${response.status}`);
 
-    // Forward Modal.com streaming response directly to frontend
-    console.log('🔍 [QUERY API] Forwarding Modal.com streaming response to frontend');
-    
+
     // Create a stream that forwards Modal.com chunks directly
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -879,16 +915,11 @@ export async function POST(request: Request) {
             while (true) {
               const { done, value } = await reader.read();
               if (done) {
-                console.log('🔍 [QUERY API] Modal stream completed, chunks forwarded:', chunkCount);
                 break;
               }
               
               chunkCount++;
               const chunk = decoder.decode(value);
-              console.log(`🔍 [QUERY API] Forwarding chunk ${chunkCount} to frontend:`, {
-                chunkLength: chunk.length,
-                chunkPreview: chunk.substring(0, 100) + (chunk.length > 100 ? '...' : '')
-              });
               
               // Forward the chunk directly to frontend
               controller.enqueue(encoder.encode(chunk));
@@ -914,13 +945,6 @@ export async function POST(request: Request) {
         "Connection": "keep-alive",
       },
     });
-
-    // Note: Since we're now streaming directly from Modal.com, 
-    // we can't do post-processing like escalation detection or caching.
-    // These features would need to be implemented differently for streaming.
-    
-    console.log('✅ [QUERY API] Request completed successfully - streaming response');
-
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
     logger.error("Query API: Error processing query", { 
