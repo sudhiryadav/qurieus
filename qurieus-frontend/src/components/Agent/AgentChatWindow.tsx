@@ -58,7 +58,7 @@ interface AgentChatWindowProps {
 interface ChatMessage {
   id: string;
   content: string;
-  role: 'user' | 'assistant' | 'agent';
+  role: 'user' | 'assistant' | 'agent' | 'system';
   createdAt: string;
   agentId?: string;
 }
@@ -118,8 +118,12 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
     if (realTimeMessages.length > 0) {
       const latestMessage = realTimeMessages[realTimeMessages.length - 1];
       setChatHistory(prev => {
-        // Check if message already exists
-        const exists = prev.some(msg => msg.id === latestMessage.id);
+        // Check if message already exists by ID or content + timestamp
+        const exists = prev.some(msg => 
+          msg.id === latestMessage.id || 
+          (msg.content === latestMessage.content && 
+           Math.abs(new Date(msg.createdAt).getTime() - new Date(latestMessage.createdAt).getTime()) < 5000) // Within 5 seconds
+        );
         if (!exists) {
           return [...prev, latestMessage];
         }
@@ -145,23 +149,13 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
     setSending(true);
 
     try {
-      // Send message via Socket.IO for real-time delivery
-      await sendMessage(messageToSend);
-      
-      // Also send via API for persistence
-      await axiosInstance.post(`/api/agent/chats/${chatId}/messages`, {
+      // Send message via API for persistence and Socket.IO emission
+      const response = await axiosInstance.post(`/api/agent/chats/${chatId}/messages`, {
         content: messageToSend
       });
 
-      // Add message to local state immediately for better UX
-      const newMessage: ChatMessage = {
-        id: `temp-${Date.now()}`,
-        content: messageToSend,
-        role: 'agent',
-        createdAt: new Date().toISOString()
-      };
-      
-      setChatHistory(prev => [...prev, newMessage]);
+      // Don't add message to local state immediately - let Socket.IO handle it
+      // This prevents duplication since the API endpoint emits the Socket.IO event
       
     } catch (error: any) {
       console.error('Error sending message:', error);
@@ -360,12 +354,20 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
                     ? 'bg-primary text-primary-foreground'
                     : msg.role === 'assistant'
                     ? 'bg-gray-100 text-gray-900'
+                    : msg.role === 'system'
+                    ? 'bg-orange-100 text-orange-900 border border-orange-200'
                     : 'bg-blue-100 text-blue-900'
                 }`}
               >
                 <div className="text-sm">{msg.content}</div>
-                <div className="text-xs opacity-70 mt-1">
-                  {format(new Date(msg.createdAt), 'HH:mm')}
+                <div className="text-xs opacity-70 mt-1 flex items-center justify-between">
+                  <span>{format(new Date(msg.createdAt), 'HH:mm')}</span>
+                  {msg.role === 'assistant' && (
+                    <span className="text-xs bg-gray-200 text-gray-600 px-1 rounded">AI</span>
+                  )}
+                  {msg.role === 'agent' && (
+                    <span className="text-xs bg-primary/20 text-primary px-1 rounded">Agent</span>
+                  )}
                 </div>
               </div>
             </div>

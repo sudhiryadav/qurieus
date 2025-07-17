@@ -7,6 +7,7 @@ import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import axiosInstance from "@/lib/axios";
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
+import { useRouter } from "next/navigation";
 
 interface DashboardData {
   totalQueries: number;
@@ -33,6 +34,14 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  // Redirect agents to agent dashboard
+  useEffect(() => {
+    if (session?.user?.role === "AGENT") {
+      router.push("/agent/dashboard");
+    }
+  }, [session?.user?.role, router]);
 
   const fetchDashboardData = useCallback(async () => {
     if (session?.user?.role === "AGENT") return;

@@ -4,6 +4,7 @@ import { prisma } from "@/utils/prismaDB";
 import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
 import { errorResponse } from "@/utils/responser";
 import { sendEscalationNotificationToUser, sendEscalationNotificationToAgents } from "@/lib/email";
+import { handleUserDisconnect } from "@/lib/agentChatRecovery";
 
 
 // Rate Limiting Setup
@@ -798,7 +799,186 @@ export async function POST(request: Request) {
     });
     // --- END NEW ---
 
-    // --- PRIORITY: Check for user intent escalation BEFORE making API call ---
+    // --- PRIORITY: Check for existing agent chat FIRST ---
+    const existingAgentChat = await prisma.agentChat.findFirst({
+      where: {
+        conversation: {
+          visitorId: effectiveVisitorId,
+          userId: apiKey
+        },
+        status: {
+          in: ['PENDING', 'ACTIVE', 'ON_HOLD']
+        }
+      },
+      include: {
+        agent: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+
+    // If there's an active agent chat, route message to agent instead of AI
+    if (existingAgentChat) {
+      logger.info("Query API: Active agent chat found, routing message to agent", { 
+        chatId: chatConversation.id,
+        agentId: existingAgentChat.agentId,
+        message: message.substring(0, 100)
+      });
+      
+      // Check if user is requesting a new topic
+      const lowerMessage = message.toLowerCase();
+      const newTopicKeywords = ['new topic', 'start new', 'new conversation', 'fresh start', 'different topic'];
+      const isRequestingNewTopic = newTopicKeywords.some(keyword => lowerMessage.includes(keyword));
+      
+      if (isRequestingNewTopic) {
+        // Close the existing agent chat to allow a new conversation
+        await prisma.agentChat.update({
+          where: { id: existingAgentChat.id },
+          data: { status: 'CLOSED' }
+        });
+        
+        const newTopicMessage = "I've closed your previous conversation. You can now start a new topic. How can I help you today?";
+        
+        // Store the message as assistant response
+        await prisma.chatMessage.create({
+          data: {
+            conversationId: chatConversation.id,
+            content: newTopicMessage,
+            role: 'assistant',
+            createdAt: new Date(),
+          },
+        });
+
+        // Update conversation stats
+        await prisma.chatConversation.update({
+          where: { id: chatConversation.id },
+          data: {
+            totalMessages: { increment: 2 },
+            lastSeen: new Date(),
+          },
+        });
+
+        // Track analytics
+        const responseTime = Date.now() - startTime;
+        await trackAnalytics({
+          apiKey,
+          message,
+          response: newTopicMessage,
+          responseTime,
+          visitorId: effectiveVisitorId,
+          success: true,
+          error: null,
+          request: request,
+          startTime,
+        });
+
+        // Return new topic response
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            const responseData = {
+              response: newTopicMessage,
+              sources: [],
+              done: true
+            };
+            
+            const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+            controller.enqueue(encoder.encode(sseData));
+            controller.close();
+          }
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "x-conversation-id": chatConversation.id,
+          },
+        });
+      }
+      
+      // Store user message
+      await prisma.chatMessage.create({
+        data: {
+          conversationId: chatConversation.id,
+          content: message,
+          role: 'user',
+          createdAt: new Date(),
+        },
+      });
+
+      // Update conversation stats
+      await prisma.chatConversation.update({
+        where: { id: chatConversation.id },
+        data: {
+          totalMessages: { increment: 1 },
+          lastSeen: new Date(),
+        },
+      });
+
+      // Emit Socket.IO event to notify agent of new message
+      try {
+        const io = (global as any).io;
+        if (io) {
+          io.to(chatConversation.id).emit('chat_message', {
+            id: `temp-${Date.now()}`,
+            content: message,
+            role: 'user',
+            createdAt: new Date().toISOString(),
+            conversationId: chatConversation.id
+          });
+        }
+      } catch (socketError) {
+        logger.warn("Query API: Failed to emit user message Socket.IO event", { 
+          error: socketError instanceof Error ? socketError.message : String(socketError)
+        });
+      }
+
+      // Return acknowledgment that message was sent to agent (only for first message)
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          // Only show system message if this is the first message after escalation
+          const shouldShowSystemMessage = existingAgentChat.status === 'PENDING';
+          
+          if (shouldShowSystemMessage) {
+            const responseData = {
+              response: `Your message has been sent to ${existingAgentChat.agent?.name || 'our support team'}. They will respond shortly.`,
+              sources: [],
+              done: true,
+              routedToAgent: true
+            };
+            
+            const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+            controller.enqueue(encoder.encode(sseData));
+          } else {
+            // For subsequent messages, just acknowledge silently
+            const responseData = {
+              response: "",
+              sources: [],
+              done: true,
+              routedToAgent: true
+            };
+            
+            const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+            controller.enqueue(encoder.encode(sseData));
+          }
+          controller.close();
+        }
+      });
+
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/plain",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+          "x-conversation-id": chatConversation.id,
+        },
+      });
+    }
+
+    // --- Check for user intent escalation for NEW conversations ---
     const lowerMessage = message.toLowerCase();
     const intentWords = ['support', 'agent', 'human', 'person', 'representative', 'someone', 'team', 'staff', 'help'];
     const actionWords = ['talk', 'speak', 'contact', 'connect', 'transfer', 'escalate', 'hand', 'get', 'put', 'call', 'reach', 'find'];
@@ -834,160 +1014,6 @@ export async function POST(request: Request) {
         actionWordsFound: actionWords.filter(word => lowerMessage.includes(word)),
         requestWordsFound: requestWords.filter(word => lowerMessage.includes(word))
       }, { userId });
-
-      // Check if there's already an active agent chat for this visitor
-      const existingAgentChat = await prisma.agentChat.findFirst({
-        where: {
-          conversation: {
-            visitorId: effectiveVisitorId,
-            userId: apiKey
-          },
-          status: {
-            in: ['PENDING', 'ACTIVE', 'ON_HOLD']
-          }
-        },
-        include: {
-          agent: {
-            select: { name: true, email: true }
-          }
-        }
-      });
-
-      if (existingAgentChat) {
-        // Check if user is requesting a new topic
-        const lowerMessage = message.toLowerCase();
-        const newTopicKeywords = ['new topic', 'start new', 'new conversation', 'fresh start', 'different topic'];
-        const isRequestingNewTopic = newTopicKeywords.some(keyword => lowerMessage.includes(keyword));
-        
-        if (isRequestingNewTopic) {
-          // Close the existing agent chat to allow a new conversation
-          await prisma.agentChat.update({
-            where: { id: existingAgentChat.id },
-            data: { status: 'CLOSED' }
-          });
-          
-          const newTopicMessage = "I've closed your previous conversation. You can now start a new topic. How can I help you today?";
-          
-          // Store the message as assistant response
-          await prisma.chatMessage.create({
-            data: {
-              conversationId: chatConversation.id,
-              content: newTopicMessage,
-              role: 'assistant',
-              createdAt: new Date(),
-            },
-          });
-
-          // Update conversation stats
-          await prisma.chatConversation.update({
-            where: { id: chatConversation.id },
-            data: {
-              totalMessages: { increment: 2 },
-              lastSeen: new Date(),
-            },
-          });
-
-          // Track analytics
-          const responseTime = Date.now() - startTime;
-          await trackAnalytics({
-            apiKey,
-            message,
-            response: newTopicMessage,
-            responseTime,
-            visitorId: effectiveVisitorId,
-            success: true,
-            error: null,
-            request: request,
-            startTime,
-          });
-
-          // Return new topic response
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream({
-            start(controller) {
-              const responseData = {
-                response: newTopicMessage,
-                sources: [],
-                done: true
-              };
-              
-              const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
-              controller.enqueue(encoder.encode(sseData));
-              controller.close();
-            }
-          });
-
-          return new Response(stream, {
-            headers: {
-              "Content-Type": "text/plain",
-              "Cache-Control": "no-cache",
-              "Connection": "keep-alive",
-              "x-conversation-id": chatConversation.id,
-            },
-          });
-        }
-        
-        // User already has an active agent chat - inform them
-        const existingChatMessage = `I see you already have an active conversation with ${existingAgentChat.agent?.name || 'our support team'}. They will continue to assist you with your request. If you need to start a new topic, please let me know.`;
-        
-        // Store the message as assistant response
-        await prisma.chatMessage.create({
-          data: {
-            conversationId: chatConversation.id,
-            content: existingChatMessage,
-            role: 'assistant',
-            createdAt: new Date(),
-          },
-        });
-
-        // Update conversation stats
-        await prisma.chatConversation.update({
-          where: { id: chatConversation.id },
-          data: {
-            totalMessages: { increment: 2 },
-            lastSeen: new Date(),
-          },
-        });
-
-        // Track analytics
-        const responseTime = Date.now() - startTime;
-        await trackAnalytics({
-          apiKey,
-          message,
-          response: existingChatMessage,
-          responseTime,
-          visitorId: effectiveVisitorId,
-          success: true,
-          error: null,
-          request: request,
-          startTime,
-        });
-
-        // Return existing chat response
-        const encoder = new TextEncoder();
-        const stream = new ReadableStream({
-          start(controller) {
-            const responseData = {
-              response: existingChatMessage,
-              sources: [],
-              done: true
-            };
-            
-            const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
-            controller.enqueue(encoder.encode(sseData));
-            controller.close();
-          }
-        });
-
-        return new Response(stream, {
-          headers: {
-            "Content-Type": "text/plain",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "x-conversation-id": chatConversation.id,
-          },
-        });
-      }
 
       // Check if there's a resolved/closed agent chat that we should allow to be re-escalated
       const previousResolvedChat = await prisma.agentChat.findFirst({
@@ -1099,8 +1125,9 @@ export async function POST(request: Request) {
     }
 
     // Query based on environment configuration
-    logger.info("Query API: Executing query", { 
-      apiKey
+    logger.info("Query API: No active agent chat found, proceeding with AI query", { 
+      apiKey,
+      message: message.substring(0, 100)
     }, { userId });
 
     let response;
@@ -1256,6 +1283,7 @@ export async function POST(request: Request) {
         "Content-Type": "text/plain", // Changed to text/plain for SSE
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
+        "x-conversation-id": chatConversation.id,
       },
     });
   } catch (error: any) {

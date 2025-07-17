@@ -1,28 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useSocket, useAgentStatus } from '@/hooks/useSocket';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  MessageSquare, 
-  Users, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Wifi, 
-  WifiOff,
-  Settings
-} from 'lucide-react';
 import AgentChatList from '@/components/Agent/AgentChatList';
 import AgentChatWindow from '@/components/Agent/AgentChatWindow';
 import AgentStatusToggle from '@/components/Agent/AgentStatusToggle';
-import { toast } from 'react-toastify';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAgentStatus, useSocket } from '@/hooks/useSocket';
 import axiosInstance from '@/lib/axios';
+import {
+  LogOut,
+  Settings,
+  User
+} from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 
 interface AgentChat {
   id: string;
@@ -80,6 +83,9 @@ export default function AgentDashboard() {
       try {
         await axiosInstance.get('/api/agent/verify');
         setLoading(false);
+        
+        // Set agent status to online and available by default when they first load the dashboard
+        await setDefaultAgentStatus();
       } catch (error) {
         console.error('Error verifying agent role:', error);
         router.push('/dashboard');
@@ -89,6 +95,25 @@ export default function AgentDashboard() {
 
     checkAgentRole();
   }, [session, status, router]);
+
+  // Set default agent status (online and available)
+  const setDefaultAgentStatus = async () => {
+    try {
+      const response = await axiosInstance.put('/api/agent/status', {
+        isOnline: true,
+        isAvailable: true
+      });
+      
+      if (response.data.success) {
+        setIsOnline(true);
+        setIsAvailable(true);
+        console.log('Agent status set to online and available');
+      }
+    } catch (error) {
+      console.error('Error setting default agent status:', error);
+      // Don't show error toast as this is not critical for dashboard functionality
+    }
+  };
 
   // Load assigned chats
   const loadAssignedChats = async () => {
@@ -143,6 +168,21 @@ export default function AgentDashboard() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      // Set agent status to offline before logging out
+      await axiosInstance.put('/api/agent/status', { isOnline: false, isAvailable: false });
+      toast.success('Logged out successfully');
+      // Sign out from NextAuth
+      await signOut({ callbackUrl: '/auth/signin' });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Still sign out even if status update fails
+      await signOut({ callbackUrl: '/auth/signin' });
     }
   };
 
@@ -205,7 +245,7 @@ export default function AgentDashboard() {
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden p-0">
                 <Tabs defaultValue="pending" className="w-full h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-3 flex-shrink-0 mx-4 mt-4">
+                  <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
                     <TabsTrigger value="pending">
                       Pending ({pendingChats.length})
                     </TabsTrigger>

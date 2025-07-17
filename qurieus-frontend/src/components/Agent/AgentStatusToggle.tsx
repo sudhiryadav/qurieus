@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { 
   Wifi, 
@@ -15,8 +16,12 @@ import {
   CheckCircle, 
   XCircle, 
   Clock,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
+import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import axiosInstance from '@/lib/axios';
 
 interface AgentStatusToggleProps {
   isOnline: boolean;
@@ -31,6 +36,7 @@ export default function AgentStatusToggle({
 }: AgentStatusToggleProps) {
   const [localOnline, setLocalOnline] = useState(isOnline);
   const [localAvailable, setLocalAvailable] = useState(isAvailable);
+  const router = useRouter();
 
   useEffect(() => {
     setLocalOnline(isOnline);
@@ -47,6 +53,43 @@ export default function AgentStatusToggle({
     const newAvailable = !localAvailable;
     setLocalAvailable(newAvailable);
     onStatusChange(localOnline, newAvailable);
+  };
+
+  const handleLogout = async () => {
+    console.log('Logout initiated...');
+    try {
+      // Set agent status to offline before logging out
+      console.log('Setting agent status to offline...');
+      await axiosInstance.put('/api/agent/status', {
+        isOnline: false,
+        isAvailable: false
+      });
+      console.log('Agent status updated successfully');
+      
+      // Sign out and redirect to frontend
+      console.log('Signing out...');
+      const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+      await signOut({ 
+        callbackUrl: frontendUrl,
+        redirect: true 
+      });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Still sign out even if status update fails
+      console.log('Attempting fallback logout...');
+      try {
+        const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+        await signOut({ 
+          callbackUrl: frontendUrl,
+          redirect: true 
+        });
+      } catch (fallbackError) {
+        console.error('Fallback logout also failed:', fallbackError);
+        // Force redirect as last resort
+        const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+        window.location.href = frontendUrl;
+      }
+    }
   };
 
   const getStatusText = () => {
@@ -100,6 +143,15 @@ export default function AgentStatusToggle({
             <div className="flex items-center space-x-2 w-full">
               {localAvailable ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
               <span>{localAvailable ? 'Set Busy' : 'Set Available'}</span>
+            </div>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem onClick={handleLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+            <div className="flex items-center space-x-2 w-full">
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </div>
           </DropdownMenuItem>
         </DropdownMenuContent>

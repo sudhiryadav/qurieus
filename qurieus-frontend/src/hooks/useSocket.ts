@@ -113,7 +113,19 @@ export const useChatMessages = (chatId?: string) => {
 
     const unsubscribe = onChatMessage((message) => {
       if (message.conversationId === chatId) {
-        setMessages((prev: any[]) => [...prev, message]);
+        setMessages((prev: any[]) => {
+          // Check if message already exists by ID or content + timestamp
+          const exists = prev.some(existingMsg => 
+            existingMsg.id === message.id || 
+            (existingMsg.content === message.content && 
+             Math.abs(new Date(existingMsg.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000) // Within 5 seconds
+          );
+          
+          if (!exists) {
+            return [...prev, message];
+          }
+          return prev;
+        });
       }
     });
 

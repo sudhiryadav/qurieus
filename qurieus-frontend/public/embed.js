@@ -40,6 +40,58 @@
   // Socket.IO connection for real-time messages
   let socket = null;
   let currentChatId = null;
+  let visitorId = null;
+
+  // Handle user disconnect
+  function handleUserDisconnect() {
+    if (currentChatId && visitorId) {
+      console.log('🔌 [EMBED] User disconnecting, cleaning up chat assignment', { 
+        currentChatId, 
+        visitorId 
+      });
+      
+      // Call disconnect API
+      fetch(`${widgetConfig.baseUrl}/api/user/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId: currentChatId,
+          visitorId: visitorId
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log('🔌 [EMBED] Disconnect cleanup successful');
+        } else {
+          console.warn('🔌 [EMBED] Disconnect cleanup failed:', response.status);
+        }
+      }).catch(error => {
+        console.error('🔌 [EMBED] Disconnect cleanup error:', error);
+      });
+    }
+  }
+
+  // Add disconnect event listeners
+  function addDisconnectListeners() {
+    // Handle page unload/close
+    window.addEventListener('beforeunload', handleUserDisconnect);
+    
+    // Handle tab visibility change (user switches tabs or minimizes)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        // User might be leaving, but don't disconnect immediately
+        // Just log for now
+        console.log('🔌 [EMBED] Page visibility changed to hidden');
+      }
+    });
+    
+    // Handle browser back/forward
+    window.addEventListener('popstate', () => {
+      console.log('🔌 [EMBED] Navigation detected');
+      // Don't disconnect on navigation, just log
+    });
+  }
 
   // Initialize Socket.IO connection
   function initSocket() {
@@ -73,16 +125,38 @@
       // Listen for real-time chat messages
       socket.on('chat_message', (message) => {
         console.log('🔌 [EMBED] Received real-time message:', message);
+        console.log('🔌 [EMBED] Current chat ID:', currentChatId);
+        console.log('🔌 [EMBED] Message conversation ID:', message.conversationId);
         
-        // Add message to state
-        widgetState.messages = [...widgetState.messages, {
-          role: message.role,
-          content: message.content,
-          timestamp: message.createdAt || new Date().toISOString()
-        }];
+        // Only process messages for the current chat
+        if (message.conversationId === currentChatId) {
+          console.log('🔌 [EMBED] Processing message for current chat');
+          
+          // Check if this is a user message that was already added locally
+          const isUserMessage = message.role === 'user';
+          const isDuplicateUserMessage = isUserMessage && widgetState.messages.some(msg => 
+            msg.role === 'user' && 
+            msg.content === message.content && 
+            Math.abs(new Date(msg.timestamp).getTime() - new Date(message.createdAt || Date.now()).getTime()) < 5000
+          );
+          
+          if (isDuplicateUserMessage) {
+            console.log('🔌 [EMBED] Skipping duplicate user message');
+            return;
+          }
+          
+          // Add message to state
+          widgetState.messages = [...widgetState.messages, {
+            role: message.role,
+            content: message.content,
+            timestamp: message.createdAt || new Date().toISOString()
+          }];
 
-        // Add message to UI
-        addMessageToUI(message.role, message.content, message.createdAt || new Date().toISOString());
+          // Add message to UI
+          addMessageToUI(message.role, message.content, message.createdAt || new Date().toISOString());
+        } else {
+          console.log('🔌 [EMBED] Ignoring message for different chat');
+        }
       });
       
       return socket;
@@ -94,6 +168,10 @@
 
   // Join chat room
   function joinChatRoom(chatId, visitorId) {
+    console.log('🔌 [EMBED] joinChatRoom called with:', { chatId, visitorId });
+    console.log('🔌 [EMBED] Socket available:', !!socket);
+    console.log('🔌 [EMBED] Socket connected:', socket?.connected);
+    
     if (socket && chatId) {
       socket.emit('join', { 
         chatId, 
@@ -104,6 +182,8 @@
       console.log('🔌 [EMBED] Joined chat room:', chatId);
     } else if (!socket) {
       console.warn('🔌 [EMBED] Socket not available, cannot join chat room');
+    } else if (!chatId) {
+      console.warn('🔌 [EMBED] No chat ID provided, cannot join chat room');
     }
   }
 
@@ -142,6 +222,8 @@
         ? (widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR)
         : role === 'agent'
         ? '#10b981' // Green for agent
+        : role === 'system'
+        ? '#f59e0b' // Orange for system messages
         : (widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6')};
     `;
     
@@ -151,6 +233,9 @@
       icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
     } else if (role === 'agent') {
       icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+    } else if (role === 'system') {
+      // System message icon (info icon)
+      icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xOCAxMEE4IDggMCAxIDEgMiAxMGE4IDggMCAwIDEgMTYgMHptLTctNGEyIDIgMCAxMS00IDAgMiAyIDAgMCAxIDQgMHptMCA2YTIgMiAwIDAwLTIgMmgxYTIgMiAwIDAwMC00aC0xYTIgMiAwIDAwLTIgMnYxYTIgMiAwIDAwMiAyaDFhMiAyIDAgMCAwIDItMnYtMWEyIDIgMCAwIDAtMi0yeiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==';
     } else {
       icon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
     }
@@ -183,25 +268,61 @@
         ? (widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR)
         : role === 'agent'
         ? '#10b981' // Green for agent
+        : role === 'system'
+        ? '#f59e0b' // Orange for system messages
         : (widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6')};
-      color: ${role === 'user' || role === 'agent' ? 'white' : (widgetConfig.theme === 'dark' ? 'white' : '#111827')};
+      color: ${role === 'user' || role === 'agent' || role === 'system' ? 'white' : (widgetConfig.theme === 'dark' ? 'white' : '#111827')};
       font-size: 14px;
       line-height: 1.4;
       word-wrap: break-word;
       text-align: left;
       max-width: 100%;
+      ${role === 'system' ? 'font-style: italic;' : ''}
     `;
     
-    // Add timestamp
+    // Add timestamp and role label
     const timestampElement = document.createElement('div');
     const messageTime = timestamp ? new Date(timestamp) : new Date();
-    timestampElement.textContent = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     timestampElement.style.cssText = `
       font-size: 11px;
       color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
       align-self: ${role === 'user' ? 'flex-end' : 'flex-start'};
       margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     `;
+    
+    const timeSpan = document.createElement('span');
+    timeSpan.textContent = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    timestampElement.appendChild(timeSpan);
+    
+    // Add role label for non-user messages
+    if (role !== 'user') {
+      const roleLabel = document.createElement('span');
+      roleLabel.style.cssText = `
+        font-size: 10px;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-weight: 500;
+      `;
+      
+      if (role === 'agent') {
+        roleLabel.textContent = 'Agent';
+        roleLabel.style.backgroundColor = '#10b981';
+        roleLabel.style.color = 'white';
+      } else if (role === 'assistant') {
+        roleLabel.textContent = 'AI';
+        roleLabel.style.backgroundColor = widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6';
+        roleLabel.style.color = widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280';
+      } else if (role === 'system') {
+        roleLabel.textContent = 'System';
+        roleLabel.style.backgroundColor = '#f59e0b';
+        roleLabel.style.color = 'white';
+      }
+      
+      timestampElement.appendChild(roleLabel);
+    }
     
     messageContentContainer.appendChild(messageBubble);
     messageContentContainer.appendChild(timestampElement);
@@ -1616,7 +1737,7 @@
                     peekingIndicator.remove();
                   }
                   
-                  // Display the complete message - always display if we have any content
+                  // Display the complete message - only if we have content
                   if (assistantMessage && assistantMessage.trim()) {
                     console.log('🔍 [EMBED] Displaying message via addMessageToUI');
                     
@@ -1629,16 +1750,30 @@
                     console.log('🔍 [EMBED] needsAgentButtons:', needsAgentButtons);
                     console.log('🔍 [EMBED] assistantMessage includes "connect with a human agent":', assistantMessage.toLowerCase().includes('connect with a human agent'));
                     console.log('🔍 [EMBED] data.showAgentButtons:', data.showAgentButtons);
+                    console.log('🔍 [EMBED] data.routedToAgent:', data.routedToAgent);
                     
-                    addMessageToUI('assistant', assistantMessage, new Date().toISOString(), needsAgentButtons);
+                    // Determine message type for visual distinction
+                    let messageRole = 'assistant';
+                    let showAgentButtons = needsAgentButtons;
+                    
+                    if (data.routedToAgent === true) {
+                      // This is a system message indicating message was routed to agent
+                      messageRole = 'system';
+                      showAgentButtons = false;
+                    }
+                    
+                    addMessageToUI(messageRole, assistantMessage, new Date().toISOString(), showAgentButtons);
                     
                     // Final update to state
                     console.log('🔍 [EMBED] Updating widgetState.messages');
                     widgetState.messages = [...widgetState.messages, { 
-                      role: 'assistant', 
+                      role: messageRole, 
                       content: assistantMessage, 
                       timestamp: new Date().toISOString() 
                     }];
+                  } else if (data.routedToAgent === true) {
+                    // Handle case where message was routed to agent but no system message was provided
+                    console.log('🔍 [EMBED] Message routed to agent, no system message to display');
                   } else {
                     console.log('🔍 [EMBED] NOT displaying message - condition failed');
                     console.log('🔍 [EMBED] assistantMessage:', assistantMessage);
@@ -1647,10 +1782,21 @@
                   
                   // Join chat room for real-time updates if we have a visitor ID
                   const visitorId = localStorage.getItem('qurieus_visitor_id');
-                  if (visitorId && !currentChatId) {
+                  if (visitorId) {
                     // Try to get conversation ID from the response headers or use visitor ID
                     const conversationId = response.headers.get('x-conversation-id') || visitorId;
                     localStorage.setItem('qurieus_conversation_id', conversationId);
+                    
+                    // Update global variables for disconnect handling
+                    currentChatId = conversationId;
+                    
+                    // Add disconnect listeners if not already added
+                    addDisconnectListeners();
+                    
+                    // Join chat room if not already joined
+                    if (!socket || !socket.connected) {
+                      initSocket();
+                    }
                     joinChatRoom(conversationId, visitorId);
                   }
                   break;
@@ -1872,6 +2018,15 @@
   function ChatWidget(config) {
     widgetConfig = config;
     widgetContainer = document.getElementById('qurieus-chat-widget');
+    
+    // Initialize conversation tracking from localStorage
+    currentChatId = localStorage.getItem('qurieus_conversation_id');
+    visitorId = localStorage.getItem('qurieus_visitor_id');
+    
+    // Add disconnect listeners if we have a conversation
+    if (currentChatId && visitorId) {
+      addDisconnectListeners();
+    }
     
     // Initialize with initial message
     setWidgetState({

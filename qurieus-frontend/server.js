@@ -41,9 +41,11 @@ app.prepare().then(() => {
 
     // Join chat room
     socket.on('join', ({ chatId, userId, agentId, role }) => {
+      console.log('Socket.IO: Join request received:', { chatId, userId, agentId, role });
       if (chatId) {
         socket.join(chatId);
         console.log(`${role} joined chat room:`, chatId);
+        console.log('Socket.IO: Room members:', io.sockets.adapter.rooms.get(chatId)?.size || 0);
       }
       if (userId) userSockets.set(userId, socket.id);
       if (agentId) userSockets.set(agentId, socket.id);

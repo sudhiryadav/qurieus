@@ -33,9 +33,14 @@ export default function SignIn({
   // Redirect if already authenticated
   useEffect(() => {
     if (status === "authenticated") {
-      router.push(callbackUrl);
+      // Redirect based on user role
+      if (session?.user?.role === "AGENT") {
+        router.push("/agent/dashboard");
+      } else {
+        router.push(callbackUrl);
+      }
     }
-  }, [status, router, callbackUrl]);
+  }, [status, router, callbackUrl, session?.user?.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +59,12 @@ export default function SignIn({
         if (onSuccess) {
           onSuccess();
         } else {
-          router.push("/user/knowledge-base");
+          // Redirect based on user role
+          if (session?.user?.role === "AGENT") {
+            router.push("/agent/dashboard");
+          } else {
+            router.push("/user/knowledge-base");
+          }
         }
       }
     } catch (error: any) {

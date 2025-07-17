@@ -127,14 +127,22 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
     try {
       const io = (global as any).io;
       if (io) {
-        io.to(chatId).emit('chat_message', {
+        const messageData = {
           id: message.id,
           content: message.content,
           role: message.role,
           agentId: message.agentId,
           createdAt: message.createdAt,
           conversationId: message.conversationId
+        };
+        
+        logger.info("Agent Message API: Emitting Socket.IO event", { 
+          chatId, 
+          messageData,
+          roomMembers: io.sockets.adapter.rooms.get(chatId)?.size || 0
         });
+        
+        io.to(chatId).emit('chat_message', messageData);
 
         // If this is the first agent message, emit status update
         if (agentChat.status === "PENDING") {
@@ -143,6 +151,8 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
             meta: { agentId, agentName: session!.user!.name }
           });
         }
+      } else {
+        logger.warn("Agent Message API: Socket.IO not available");
       }
     } catch (socketError) {
       logger.warn("Agent Message API: Failed to emit Socket.IO event", { 

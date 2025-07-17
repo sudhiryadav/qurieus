@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { RequireRoles, invalidateUserCache } from "@/utils/roleGuardsDecorator";
 import { UserRole } from "@prisma/client";
 import { ensureAgentRecord } from "@/utils/agentUtils";
+import { fixAgentChatCounts } from "@/lib/agentChatRecovery";
 
 // GET /api/agent/status - Get current agent status
 export const GET = RequireRoles([UserRole.AGENT])(async (request: Request) => {
@@ -21,6 +22,17 @@ export const GET = RequireRoles([UserRole.AGENT])(async (request: Request) => {
         error: "Failed to ensure agent record exists", 
         status: 500 
       });
+    }
+
+    // Run automatic chat count recovery (this will fix any stale counts)
+    try {
+      await fixAgentChatCounts();
+    } catch (recoveryError) {
+      logger.warn("Agent Status API: Chat count recovery failed", { 
+        userId,
+        error: recoveryError instanceof Error ? recoveryError.message : String(recoveryError)
+      });
+      // Don't fail the request if recovery fails
     }
 
     // Get current agent status
