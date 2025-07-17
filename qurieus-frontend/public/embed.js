@@ -45,10 +45,7 @@
   // Handle user disconnect
   function handleUserDisconnect() {
     if (currentChatId && visitorId) {
-      console.log('🔌 [EMBED] User disconnecting, cleaning up chat assignment', { 
-        currentChatId, 
-        visitorId 
-      });
+      // User disconnecting, cleaning up chat assignment
       
       // Call disconnect API
       fetch(`${widgetConfig.baseUrl}/api/user/disconnect`, {
@@ -62,12 +59,12 @@
         })
       }).then(response => {
         if (response.ok) {
-          console.log('🔌 [EMBED] Disconnect cleanup successful');
+          // Disconnect cleanup successful
         } else {
-          console.warn('🔌 [EMBED] Disconnect cleanup failed:', response.status);
+          // Disconnect cleanup failed
         }
       }).catch(error => {
-        console.error('🔌 [EMBED] Disconnect cleanup error:', error);
+        // Disconnect cleanup error
       });
     }
   }
@@ -81,15 +78,12 @@
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         // User might be leaving, but don't disconnect immediately
-        // Just log for now
-        console.log('🔌 [EMBED] Page visibility changed to hidden');
       }
     });
     
     // Handle browser back/forward
     window.addEventListener('popstate', () => {
-      console.log('🔌 [EMBED] Navigation detected');
-      // Don't disconnect on navigation, just log
+      // Navigation detected
     });
   }
 
@@ -99,7 +93,6 @@
     
     // Check if Socket.IO is loaded
     if (typeof io === 'undefined') {
-      console.log('🔌 [EMBED] Socket.IO not available - real-time features disabled');
       return null;
     }
     
@@ -111,27 +104,21 @@
       });
       
       socket.on('connect', () => {
-        console.log('🔌 [EMBED] Socket.IO connected:', socket.id);
+        // Socket.IO connected
       });
 
       socket.on('disconnect', () => {
-        console.log('🔌 [EMBED] Socket.IO disconnected');
+        // Socket.IO disconnected
       });
 
       socket.on('connect_error', (error) => {
-        console.error('🔌 [EMBED] Socket.IO connection error:', error);
+        // Socket.IO connection error
       });
 
       // Listen for real-time chat messages
       socket.on('chat_message', (message) => {
-        console.log('🔌 [EMBED] Received real-time message:', message);
-        console.log('🔌 [EMBED] Current chat ID:', currentChatId);
-        console.log('🔌 [EMBED] Message conversation ID:', message.conversationId);
-        
         // Only process messages for the current chat
         if (message.conversationId === currentChatId) {
-          console.log('🔌 [EMBED] Processing message for current chat');
-          
           // Check if this is a user message that was already added locally
           const isUserMessage = message.role === 'user';
           const isDuplicateUserMessage = isUserMessage && widgetState.messages.some(msg => 
@@ -141,7 +128,6 @@
           );
           
           if (isDuplicateUserMessage) {
-            console.log('🔌 [EMBED] Skipping duplicate user message');
             return;
           }
           
@@ -154,24 +140,17 @@
 
           // Add message to UI
           addMessageToUI(message.role, message.content, message.createdAt || new Date().toISOString());
-        } else {
-          console.log('🔌 [EMBED] Ignoring message for different chat');
         }
       });
       
       return socket;
     } catch (error) {
-      console.error('🔌 [EMBED] Failed to initialize Socket.IO:', error);
       return null;
     }
   }
 
   // Join chat room
   function joinChatRoom(chatId, visitorId) {
-    console.log('🔌 [EMBED] joinChatRoom called with:', { chatId, visitorId });
-    console.log('🔌 [EMBED] Socket available:', !!socket);
-    console.log('🔌 [EMBED] Socket connected:', socket?.connected);
-    
     if (socket && chatId) {
       socket.emit('join', { 
         chatId, 
@@ -179,25 +158,15 @@
         role: 'user' 
       });
       currentChatId = chatId;
-      console.log('🔌 [EMBED] Joined chat room:', chatId);
-    } else if (!socket) {
-      console.warn('🔌 [EMBED] Socket not available, cannot join chat room');
-    } else if (!chatId) {
-      console.warn('🔌 [EMBED] No chat ID provided, cannot join chat room');
     }
   }
 
   // Add message to UI without re-rendering everything
   function addMessageToUI(role, content, timestamp, showAgentButtons = false) {
-    console.log('🔍 [EMBED] addMessageToUI called with:', { role, content, timestamp, showAgentButtons });
-    
     const messagesContainer = document.querySelector('.qurieus-chat-messages');
     if (!messagesContainer) {
-      console.log('🔍 [EMBED] messagesContainer not found!');
       return;
     }
-    
-    console.log('🔍 [EMBED] Found messagesContainer, creating message element');
 
     const messageContainer = document.createElement('div');
     messageContainer.style.cssText = `
@@ -332,10 +301,7 @@
     messagesContainer.appendChild(messageContainer);
     
     // Add agent action buttons if needed
-    console.log('🔍 [EMBED] showAgentButtons parameter:', showAgentButtons);
-    console.log('🔍 [EMBED] role parameter:', role);
     if (showAgentButtons && role === 'assistant') {
-      console.log('🔍 [EMBED] Adding agent action buttons');
       
       const buttonsContainer = document.createElement('div');
       buttonsContainer.style.cssText = `
@@ -364,7 +330,6 @@
       connectAgentBtn.onmouseenter = () => connectAgentBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? '#7c3aed' : '#7c3aed';
       connectAgentBtn.onmouseleave = () => connectAgentBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR;
       connectAgentBtn.onclick = () => {
-        console.log('🔍 [EMBED] Connect with Agent clicked');
         const userMessage = 'I would like to speak with a human agent to get help with my question.';
         widgetState.inputMessage = userMessage;
         // Trigger form submission
@@ -393,24 +358,17 @@
       tryDifferentBtn.onmouseenter = () => tryDifferentBtn.style.backgroundColor = '#4b5563';
       tryDifferentBtn.onmouseleave = () => tryDifferentBtn.style.backgroundColor = '#6b7280';
       tryDifferentBtn.onclick = () => {
-        console.log('🔍 [EMBED] Try Different Question clicked');
         // Focus on the textarea for the user to type a new question
         const inputField = document.querySelector('#qurieus-chat-widget textarea');
         if (inputField) {
           inputField.focus();
-          console.log('🔍 [EMBED] Textarea focused successfully');
-        } else {
-          console.log('🔍 [EMBED] Textarea not found');
         }
       };
       
       buttonsContainer.appendChild(connectAgentBtn);
       buttonsContainer.appendChild(tryDifferentBtn);
       messageContentContainer.appendChild(buttonsContainer);
-      console.log('🔍 [EMBED] Agent buttons added to DOM');
     }
-    
-    console.log('🔍 [EMBED] Message added to UI successfully');
     
     // Auto-scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -440,11 +398,10 @@
     const script = document.createElement('script');
     script.src = 'https://cdn.socket.io/4.7.2/socket.io.min.js';
     script.onload = () => {
-      console.log('🔌 [EMBED] Socket.IO library loaded');
       socketIOLoaded = true;
     };
     script.onerror = () => {
-      console.warn('🔌 [EMBED] Failed to load Socket.IO library - real-time features disabled');
+      // Failed to load Socket.IO library - real-time features disabled
     };
     document.head.appendChild(script);
   } else {
@@ -949,7 +906,6 @@
         text: 'Connect to Agent',
         icon: '👨‍💼',
         action: () => {
-          console.log('🔍 [EMBED] Connect to Agent clicked');
           // Add logic to connect to agent
           const userMessage = 'I would like to connect to a human agent.';
           widgetState.inputMessage = userMessage;
@@ -964,7 +920,6 @@
         text: 'Start New Chat',
         icon: '🆕',
         action: () => {
-          console.log('🔍 [EMBED] Start New Chat clicked');
           // Clear messages and start fresh
           setWidgetState({
             messages: [{ 
@@ -986,7 +941,6 @@
         text: 'Clear History',
         icon: '🗑️',
         action: () => {
-          console.log('🔍 [EMBED] Clear History clicked');
           // Clear messages but keep initial message
           setWidgetState({
             messages: [{ 
@@ -1001,7 +955,6 @@
         text: 'Download Chat',
         icon: '📥',
         action: () => {
-          console.log('🔍 [EMBED] Download Chat clicked');
           // Create chat transcript
           const transcript = widgetState.messages.map(msg => 
             `${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content}`
@@ -1657,11 +1610,6 @@
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('❌ [EMBED] Query failed:', {
-            status: response.status,
-            statusText: response.statusText,
-            errorText
-          });
           throw new Error(`Query failed: ${response.status} ${errorText}`);
         }
         
@@ -1676,8 +1624,6 @@
         let assistantMessage = '';
         let fullResponse = '';
         let chunkCount = 0;
-        
-        console.log('🔍 [EMBED] Starting to read streaming response...');
         
         while (true) {
           const { done, value } = await reader.read();
