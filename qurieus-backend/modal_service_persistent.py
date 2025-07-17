@@ -292,11 +292,21 @@ async def query_documents_endpoint(
             print(f"Connected to Qdrant: {qdrant_url}")
         except Exception as e:
             print(f"Failed to connect to Qdrant: {e}")
-            return {
-                "response": "Vector database is currently unavailable.",
-                "sources": [],
-                "done": True
-            }
+            from fastapi.responses import StreamingResponse
+            import json
+            
+            def generate_qdrant_error_stream():
+                yield f"data: {json.dumps({'response': 'Vector database is currently unavailable.', 'done': False})}\n\n"
+                yield f"data: {json.dumps({'response': '', 'sources': [], 'done': True})}\n\n"
+            
+            return StreamingResponse(
+                generate_qdrant_error_stream(),
+                media_type="text/plain",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
         
         # Generate query embedding using cached model
         embedding_start = time.time()
@@ -306,11 +316,21 @@ async def query_documents_endpoint(
             print(f"PERFLOG: Query embedding generated in {time.time() - embedding_start:.2f}s")
         except Exception as e:
             print(f"Failed to generate query embedding: {e}")
-            return {
-                "response": "Failed to process your query.",
-                "sources": [],
-                "done": True
-            }
+            from fastapi.responses import StreamingResponse
+            import json
+            
+            def generate_embedding_error_stream():
+                yield f"data: {json.dumps({'response': 'Failed to process your query.', 'done': False})}\n\n"
+                yield f"data: {json.dumps({'response': '', 'sources': [], 'done': True})}\n\n"
+            
+            return StreamingResponse(
+                generate_embedding_error_stream(),
+                media_type="text/plain",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
         
         # Search Qdrant for similar vectors with optimized parameters
         search_start = time.time()
@@ -332,11 +352,21 @@ async def query_documents_endpoint(
             
             if not search_results:
                 print("No relevant documents found in Qdrant")
-                return {
-                    "response": "No relevant documents found.",
-                    "sources": [],
-                    "done": True
-                }
+                from fastapi.responses import StreamingResponse
+                import json
+                
+                def generate_no_results_stream():
+                    yield f"data: {json.dumps({'response': 'No relevant documents found.', 'done': False})}\n\n"
+                    yield f"data: {json.dumps({'response': '', 'sources': [], 'done': True})}\n\n"
+                
+                return StreamingResponse(
+                    generate_no_results_stream(),
+                    media_type="text/plain",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                    }
+                )
             
             # Extract chunks and sources from Qdrant results
             relevant_chunks = []
@@ -356,11 +386,21 @@ async def query_documents_endpoint(
             
         except Exception as e:
             print(f"Failed to search Qdrant: {e}")
-            return {
-                "response": "Failed to search documents.",
-                "sources": [],
-                "done": True
-            }
+            from fastapi.responses import StreamingResponse
+            import json
+            
+            def generate_error_stream():
+                yield f"data: {json.dumps({'response': 'Failed to search documents.', 'done': False})}\n\n"
+                yield f"data: {json.dumps({'response': '', 'sources': [], 'done': True})}\n\n"
+            
+            return StreamingResponse(
+                generate_error_stream(),
+                media_type="text/plain",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
         
         # Generate response using the cached LLM model
         llm_start = time.time()

@@ -38,6 +38,6 @@ export default function AgentLayout({
   }
 
   return (
-    <main className="flex-1">{children}</main>
+    <main className="h-screen w-full bg-background">{children}</main>
   );
 } 

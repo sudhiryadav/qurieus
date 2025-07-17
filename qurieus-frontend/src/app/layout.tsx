@@ -30,6 +30,12 @@ export default function RootLayout({
   // Don't show footer on user layout pages
   const shouldShowFooter = !pathname?.startsWith('/user') && !pathname?.startsWith('/admin');
 
+  // Don't show header on agent pages
+  const shouldShowHeader = !pathname?.startsWith('/agent');
+
+  // Don't add padding-top on agent pages
+  const shouldAddPadding = !pathname?.startsWith('/agent');
+
   // Static values for meta tags
   const siteUrl = 'https://qurieus.com';
   const siteName = 'Qurieus';
@@ -144,8 +150,8 @@ export default function RootLayout({
               <Toast />
               <Providers>
                 <IdentityProvider>
-                  <Header />
-                  <main className="flex-1 pt-16">{children}</main>
+                  {shouldShowHeader && <Header />}
+                  <main className={`flex-1 ${shouldAddPadding ? 'pt-16' : ''}`}>{children}</main>
                 </IdentityProvider>
               </Providers>
               {shouldShowFooter && <Footer />}

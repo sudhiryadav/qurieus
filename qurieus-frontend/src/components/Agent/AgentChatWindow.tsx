@@ -17,7 +17,8 @@ import {
   Building,
   Mail,
   CheckSquare,
-  Square
+  Square,
+  Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -66,6 +67,10 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [localStatus, setLocalStatus] = useState<string | undefined>(undefined);
+  const [resolving, setResolving] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Socket.IO hooks
@@ -77,6 +82,11 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
 
   const realTimeMessages = useChatMessages(chatId);
   const { status, meta } = useChatStatus(chatId);
+
+  // Keep localStatus in sync with backend status
+  useEffect(() => {
+    setLocalStatus(status);
+  }, [status]);
 
   // Load chat history
   useEffect(() => {
@@ -90,6 +100,7 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
         });
         if (response.status === 200) {
           setChatHistory(response.data.messages || []);
+          setPreviousMessageCount(response.data.messages?.length || 0);
         }
       } catch (error) {
         console.error('Error loading chat history:', error);
@@ -119,23 +130,44 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
+    // Only auto-scroll if new messages were added (not on initial load)
+    if (chatHistory.length > previousMessageCount && previousMessageCount > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setPreviousMessageCount(chatHistory.length);
+    }
+  }, [chatHistory, previousMessageCount]);
 
   const handleSendMessage = async () => {
-    if (!message.trim() || sending) return;
+    if (!message.trim() || sending || !isConnected) return;
 
+    const messageToSend = message.trim();
+    setMessage('');
     setSending(true);
+
     try {
-      // Send via API
-      await axiosInstance.post(`/api/agent/chats/${chatId}/messages`, { 
-        content: message.trim() 
+      // Send message via Socket.IO for real-time delivery
+      await sendMessage(messageToSend);
+      
+      // Also send via API for persistence
+      await axiosInstance.post(`/api/agent/chats/${chatId}/messages`, {
+        content: messageToSend
       });
-      setMessage('');
-      toast.success('Message sent');
+
+      // Add message to local state immediately for better UX
+      const newMessage: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        content: messageToSend,
+        role: 'agent',
+        createdAt: new Date().toISOString()
+      };
+      
+      setChatHistory(prev => [...prev, newMessage]);
+      
     } catch (error: any) {
       console.error('Error sending message:', error);
       toast.error(error.response?.data?.error || 'Failed to send message');
+      // Restore message if sending failed
+      setMessage(messageToSend);
     } finally {
       setSending(false);
     }
@@ -149,14 +181,15 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
   };
 
   const handleStatusUpdate = async (newStatus: 'RESOLVED' | 'CLOSED') => {
+    if (newStatus === 'RESOLVED') setResolving(true);
+    if (newStatus === 'CLOSED') setClosing(true);
     try {
       const response = await axiosInstance.put(`/api/agent/chats/${chatId}/status`, {
         status: newStatus
       });
-      
       if (response.data.success) {
         toast.success(response.data.message);
-        // Call the callback to refresh the chat list
+        setLocalStatus(newStatus); // Update local status immediately
         if (onStatusUpdate) {
           onStatusUpdate();
         }
@@ -164,6 +197,9 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
     } catch (error: any) {
       console.error('Error updating chat status:', error);
       toast.error(error.response?.data?.error || 'Failed to update chat status');
+    } finally {
+      setResolving(false);
+      setClosing(false);
     }
   };
 
@@ -212,128 +248,157 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
     }
   };
 
+  // Check if chat is resolved or closed
+  const isChatResolvedOrClosed = localStatus === 'RESOLVED' || localStatus === 'CLOSED';
+
+  if (!chatId) {
+    return (
+      <Card className="h-full">
+        <CardContent className="flex items-center justify-center h-full">
+          <div className="text-center text-gray-500">
+            <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Select a chat to start messaging</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="h-full flex flex-col">
-      {/* Chat Header */}
-      <CardHeader className="border-b">
+      <CardHeader className="flex-shrink-0 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="w-10 h-10">
-              <AvatarFallback className="text-sm">
+              <AvatarFallback className="bg-primary text-primary-foreground">
                 {getVisitorInitials()}
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg">{getVisitorDisplayName()}</CardTitle>
+              <h3 className="font-semibold">{getVisitorDisplayName()}</h3>
               <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <div className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} mr-1`}></div>
-                  <span>{isConnected ? 'Online' : 'Offline'}</span>
-                </div>
+                <User className="w-4 h-4" />
+                <span>{chat?.conversation.visitorInfo?.email || 'No email'}</span>
                 {chat?.conversation.visitorInfo?.company && (
-                  <div className="flex items-center">
-                    <Building className="w-3 h-3 mr-1" />
+                  <>
+                    <Building className="w-4 h-4" />
                     <span>{chat.conversation.visitorInfo.company}</span>
-                  </div>
-                )}
-                {chat?.conversation.visitorInfo?.email && (
-                  <div className="flex items-center">
-                    <Mail className="w-3 h-3 mr-1" />
-                    <span>{chat.conversation.visitorInfo.email}</span>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
           </div>
+
           <div className="flex items-center space-x-2">
             <Badge variant="outline" className={getPriorityColor(chat?.priority || 'NORMAL')}>
               {chat?.priority || 'NORMAL'}
             </Badge>
-            <Badge variant="outline" className={getStatusColor(status)}>
-              {status}
+            <Badge variant="outline" className={getStatusColor(localStatus || status)}>
+              {localStatus || status}
             </Badge>
             
-            {/* Status Management Buttons */}
-            {status !== 'RESOLVED' && status !== 'CLOSED' && (
+            {/* Status Management Buttons - Only show if chat is not resolved or closed */}
+            {!isChatResolvedOrClosed && (
               <div className="flex items-center space-x-2 ml-4">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleStatusUpdate('RESOLVED')}
                   className="text-green-600 border-green-200 hover:bg-green-50"
+                  disabled={resolving || closing}
                 >
-                  <CheckSquare className="w-4 h-4 mr-1" />
-                  Resolve
+                  {resolving ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <CheckSquare className="w-4 h-4 mr-1" />
+                  )}
+                  {resolving ? 'Resolving...' : 'Resolve'}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleStatusUpdate('CLOSED')}
                   className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                  disabled={resolving || closing}
                 >
-                  <Square className="w-4 h-4 mr-1" />
-                  Close
+                  {closing ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Square className="w-4 h-4 mr-1" />
+                  )}
+                  {closing ? 'Closing...' : 'Close'}
                 </Button>
+              </div>
+            )}
+
+            {/* Show resolution info if chat is resolved or closed */}
+            {isChatResolvedOrClosed && (
+              <div className="flex items-center space-x-2 ml-4 text-sm text-gray-600">
+                <CheckCircle className="w-4 h-4" />
+                <span>Chat {localStatus?.toLowerCase() || status.toLowerCase()}</span>
+                {meta?.resolvedAt && (
+                  <span>• {new Date(meta.resolvedAt).toLocaleDateString()}</span>
+                )}
               </div>
             )}
           </div>
         </div>
       </CardHeader>
 
-      {/* Messages Area */}
-      <CardContent className="flex-1 overflow-hidden p-0">
-        <div className="h-full flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {chatHistory.map((msg) => (
+      {/* Messages Area - Fixed height with proper scrolling */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Messages Container - Scrollable area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+          {chatHistory.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'agent' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
-                key={msg.id}
-                className={`flex ${msg.role === 'agent' ? 'justify-end' : 'justify-start'}`}
+                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  msg.role === 'agent'
+                    ? 'bg-primary text-primary-foreground'
+                    : msg.role === 'assistant'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'bg-blue-100 text-blue-900'
+                }`}
               >
-                <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    msg.role === 'agent'
-                      ? 'bg-primary text-primary-foreground'
-                      : msg.role === 'assistant'
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'bg-blue-100 text-blue-900'
-                  }`}
-                >
-                  <div className="text-sm">{msg.content}</div>
-                  <div className="text-xs opacity-70 mt-1">
-                    {format(new Date(msg.createdAt), 'HH:mm')}
-                  </div>
+                <div className="text-sm">{msg.content}</div>
+                <div className="text-xs opacity-70 mt-1">
+                  {format(new Date(msg.createdAt), 'HH:mm')}
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
 
-          {/* Message Input */}
-          <div className="border-t p-4">
-            <div className="flex space-x-2">
-              <Input
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                disabled={sending || !isConnected}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!message.trim() || sending || !isConnected}
-                size="sm"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="text-xs text-gray-500 mt-2">
-              {!isConnected && 'Connecting to chat...'}
-              {sending && 'Sending message...'}
-            </div>
+        {/* Message Input - Fixed at bottom */}
+        <div className="border-t p-4 flex-shrink-0 bg-background">
+          <div className="flex space-x-2">
+            <Input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={isChatResolvedOrClosed ? "Chat is resolved/closed" : "Type your message..."}
+              disabled={sending || !isConnected || isChatResolvedOrClosed}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!message.trim() || sending || !isConnected || isChatResolvedOrClosed}
+              size="sm"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            {!isConnected && 'Connecting to chat...'}
+            {sending && 'Sending message...'}
+            {isChatResolvedOrClosed && 'This chat has been resolved and is no longer active'}
           </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 } 

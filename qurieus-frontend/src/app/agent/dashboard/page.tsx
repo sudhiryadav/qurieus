@@ -101,12 +101,30 @@ export default function AgentDashboard() {
     }
   };
 
+  // Load current agent status
+  const loadAgentStatus = async () => {
+    try {
+      const response = await axiosInstance.get('/api/agent/status');
+      if (response.data.success) {
+        setIsOnline(response.data.status.isOnline);
+        setIsAvailable(response.data.status.isAvailable);
+      }
+    } catch (error) {
+      console.error('Error loading agent status:', error);
+      // Don't show error toast for status loading as it's not critical
+    }
+  };
+
   useEffect(() => {
     if (!session?.user?.id) return;
 
     loadAssignedChats();
+    loadAgentStatus();
     // Refresh every 30 seconds
-    const interval = setInterval(loadAssignedChats, 30000);
+    const interval = setInterval(() => {
+      loadAssignedChats();
+      loadAgentStatus();
+    }, 30000);
     return () => clearInterval(interval);
   }, [session?.user?.id]);
 
@@ -145,97 +163,105 @@ export default function AgentDashboard() {
   const resolvedChats = assignedChats.filter(chat => chat.status === 'RESOLVED');
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Status Controls */}
-      <div className="mb-6 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-sm text-muted-foreground">
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </span>
+    <div className="h-full flex flex-col bg-background">
+      {/* Header */}
+      <div className="flex-shrink-0 border-b bg-background">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Agent Dashboard</h1>
+              <p className="text-gray-600">Manage your assigned chats</p>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm text-gray-600">
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              
+              <AgentStatusToggle
+                isOnline={isOnline}
+                isAvailable={isAvailable}
+                onStatusChange={handleStatusUpdate}
+              />
+            </div>
           </div>
         </div>
-        
-        <AgentStatusToggle
-          isOnline={isOnline}
-          isAvailable={isAvailable}
-          onStatusChange={handleStatusUpdate}
-        />
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Sidebar - Chat List */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Assigned Chats</span>
-                <Badge variant="secondary">{assignedChats.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="pending" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="pending">
-                    Pending ({pendingChats.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="active">
-                    Active ({activeChats.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="resolved">
-                    Resolved ({resolvedChats.length})
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="pending" className="mt-4">
-                  <AgentChatList
-                    chats={pendingChats}
-                    selectedChat={selectedChat}
-                    onChatSelect={handleChatSelect}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="active" className="mt-4">
-                  <AgentChatList
-                    chats={activeChats}
-                    selectedChat={selectedChat}
-                    onChatSelect={handleChatSelect}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="resolved" className="mt-4">
-                  <AgentChatList
-                    chats={resolvedChats}
-                    selectedChat={selectedChat}
-                    onChatSelect={handleChatSelect}
-                  />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+      {/* Main Content - Full height minus header */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Side - Chat List */}
+        <div className="w-96 flex-shrink-0 border-r bg-background">
+          <div className="h-full p-4">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="flex-shrink-0">
+                <CardTitle className="flex items-center justify-between">
+                  <span>Assigned Chats</span>
+                  <Badge variant="secondary">{assignedChats.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <Tabs defaultValue="pending" className="w-full h-full flex flex-col">
+                  <TabsList className="grid w-full grid-cols-3 flex-shrink-0 mx-4 mt-4">
+                    <TabsTrigger value="pending">
+                      Pending ({pendingChats.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="active">
+                      Active ({activeChats.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="resolved">
+                      Resolved ({resolvedChats.length})
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <div className="flex-1 overflow-hidden mt-4">
+                    <TabsContent value="pending" className="h-full m-0 p-4">
+                      <div className="h-full overflow-y-auto">
+                        <AgentChatList
+                          chats={pendingChats}
+                          selectedChat={selectedChat}
+                          onChatSelect={handleChatSelect}
+                        />
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="active" className="h-full m-0 p-4">
+                      <div className="h-full overflow-y-auto">
+                        <AgentChatList
+                          chats={activeChats}
+                          selectedChat={selectedChat}
+                          onChatSelect={handleChatSelect}
+                        />
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="resolved" className="h-full m-0 p-4">
+                      <div className="h-full overflow-y-auto">
+                        <AgentChatList
+                          chats={resolvedChats}
+                          selectedChat={selectedChat}
+                          onChatSelect={handleChatSelect}
+                        />
+                      </div>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Right Side - Chat Window */}
-        <div className="lg:col-span-2">
-          {selectedChat ? (
-            <AgentChatWindow
-              chatId={selectedChat}
-              agentId={session.user.id}
-              chat={assignedChats.find(c => c.conversationId === selectedChat)}
-              onStatusUpdate={loadAssignedChats}
-            />
-          ) : (
-            <Card className="h-96">
-              <CardContent className="flex items-center justify-center h-full">
-                <div className="text-center text-muted-foreground">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-4" />
-                  <p>Select a chat to start responding</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        <div className="flex-1 min-w-0 h-full p-4">
+          <AgentChatWindow
+            chatId={selectedChat || ''}
+            agentId={session?.user?.id || ''}
+            chat={assignedChats.find(chat => chat.conversationId === selectedChat)}
+            onStatusUpdate={loadAssignedChats}
+          />
         </div>
       </div>
     </div>

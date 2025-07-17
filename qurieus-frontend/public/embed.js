@@ -28,15 +28,272 @@
     return fallbackUrl;
   };
 
-  // Chat Widget State Management
+  // Initialize widget state
   let widgetState = {
     isOpen: false,
-    messages: [],
-    inputMessage: '',
     isLoading: false,
-    visitorInfoSubmitted: false,
-    visitorInfo: null
+    inputMessage: '',
+    messages: [],
+    visitorInfoSubmitted: false
   };
+
+  // Socket.IO connection for real-time messages
+  let socket = null;
+  let currentChatId = null;
+
+  // Initialize Socket.IO connection
+  function initSocket() {
+    if (socket) return socket;
+    
+    // Check if Socket.IO is loaded
+    if (typeof io === 'undefined') {
+      console.log('🔌 [EMBED] Socket.IO not available - real-time features disabled');
+      return null;
+    }
+    
+    try {
+      const socketUrl = widgetConfig.baseUrl;
+      socket = io(socketUrl, {
+        autoConnect: true,
+        transports: ['websocket', 'polling']
+      });
+      
+      socket.on('connect', () => {
+        console.log('🔌 [EMBED] Socket.IO connected:', socket.id);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('🔌 [EMBED] Socket.IO disconnected');
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('🔌 [EMBED] Socket.IO connection error:', error);
+      });
+
+      // Listen for real-time chat messages
+      socket.on('chat_message', (message) => {
+        console.log('🔌 [EMBED] Received real-time message:', message);
+        
+        // Add message to state
+        widgetState.messages = [...widgetState.messages, {
+          role: message.role,
+          content: message.content,
+          timestamp: message.createdAt || new Date().toISOString()
+        }];
+
+        // Add message to UI
+        addMessageToUI(message.role, message.content, message.createdAt || new Date().toISOString());
+      });
+      
+      return socket;
+    } catch (error) {
+      console.error('🔌 [EMBED] Failed to initialize Socket.IO:', error);
+      return null;
+    }
+  }
+
+  // Join chat room
+  function joinChatRoom(chatId, visitorId) {
+    if (socket && chatId) {
+      socket.emit('join', { 
+        chatId, 
+        visitorId, 
+        role: 'user' 
+      });
+      currentChatId = chatId;
+      console.log('🔌 [EMBED] Joined chat room:', chatId);
+    } else if (!socket) {
+      console.warn('🔌 [EMBED] Socket not available, cannot join chat room');
+    }
+  }
+
+  // Add message to UI without re-rendering everything
+  function addMessageToUI(role, content, timestamp, showAgentButtons = false) {
+    console.log('🔍 [EMBED] addMessageToUI called with:', { role, content, timestamp, showAgentButtons });
+    
+    const messagesContainer = document.querySelector('.qurieus-chat-messages');
+    if (!messagesContainer) {
+      console.log('🔍 [EMBED] messagesContainer not found!');
+      return;
+    }
+    
+    console.log('🔍 [EMBED] Found messagesContainer, creating message element');
+
+    const messageContainer = document.createElement('div');
+    messageContainer.style.cssText = `
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      margin-bottom: 12px;
+      ${role === 'user' ? 'flex-direction: row-reverse;' : 'flex-direction: row;'}
+    `;
+    
+    // Icon container
+    const iconContainer = document.createElement('div');
+    iconContainer.style.cssText = `
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background-color: ${role === 'user' 
+        ? (widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR)
+        : role === 'agent'
+        ? '#10b981' // Green for agent
+        : (widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6')};
+    `;
+    
+    // Icon
+    const icon = document.createElement('img');
+    if (role === 'user') {
+      icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+    } else if (role === 'agent') {
+      icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+    } else {
+      icon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
+    }
+    icon.style.cssText = `
+      width: 20px;
+      height: 20px;
+    `;
+    
+    iconContainer.appendChild(icon);
+    
+    // Message content container
+    const messageContentContainer = document.createElement('div');
+    messageContentContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: calc(100% - 40px);
+    `;
+    
+    const messageBubble = document.createElement('div');
+    if (role === 'assistant') {
+      messageBubble.innerHTML = formatMessageText(content);
+    } else {
+      messageBubble.textContent = content;
+    }
+    messageBubble.style.cssText = `
+      padding: 8px 12px;
+      border-radius: 12px;
+      background-color: ${role === 'user' 
+        ? (widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR)
+        : role === 'agent'
+        ? '#10b981' // Green for agent
+        : (widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6')};
+      color: ${role === 'user' || role === 'agent' ? 'white' : (widgetConfig.theme === 'dark' ? 'white' : '#111827')};
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      text-align: left;
+      max-width: 100%;
+    `;
+    
+    // Add timestamp
+    const timestampElement = document.createElement('div');
+    const messageTime = timestamp ? new Date(timestamp) : new Date();
+    timestampElement.textContent = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    timestampElement.style.cssText = `
+      font-size: 11px;
+      color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+      align-self: ${role === 'user' ? 'flex-end' : 'flex-start'};
+      margin-top: 2px;
+    `;
+    
+    messageContentContainer.appendChild(messageBubble);
+    messageContentContainer.appendChild(timestampElement);
+    
+    messageContainer.appendChild(iconContainer);
+    messageContainer.appendChild(messageContentContainer);
+    messagesContainer.appendChild(messageContainer);
+    
+    // Add agent action buttons if needed
+    console.log('🔍 [EMBED] showAgentButtons parameter:', showAgentButtons);
+    console.log('🔍 [EMBED] role parameter:', role);
+    if (showAgentButtons && role === 'assistant') {
+      console.log('🔍 [EMBED] Adding agent action buttons');
+      
+      const buttonsContainer = document.createElement('div');
+      buttonsContainer.style.cssText = `
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      `;
+      
+      // Connect with Agent button
+      const connectAgentBtn = document.createElement('button');
+      connectAgentBtn.textContent = 'Connect with Agent';
+      connectAgentBtn.style.cssText = `
+        padding: 8px 12px;
+        background-color: ${widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR};
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background-color 0.2s ease;
+        flex: 1;
+        min-width: 140px;
+      `;
+      connectAgentBtn.onmouseenter = () => connectAgentBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? '#7c3aed' : '#7c3aed';
+      connectAgentBtn.onmouseleave = () => connectAgentBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR;
+      connectAgentBtn.onclick = () => {
+        console.log('🔍 [EMBED] Connect with Agent clicked');
+        const userMessage = 'I would like to speak with a human agent to get help with my question.';
+        widgetState.inputMessage = userMessage;
+        // Trigger form submission
+        const form = document.querySelector('#qurieus-chat-widget form');
+        if (form) {
+          form.requestSubmit();
+        }
+      };
+      
+      // Try Different Question button
+      const tryDifferentBtn = document.createElement('button');
+      tryDifferentBtn.textContent = 'Try Different Question';
+      tryDifferentBtn.style.cssText = `
+        padding: 8px 12px;
+        background-color: ${widgetConfig.theme === 'dark' ? '#6b7280' : '#6b7280'};
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background-color 0.2s ease;
+        flex: 1;
+        min-width: 140px;
+      `;
+      tryDifferentBtn.onmouseenter = () => tryDifferentBtn.style.backgroundColor = '#4b5563';
+      tryDifferentBtn.onmouseleave = () => tryDifferentBtn.style.backgroundColor = '#6b7280';
+      tryDifferentBtn.onclick = () => {
+        console.log('🔍 [EMBED] Try Different Question clicked');
+        // Focus on the textarea for the user to type a new question
+        const inputField = document.querySelector('#qurieus-chat-widget textarea');
+        if (inputField) {
+          inputField.focus();
+          console.log('🔍 [EMBED] Textarea focused successfully');
+        } else {
+          console.log('🔍 [EMBED] Textarea not found');
+        }
+      };
+      
+      buttonsContainer.appendChild(connectAgentBtn);
+      buttonsContainer.appendChild(tryDifferentBtn);
+      messageContentContainer.appendChild(buttonsContainer);
+      console.log('🔍 [EMBED] Agent buttons added to DOM');
+    }
+    
+    console.log('🔍 [EMBED] Message added to UI successfully');
+    
+    // Auto-scroll to bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
 
   // Check if visitor info has been submitted for this visitor
   function checkVisitorInfoSubmitted() {
@@ -54,6 +311,23 @@
       submittedVisitors.push(visitorId);
       localStorage.setItem('qurieus_submitted_visitors', JSON.stringify(submittedVisitors));
     }
+  }
+
+  // Load Socket.IO library if not already loaded (optional)
+  let socketIOLoaded = false;
+  if (typeof io === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.socket.io/4.7.2/socket.io.min.js';
+    script.onload = () => {
+      console.log('🔌 [EMBED] Socket.IO library loaded');
+      socketIOLoaded = true;
+    };
+    script.onerror = () => {
+      console.warn('🔌 [EMBED] Failed to load Socket.IO library - real-time features disabled');
+    };
+    document.head.appendChild(script);
+  } else {
+    socketIOLoaded = true;
   }
 
   let widgetConfig = {};
@@ -369,6 +643,30 @@
   function renderWidget() {
     if (!widgetContainer) return;
     
+    // Initialize Socket.IO connection (will be null if not loaded yet)
+    const socketInstance = initSocket();
+    
+    // Join chat room if we have a visitor ID and conversation and socket is available
+    const visitorId = localStorage.getItem('qurieus_visitor_id');
+    if (visitorId && !currentChatId) {
+      // Try to get conversation ID from localStorage or use visitor ID
+      const conversationId = localStorage.getItem('qurieus_conversation_id') || visitorId;
+      
+      if (socketInstance) {
+        joinChatRoom(conversationId, visitorId);
+      } else {
+        // Retry joining when socket becomes available
+        const retryJoin = () => {
+          if (socket && !currentChatId) {
+            joinChatRoom(conversationId, visitorId);
+          } else if (!socket) {
+            setTimeout(retryJoin, 1000);
+          }
+        };
+        setTimeout(retryJoin, 1000);
+      }
+    }
+    
     widgetContainer.innerHTML = '';
     if (!widgetState.isOpen) {
       // Render chat button
@@ -449,6 +747,7 @@
       align-items: center;
       background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f9fafb'};
       border-radius: 12px 12px 0 0;
+      position: relative;
     `;
     
     // Title container with logo and text
@@ -466,7 +765,6 @@
     logoIcon.style.cssText = `
       width: 20px;
       height: 20px;
-      filter: ${widgetConfig.theme === 'dark' ? 'brightness(0) invert(1)' : 'none'};
     `;
     
     const title = document.createElement('h3');
@@ -481,13 +779,175 @@
     titleContainer.appendChild(logoIcon);
     titleContainer.appendChild(title);
     
-    // Button container for expand and close buttons
+    // Button container for expand, menu, and close buttons
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = `
       display: flex;
       gap: 8px;
       align-items: center;
     `;
+    
+    // Menu button
+    const menuBtn = document.createElement('button');
+    menuBtn.innerHTML = '⋮';
+    menuBtn.style.cssText = `
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+      font-weight: bold;
+    `;
+    menuBtn.onmouseenter = () => menuBtn.style.backgroundColor = widgetConfig.theme === 'dark' ? '#4b5563' : '#e5e7eb';
+    menuBtn.onmouseleave = () => menuBtn.style.backgroundColor = 'transparent';
+    
+    // Menu dropdown
+    const menuDropdown = document.createElement('div');
+    menuDropdown.style.cssText = `
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: ${widgetConfig.theme === 'dark' ? '#374151' : 'white'};
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      min-width: 160px;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      margin-top: 4px;
+    `;
+    
+    // Menu items
+    const menuItems = [
+      {
+        text: 'Connect to Agent',
+        icon: '👨‍💼',
+        action: () => {
+          console.log('🔍 [EMBED] Connect to Agent clicked');
+          // Add logic to connect to agent
+          const userMessage = 'I would like to connect to a human agent.';
+          widgetState.inputMessage = userMessage;
+          // Trigger form submission
+          const form = document.querySelector('#qurieus-chat-widget form');
+          if (form) {
+            form.requestSubmit();
+          }
+        }
+      },
+      {
+        text: 'Start New Chat',
+        icon: '🆕',
+        action: () => {
+          console.log('🔍 [EMBED] Start New Chat clicked');
+          // Clear messages and start fresh
+          setWidgetState({
+            messages: [{ 
+              role: 'assistant', 
+              content: 'Hello! How can I help you today?',
+              timestamp: new Date().toISOString()
+            }]
+          });
+          // Clear conversation ID
+          localStorage.removeItem('qurieus_conversation_id');
+          // Leave current chat room
+          if (socket && currentChatId) {
+            socket.emit('leave', { chatId: currentChatId });
+            currentChatId = null;
+          }
+        }
+      },
+      {
+        text: 'Clear History',
+        icon: '🗑️',
+        action: () => {
+          console.log('🔍 [EMBED] Clear History clicked');
+          // Clear messages but keep initial message
+          setWidgetState({
+            messages: [{ 
+              role: 'assistant', 
+              content: 'Chat history cleared. How can I help you?',
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
+      },
+      {
+        text: 'Download Chat',
+        icon: '📥',
+        action: () => {
+          console.log('🔍 [EMBED] Download Chat clicked');
+          // Create chat transcript
+          const transcript = widgetState.messages.map(msg => 
+            `${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content}`
+          ).join('\n\n');
+          
+          // Create and download file
+          const blob = new Blob([transcript], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `chat-transcript-${new Date().toISOString().split('T')[0]}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }
+    ];
+    
+    // Create menu items
+    menuItems.forEach((item, index) => {
+      const menuItem = document.createElement('button');
+      menuItem.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
+        transition: background-color 0.2s ease;
+        text-align: left;
+        width: 100%;
+        ${index === menuItems.length - 1 ? '' : 'border-bottom: 1px solid #e5e7eb;'}
+      `;
+      
+      menuItem.innerHTML = `${item.icon} ${item.text}`;
+      
+      menuItem.onmouseenter = () => {
+        menuItem.style.backgroundColor = widgetConfig.theme === 'dark' ? '#4b5563' : '#f3f4f6';
+      };
+      menuItem.onmouseleave = () => {
+        menuItem.style.backgroundColor = 'transparent';
+      };
+      menuItem.onclick = () => {
+        item.action();
+        menuDropdown.style.display = 'none';
+      };
+      
+      menuDropdown.appendChild(menuItem);
+    });
+    
+    // Menu button click handler
+    menuBtn.onclick = (e) => {
+      e.stopPropagation();
+      const isVisible = menuDropdown.style.display === 'flex';
+      menuDropdown.style.display = isVisible ? 'none' : 'flex';
+    };
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+        menuDropdown.style.display = 'none';
+      }
+    });
     
     // Expand button
     const expandBtn = document.createElement('button');
@@ -552,13 +1012,18 @@
     closeBtn.onclick = () => setWidgetState({ isOpen: false });
     
     buttonContainer.appendChild(expandBtn);
+    buttonContainer.appendChild(menuBtn);
     buttonContainer.appendChild(closeBtn);
+    
+    // Add menu dropdown to header
+    header.appendChild(menuDropdown);
     
     header.appendChild(titleContainer);
     header.appendChild(buttonContainer);
     
     // Messages container
     const messagesContainer = document.createElement('div');
+    messagesContainer.className = 'qurieus-chat-messages';
     messagesContainer.style.cssText = `
       flex: 1;
       overflow-y: auto;
@@ -591,6 +1056,8 @@
         flex-shrink: 0;
         background-color: ${msg.role === 'user' 
           ? (widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR)
+          : msg.role === 'agent'
+          ? (widgetConfig.theme === 'dark' ? '#10b981' : '#f3f4f6') // Green for agent
           : (widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6')};
       `;
       
@@ -599,6 +1066,9 @@
       if (msg.role === 'user') {
         // User icon (SVG data URL for a simple user icon)
         icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+      } else if (msg.role === 'agent') {
+        // Agent icon (human icon)
+        icon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDlDMTEuNjU2OSA5IDEzIDcuNjU2ODUgMTMgNkMxMyA0LjM0MzE1IDExLjY1NjkgMyAxMCAzQzguMzQzMTUgMyA3IDQuMzQzMTUgNyA2QzcgNy42NTY4NSA4LjM0MzE1IDkgMTAgOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zIDE3QzMgMTMuNjg2MyA2LjEzNDAxIDExIDEwIDExQzEzLjg2NiAxMSAxNyAxMy42ODYzIDE3IDE3VjE5QzE3IDE5LjU1MjMgMTYuNTUyMyAyMCAxNiAyMEg0QzMuNDQ3NzIgMjAgMyAxOS41NTIzIDMgMTlWMTdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
       } else {
         // Assistant icon (logo.svg)
         icon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
@@ -606,7 +1076,6 @@
       icon.style.cssText = `
         width: 20px;
         height: 20px;
-        filter: ${msg.role === 'user' ? 'none' : 'brightness(0) invert(1)'};
       `;
       
       iconContainer.appendChild(icon);
@@ -621,7 +1090,7 @@
       `;
       
       const messageBubble = document.createElement('div');
-      // Use formatting for assistant messages, plain text for user messages
+      // Use formatting for assistant messages, plain text for user and agent messages
       if (msg.role === 'assistant') {
         messageBubble.innerHTML = formatMessageText(msg.content);
       } else {
@@ -632,8 +1101,10 @@
         border-radius: 12px;
         background-color: ${msg.role === 'user' 
           ? (widgetConfig.theme === 'dark' ? DARK_BRAND_COLOR : BRAND_COLOR)
+          : msg.role === 'agent'
+          ? '#10b981' // Green for agent
           : (widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6')};
-        color: ${msg.role === 'user' ? 'white' : (widgetConfig.theme === 'dark' ? 'white' : '#111827')};
+        color: ${msg.role === 'user' || msg.role === 'agent' ? 'white' : (widgetConfig.theme === 'dark' ? 'white' : '#111827')};
         font-size: 14px;
         line-height: 1.4;
         word-wrap: break-word;
@@ -1085,9 +1556,12 @@
         let fullResponse = '';
         let chunkCount = 0;
         
+        console.log('🔍 [EMBED] Starting to read streaming response...');
+        
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
+            console.log('🔍 [EMBED] Reader done, breaking loop');
             break;
           }
           
@@ -1095,19 +1569,32 @@
           const chunk = decoder.decode(value);
           fullResponse += chunk;
           
+          console.log(`🔍 [EMBED] Chunk ${chunkCount}:`, chunk);
+          
           // Process each line for Server-Sent Events format
           const lines = chunk.split('\n');
+          console.log(`🔍 [EMBED] Processing ${lines.length} lines from chunk ${chunkCount}`);
           
           for (const line of lines) {
+            console.log(`🔍 [EMBED] Processing line: "${line}"`);
+            
             if (line.startsWith('data: ')) {
+              console.log(`🔍 [EMBED] Found data line: "${line}"`);
+              
               try {
                 const jsonStr = line.slice(6); // Remove 'data: ' prefix
-                const data = JSON.parse(jsonStr);
+                console.log(`🔍 [EMBED] JSON string: "${jsonStr}"`);
                 
+                const data = JSON.parse(jsonStr);
+                console.log(`🔍 [EMBED] Parsed data:`, data);
+                
+                // Handle response content
                 if (data.response !== undefined && data.response !== "") {
+                  console.log(`🔍 [EMBED] Adding response to assistantMessage: "${data.response}"`);
                   assistantMessage += data.response;
-                  // Update the UI immediately for streaming effect
-                  updateAssistantMessage(assistantMessage);
+                  console.log(`🔍 [EMBED] assistantMessage now: "${assistantMessage}"`);
+                } else {
+                  console.log(`🔍 [EMBED] Skipping response (undefined or empty):`, data.response);
                 }
                 
                 if (data.sources) {
@@ -1116,13 +1603,56 @@
                 }
                 
                 if (data.done) {
-                  console.log('🔍 [EMBED] Received done flag');
-                  // Final update to state
-                  widgetState.messages = [...widgetState.messages, { 
-                    role: 'assistant', 
-                    content: assistantMessage, 
-                    timestamp: new Date().toISOString() 
-                  }];
+                  console.log('🔍 [EMBED] Received done flag, assistantMessage:', assistantMessage);
+                  console.log('🔍 [EMBED] assistantMessage length:', assistantMessage.length);
+                  console.log('🔍 [EMBED] assistantMessage.trim():', assistantMessage.trim());
+                  console.log('🔍 [EMBED] assistantMessage.trim() length:', assistantMessage.trim().length);
+                  console.log('🔍 [EMBED] showAgentButtons flag:', data.showAgentButtons);
+                  
+                  // Remove peeking character indicator
+                  const peekingIndicator = chatWindow.querySelector('[style*="position: absolute"][style*="bottom: 80px"]');
+                  if (peekingIndicator) {
+                    console.log('🔍 [EMBED] Removing peeking indicator');
+                    peekingIndicator.remove();
+                  }
+                  
+                  // Display the complete message - always display if we have any content
+                  if (assistantMessage && assistantMessage.trim()) {
+                    console.log('🔍 [EMBED] Displaying message via addMessageToUI');
+                    
+                    // Check if this is an agent-related message that needs action buttons
+                    const needsAgentButtons = (assistantMessage.toLowerCase().includes('active conversation') && 
+                                            assistantMessage.toLowerCase().includes('agent')) ||
+                                            assistantMessage.toLowerCase().includes('connect with a human agent') ||
+                                            data.showAgentButtons === true;
+                    
+                    console.log('🔍 [EMBED] needsAgentButtons:', needsAgentButtons);
+                    console.log('🔍 [EMBED] assistantMessage includes "connect with a human agent":', assistantMessage.toLowerCase().includes('connect with a human agent'));
+                    console.log('🔍 [EMBED] data.showAgentButtons:', data.showAgentButtons);
+                    
+                    addMessageToUI('assistant', assistantMessage, new Date().toISOString(), needsAgentButtons);
+                    
+                    // Final update to state
+                    console.log('🔍 [EMBED] Updating widgetState.messages');
+                    widgetState.messages = [...widgetState.messages, { 
+                      role: 'assistant', 
+                      content: assistantMessage, 
+                      timestamp: new Date().toISOString() 
+                    }];
+                  } else {
+                    console.log('🔍 [EMBED] NOT displaying message - condition failed');
+                    console.log('🔍 [EMBED] assistantMessage:', assistantMessage);
+                    console.log('🔍 [EMBED] assistantMessage.trim():', assistantMessage.trim());
+                  }
+                  
+                  // Join chat room for real-time updates if we have a visitor ID
+                  const visitorId = localStorage.getItem('qurieus_visitor_id');
+                  if (visitorId && !currentChatId) {
+                    // Try to get conversation ID from the response headers or use visitor ID
+                    const conversationId = response.headers.get('x-conversation-id') || visitorId;
+                    localStorage.setItem('qurieus_conversation_id', conversationId);
+                    joinChatRoom(conversationId, visitorId);
+                  }
                   break;
                 }
               } catch (e) {
@@ -1131,139 +1661,16 @@
                   error: e instanceof Error ? e.message : String(e)
                 });
               }
+            } else {
+              console.log(`🔍 [EMBED] Line does not start with 'data: ': "${line}"`);
             }
-
-          
-          // Helper function to update assistant message in real-time
-          function updateAssistantMessage(message) {
-            // Find or create assistant message container
-            let assistantContainer = messagesContainer.querySelector('.assistant-message');
-            if (!assistantContainer) {
-              // Create new assistant message container
-              assistantContainer = document.createElement('div');
-              assistantContainer.className = 'assistant-message';
-              assistantContainer.style.cssText = `
-                display: flex;
-                align-items: flex-end;
-                gap: 8px;
-                margin-bottom: 12px;
-                flex-direction: row;
-              `;
-              
-              // Icon container for assistant
-              const assistantIconContainer = document.createElement('div');
-              assistantIconContainer.style.cssText = `
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
-              `;
-              
-              // Assistant icon (logo.svg)
-              const assistantIcon = document.createElement('img');
-              assistantIcon.src = widgetConfig.baseUrl + '/images/logo/logo.svg';
-              assistantIcon.style.cssText = `
-                width: 20px;
-                height: 20px;
-                filter: brightness(0) invert(1);
-              `;
-              
-              assistantIconContainer.appendChild(assistantIcon);
-              assistantContainer.appendChild(assistantIconContainer);
-              
-              // Message content container
-              const assistantContentContainer = document.createElement('div');
-              assistantContentContainer.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                max-width: calc(100% - 40px);
-              `;
-              assistantContainer.appendChild(assistantContentContainer);
-              
-              messagesContainer.appendChild(assistantContainer);
-            }
-            
-            // Get the content container and update it
-            const assistantContentContainer = assistantContainer.querySelector('div:last-child');
-            
-            const assistantBubble = document.createElement('div');
-            assistantBubble.innerHTML = formatMessageText(message);
-            assistantBubble.style.cssText = `
-              padding: 8px 12px;
-              border-radius: 12px;
-              background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
-              color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
-              font-size: 14px;
-              line-height: 1.4;
-              word-wrap: break-word;
-              text-align: left;
-              max-width: 100%;
-            `;
-            
-            // Add custom styles for formatted content
-            const style = document.createElement('style');
-            style.textContent = `
-              .assistant-message ol, .assistant-message ul {
-                margin: 8px 0;
-                padding-left: 20px;
-              }
-              .assistant-message li {
-                margin: 4px 0;
-              }
-              .assistant-message strong {
-                font-weight: 600;
-              }
-              .assistant-message em {
-                font-style: italic;
-              }
-              .assistant-message code {
-                background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
-                padding: 2px 4px;
-                border-radius: 4px;
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-                font-size: 12px;
-              }
-              .assistant-message pre {
-                background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#f1f5f9'};
-                padding: 8px;
-                border-radius: 6px;
-                overflow-x: auto;
-                margin: 8px 0;
-              }
-              .assistant-message pre code {
-                background: none;
-                padding: 0;
-                font-size: 12px;
-              }
-            `;
-            
-            // Add timestamp for assistant message
-            const assistantTimestamp = document.createElement('div');
-            assistantTimestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            assistantTimestamp.style.cssText = `
-              font-size: 11px;
-              color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-              align-self: flex-start;
-              margin-top: 2px;
-            `;
-            
-            // Clear and update content
-            assistantContentContainer.innerHTML = '';
-            assistantContentContainer.appendChild(style);
-            assistantContentContainer.appendChild(assistantBubble);
-            assistantContentContainer.appendChild(assistantTimestamp);
-            
-            // Auto-scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }
         }
-      }
-    } catch (error) {
+        
+        console.log('🔍 [EMBED] Finished reading streaming response');
+        console.log('🔍 [EMBED] Final assistantMessage:', assistantMessage);
+        console.log('🔍 [EMBED] Final fullResponse:', fullResponse);
+      } catch (error) {
         console.error('❌ [EMBED] Chat error:', {
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined
@@ -1310,7 +1717,6 @@
         errorIcon.style.cssText = `
           width: 20px;
           height: 20px;
-          filter: brightness(0) invert(1);
         `;
         
         errorIconContainer.appendChild(errorIcon);

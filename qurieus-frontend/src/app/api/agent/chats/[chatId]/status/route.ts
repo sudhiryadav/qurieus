@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { logger } from "@/lib/logger";
 import { RequireRoles } from "@/utils/roleGuardsDecorator";
 import { UserRole, AgentChatStatus } from "@prisma/client";
+import { sendEmail } from "@/lib/email";
 
 export const PUT = RequireRoles([UserRole.AGENT])(async (request: Request, context: { params: Promise<{ chatId: string }> }) => {
   let agentId = '';
@@ -80,6 +81,28 @@ export const PUT = RequireRoles([UserRole.AGENT])(async (request: Request, conte
         endedAt: new Date()
       }
     });
+
+    // If chat is resolved, send email notification to the user
+    if (statusEnum === 'RESOLVED') {
+      // Get conversation and user email
+      const conversation = await prisma.chatConversation.findUnique({
+        where: { id: chatId },
+        select: {
+          user: { select: { email: true, name: true } },
+        }
+      });
+      if (conversation?.user?.email) {
+        await sendEmail({
+          to: conversation.user.email,
+          subject: 'Your support chat has been resolved',
+          template: 'chat-resolved-notification',
+          context: {
+            userName: conversation.user.name || 'User',
+            chatId,
+          },
+        });
+      }
+    }
 
     // Emit Socket.IO event for real-time updates
     try {

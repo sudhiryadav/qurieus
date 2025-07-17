@@ -182,7 +182,7 @@ model UserSubscription {
   createdAt             DateTime @default(now())
   billingCycle          String @default("monthly")
   updatedAt             DateTime @updatedAt
-  planSnapshot          Json?
+  planSnapshot          Json?   // Stores the plan details at the time of subscription for versioning
 }
 
 model Message {

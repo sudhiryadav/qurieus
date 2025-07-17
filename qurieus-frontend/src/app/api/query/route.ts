@@ -458,16 +458,49 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
     const agentId = await findAvailableAgent(userId);
     
     if (agentId) {
-      // Create AgentChat record to assign the chat to the agent
-      await prisma.agentChat.create({
-        data: {
-          conversationId: conversationId,
-          agentId: agentId,
-          status: "PENDING" as any,
-          priority: "NORMAL" as any,
-          assignedAt: new Date()
-        }
+      // Check if there's already an agent chat for this conversation (regardless of status)
+      const existingAgentChat = await prisma.agentChat.findUnique({
+        where: { conversationId: conversationId }
       });
+
+      if (existingAgentChat) {
+        // Update existing agent chat for re-escalation (regardless of previous status)
+        await prisma.agentChat.update({
+          where: { conversationId: conversationId },
+          data: {
+            agentId: agentId,
+            status: "PENDING" as any,
+            priority: "NORMAL" as any,
+            assignedAt: new Date(),
+            startedAt: null,
+            endedAt: null
+          }
+        });
+        
+        logger.info("Query API: Updated existing agent chat for re-escalation", { 
+          conversationId,
+          userId,
+          agentId,
+          previousStatus: existingAgentChat.status
+        });
+      } else {
+        // Create new AgentChat record to assign the chat to the agent
+        await prisma.agentChat.create({
+          data: {
+            conversationId: conversationId,
+            agentId: agentId,
+            status: "PENDING" as any,
+            priority: "NORMAL" as any,
+            assignedAt: new Date()
+          }
+        });
+        
+        logger.info("Query API: Created new agent chat assignment", { 
+          conversationId,
+          userId,
+          agentId
+        });
+      }
 
       // Update agent's current chat count
       await prisma.agent.update({
@@ -483,19 +516,20 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
         data: {
           status: "ESCALATED" as any,
           escalatedAt: new Date(),
-          escalationReason: "AI unable to provide satisfactory answer"
+          escalationReason: "User requested human support"
         } as any
       });
 
       logger.info("Query API: Chat escalated and assigned to agent", { 
         conversationId,
         userId,
-        agentId
+        agentId,
+        isReEscalation: !!existingAgentChat
       });
     } else {
       // No available agents - mark as escalated without assignment and send email notifications
       const escalatedAt = new Date();
-      const escalationReason = "AI unable to provide satisfactory answer - No agents available";
+      const escalationReason = "User requested human support - No agents available";
       
       await prisma.chatConversation.update({
         where: { id: conversationId },
@@ -626,7 +660,10 @@ export async function POST(request: Request) {
           where: { status: 'active' },
           orderBy: { createdAt: 'desc' },
           take: 1,
-          select: { plan: true },
+          select: { 
+            planSnapshot: true,
+            plan: true // Keep for backward compatibility
+          },
         },
       } as any,
     });
@@ -657,7 +694,9 @@ export async function POST(request: Request) {
     const queryCount = await prisma.queryAnalytics.count({
       where: { userId: apiKey, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 1)) } },
     });
-    if (userWithSubscription.subscription?.plan.maxQueriesPerDay && userWithSubscription.subscription.plan.maxQueriesPerDay < queryCount)
+    // Use planSnapshot if available, otherwise fall back to plan for backward compatibility
+    const plan = userWithSubscription.subscription?.planSnapshot || userWithSubscription.subscription?.plan;
+    if (plan?.maxQueriesPerDay && plan.maxQueriesPerDay < queryCount)
       return errorResponse({ error: "Number of requests exceeded", status: 403, errorCode: "QUERY_LIMIT_EXCEEDED" });
 
     // (DEV) Test Response
@@ -796,12 +835,188 @@ export async function POST(request: Request) {
         requestWordsFound: requestWords.filter(word => lowerMessage.includes(word))
       }, { userId });
 
+      // Check if there's already an active agent chat for this visitor
+      const existingAgentChat = await prisma.agentChat.findFirst({
+        where: {
+          conversation: {
+            visitorId: effectiveVisitorId,
+            userId: apiKey
+          },
+          status: {
+            in: ['PENDING', 'ACTIVE', 'ON_HOLD']
+          }
+        },
+        include: {
+          agent: {
+            select: { name: true, email: true }
+          }
+        }
+      });
+
+      if (existingAgentChat) {
+        // Check if user is requesting a new topic
+        const lowerMessage = message.toLowerCase();
+        const newTopicKeywords = ['new topic', 'start new', 'new conversation', 'fresh start', 'different topic'];
+        const isRequestingNewTopic = newTopicKeywords.some(keyword => lowerMessage.includes(keyword));
+        
+        if (isRequestingNewTopic) {
+          // Close the existing agent chat to allow a new conversation
+          await prisma.agentChat.update({
+            where: { id: existingAgentChat.id },
+            data: { status: 'CLOSED' }
+          });
+          
+          const newTopicMessage = "I've closed your previous conversation. You can now start a new topic. How can I help you today?";
+          
+          // Store the message as assistant response
+          await prisma.chatMessage.create({
+            data: {
+              conversationId: chatConversation.id,
+              content: newTopicMessage,
+              role: 'assistant',
+              createdAt: new Date(),
+            },
+          });
+
+          // Update conversation stats
+          await prisma.chatConversation.update({
+            where: { id: chatConversation.id },
+            data: {
+              totalMessages: { increment: 2 },
+              lastSeen: new Date(),
+            },
+          });
+
+          // Track analytics
+          const responseTime = Date.now() - startTime;
+          await trackAnalytics({
+            apiKey,
+            message,
+            response: newTopicMessage,
+            responseTime,
+            visitorId: effectiveVisitorId,
+            success: true,
+            error: null,
+            request: request,
+            startTime,
+          });
+
+          // Return new topic response
+          const encoder = new TextEncoder();
+          const stream = new ReadableStream({
+            start(controller) {
+              const responseData = {
+                response: newTopicMessage,
+                sources: [],
+                done: true
+              };
+              
+              const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+              controller.enqueue(encoder.encode(sseData));
+              controller.close();
+            }
+          });
+
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/plain",
+              "Cache-Control": "no-cache",
+              "Connection": "keep-alive",
+              "x-conversation-id": chatConversation.id,
+            },
+          });
+        }
+        
+        // User already has an active agent chat - inform them
+        const existingChatMessage = `I see you already have an active conversation with ${existingAgentChat.agent?.name || 'our support team'}. They will continue to assist you with your request. If you need to start a new topic, please let me know.`;
+        
+        // Store the message as assistant response
+        await prisma.chatMessage.create({
+          data: {
+            conversationId: chatConversation.id,
+            content: existingChatMessage,
+            role: 'assistant',
+            createdAt: new Date(),
+          },
+        });
+
+        // Update conversation stats
+        await prisma.chatConversation.update({
+          where: { id: chatConversation.id },
+          data: {
+            totalMessages: { increment: 2 },
+            lastSeen: new Date(),
+          },
+        });
+
+        // Track analytics
+        const responseTime = Date.now() - startTime;
+        await trackAnalytics({
+          apiKey,
+          message,
+          response: existingChatMessage,
+          responseTime,
+          visitorId: effectiveVisitorId,
+          success: true,
+          error: null,
+          request: request,
+          startTime,
+        });
+
+        // Return existing chat response
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            const responseData = {
+              response: existingChatMessage,
+              sources: [],
+              done: true
+            };
+            
+            const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+            controller.enqueue(encoder.encode(sseData));
+            controller.close();
+          }
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "x-conversation-id": chatConversation.id,
+          },
+        });
+      }
+
+      // Check if there's a resolved/closed agent chat that we should allow to be re-escalated
+      const previousResolvedChat = await prisma.agentChat.findFirst({
+        where: {
+          conversation: {
+            visitorId: effectiveVisitorId,
+            userId: apiKey
+          },
+          status: {
+            in: ['RESOLVED', 'CLOSED']
+          }
+        },
+        include: {
+          agent: {
+            select: { name: true, email: true }
+          }
+        }
+      });
+
       // Escalate the conversation
       await escalateChatToAgent(chatConversation.id, apiKey, message, effectiveVisitorId);
 
-      // Create escalation message
-      const escalationMessage = "I understand you'd like to speak with a human agent. I've escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.";
-      
+      // Create escalation message based on whether this is a re-escalation
+      let escalationMessage;
+      if (previousResolvedChat) {
+        escalationMessage = `I understand you'd like to speak with a human agent again. Ive escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.`;
+      } else {
+        escalationMessage = "I understand you'd like to speak with a human agent. I've escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.";
+      }
       // Store escalation message as assistant response
       await prisma.chatMessage.create({
         data: {
@@ -878,6 +1093,7 @@ export async function POST(request: Request) {
           "Content-Type": "text/plain", // Changed to text/plain for SSE
           "Cache-Control": "no-cache",
           "Connection": "keep-alive",
+          "x-conversation-id": chatConversation.id,
         },
       });
     }
@@ -898,11 +1114,11 @@ export async function POST(request: Request) {
       throw new Error(`HTTP error! status: ${response.status}`);
 
 
-    // Create a stream that forwards Modal.com chunks directly
+    // Create a stream that processes Modal.com chunks and handles "No relevant documents found"
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
-        const forwardStream = async () => {
+        const processStream = async () => {
           try {
             const reader = response.body?.getReader();
             if (!reader) {
@@ -911,6 +1127,9 @@ export async function POST(request: Request) {
             
             const decoder = new TextDecoder();
             let chunkCount = 0;
+            let fullResponse = "";
+            let isNoDocumentsResponse = false;
+            let hasProcessedNoDocuments = false;
             
             while (true) {
               const { done, value } = await reader.read();
@@ -920,20 +1139,114 @@ export async function POST(request: Request) {
               
               chunkCount++;
               const chunk = decoder.decode(value);
+              fullResponse += chunk;
               
-              // Forward the chunk directly to frontend
-              controller.enqueue(encoder.encode(chunk));
+              // Debug logging for first few chunks
+              if (chunkCount <= 3) {
+                logger.info("Query API: Processing chunk", {
+                  chunkCount,
+                  chunkLength: chunk.length,
+                  chunkPreview: chunk.substring(0, 100),
+                  fullResponseLength: fullResponse.length,
+                  fullResponsePreview: fullResponse.substring(0, 200)
+                });
+              }
+              
+                          // Check if this is a "No relevant documents found" response
+            if (fullResponse.includes("No relevant documents found") && !hasProcessedNoDocuments) {
+              isNoDocumentsResponse = true;
+              hasProcessedNoDocuments = true;
+              
+              logger.info("Query API: Detected 'No relevant documents found' response, replacing with agent connection options", {
+                conversationId: chatConversation.id,
+                userId: apiKey,
+                fullResponseLength: fullResponse.length,
+                fullResponsePreview: fullResponse.substring(0, 200)
+              });
+              
+              // Create a modified response that includes the agent connection message and buttons flag
+              const modifiedResponse = {
+                response: "No relevant documents found.\n\nI couldn't find relevant information in your documents. Would you like to connect with a human agent who can help you with your specific question?",
+                sources: [],
+                done: true,
+                showAgentButtons: true
+              };
+              
+              const modifiedSSE = `data: ${JSON.stringify(modifiedResponse)}\n\n`;
+              logger.info("Query API: Sending modified response with agent buttons", {
+                modifiedResponse,
+                sseLength: modifiedSSE.length
+              });
+              controller.enqueue(encoder.encode(modifiedSSE));
+              
+              // Skip forwarding the original response since we've replaced it
+              continue;
             }
             
-            controller.close();
+            // Also check for the specific SSE format that Modal.com uses
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const jsonStr = line.slice(6); // Remove 'data: ' prefix
+                  const data = JSON.parse(jsonStr);
+                  
+                  // Check if this is the "No relevant documents found" message
+                  if (data.response === "No relevant documents found." && !hasProcessedNoDocuments) {
+                    isNoDocumentsResponse = true;
+                    hasProcessedNoDocuments = true;
+                    
+                    logger.info("Query API: Detected 'No relevant documents found' in SSE data, replacing with agent connection options", {
+                      conversationId: chatConversation.id,
+                      userId: apiKey,
+                      detectedData: data
+                    });
+                    
+                    // Create a modified response that includes the agent connection message and buttons flag
+                    const modifiedResponse = {
+                      response: "No relevant documents found.\n\nI couldn't find relevant information in your documents. Would you like to connect with a human agent who can help you with your specific question?",
+                      sources: [],
+                      done: true,
+                      showAgentButtons: true
+                    };
+                    
+                    const modifiedSSE = `data: ${JSON.stringify(modifiedResponse)}\n\n`;
+                    logger.info("Query API: Sending modified response with agent buttons", {
+                      modifiedResponse,
+                      sseLength: modifiedSSE.length
+                    });
+                    controller.enqueue(encoder.encode(modifiedSSE));
+                    
+                    // Skip forwarding the original response since we've replaced it
+                    continue;
+                  }
+                } catch (e) {
+                  // Ignore JSON parsing errors for non-JSON lines
+                }
+              }
+            }
+              
+              // Only forward chunks if we haven't processed a "No relevant documents found" response
+              if (!isNoDocumentsResponse) {
+                controller.enqueue(encoder.encode(chunk));
+              }
+            }
+            
+            // If we didn't find "No relevant documents found", close normally
+            if (!isNoDocumentsResponse) {
+              controller.close();
+            } else {
+              // We already sent the modified response, so close here
+              controller.close();
+            }
             
           } catch (error) {
-            console.error('❌ [QUERY API] Error forwarding stream:', error);
+            console.error('❌ [QUERY API] Error processing stream:', error);
             controller.error(error);
           }
         };
         
-        forwardStream();
+        processStream();
       }
     });
     
