@@ -110,16 +110,6 @@ export default function Head() {
       {/* Security Headers */}
       <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
       <meta name="referrer" content="strict-origin-when-cross-origin" />
-      
-      
-      <script 
-  src="http://localhost:8000/embed.js"
-  data-api-key="cmd052lie0000vj4kgg43y6yv"
-  data-initial-message="Hello! How can I help you today?"
-  data-position="bottom-right"
-  data-theme="light"
-  async
-></script>
     </>
   );
 }
