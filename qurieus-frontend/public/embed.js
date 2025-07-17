@@ -675,8 +675,7 @@
         });
         
       } catch (error) {
-        console.error('❌ [EMBED] Error saving visitor information:', error);
-        alert('❌ [EMBED] Failed to save information. Please try again.');
+        alert('Failed to save information. Please try again.');
       }
     };
     
@@ -1636,67 +1635,38 @@
           const chunk = decoder.decode(value);
           fullResponse += chunk;
           
-          console.log(`🔍 [EMBED] Chunk ${chunkCount}:`, chunk);
-          
           // Process each line for Server-Sent Events format
           const lines = chunk.split('\n');
-          console.log(`🔍 [EMBED] Processing ${lines.length} lines from chunk ${chunkCount}`);
           
           for (const line of lines) {
-            console.log(`🔍 [EMBED] Processing line: "${line}"`);
-            
             if (line.startsWith('data: ')) {
-              console.log(`🔍 [EMBED] Found data line: "${line}"`);
-              
               try {
                 const jsonStr = line.slice(6); // Remove 'data: ' prefix
-                console.log(`🔍 [EMBED] JSON string: "${jsonStr}"`);
-                
                 const data = JSON.parse(jsonStr);
-                console.log(`🔍 [EMBED] Parsed data:`, data);
                 
                 // Handle response content
                 if (data.response !== undefined && data.response !== "") {
-                  console.log(`🔍 [EMBED] Adding response to assistantMessage: "${data.response}"`);
                   assistantMessage += data.response;
-                  console.log(`🔍 [EMBED] assistantMessage now: "${assistantMessage}"`);
-                } else {
-                  console.log(`🔍 [EMBED] Skipping response (undefined or empty):`, data.response);
                 }
                 
                 if (data.sources) {
                   // Handle sources if needed
-                  console.log('🔍 [EMBED] Received sources:', data.sources);
                 }
                 
                 if (data.done) {
-                  console.log('🔍 [EMBED] Received done flag, assistantMessage:', assistantMessage);
-                  console.log('🔍 [EMBED] assistantMessage length:', assistantMessage.length);
-                  console.log('🔍 [EMBED] assistantMessage.trim():', assistantMessage.trim());
-                  console.log('🔍 [EMBED] assistantMessage.trim() length:', assistantMessage.trim().length);
-                  console.log('🔍 [EMBED] showAgentButtons flag:', data.showAgentButtons);
-                  
                   // Remove peeking character indicator
                   const peekingIndicator = chatWindow.querySelector('[style*="position: absolute"][style*="bottom: 80px"]');
                   if (peekingIndicator) {
-                    console.log('🔍 [EMBED] Removing peeking indicator');
                     peekingIndicator.remove();
                   }
                   
                   // Display the complete message - only if we have content
                   if (assistantMessage && assistantMessage.trim()) {
-                    console.log('🔍 [EMBED] Displaying message via addMessageToUI');
-                    
                     // Check if this is an agent-related message that needs action buttons
                     const needsAgentButtons = (assistantMessage.toLowerCase().includes('active conversation') && 
                                             assistantMessage.toLowerCase().includes('agent')) ||
                                             assistantMessage.toLowerCase().includes('connect with a human agent') ||
                                             data.showAgentButtons === true;
-                    
-                    console.log('🔍 [EMBED] needsAgentButtons:', needsAgentButtons);
-                    console.log('🔍 [EMBED] assistantMessage includes "connect with a human agent":', assistantMessage.toLowerCase().includes('connect with a human agent'));
-                    console.log('🔍 [EMBED] data.showAgentButtons:', data.showAgentButtons);
-                    console.log('🔍 [EMBED] data.routedToAgent:', data.routedToAgent);
                     
                     // Determine message type for visual distinction
                     let messageRole = 'assistant';
@@ -1711,19 +1681,11 @@
                     addMessageToUI(messageRole, assistantMessage, new Date().toISOString(), showAgentButtons);
                     
                     // Final update to state
-                    console.log('🔍 [EMBED] Updating widgetState.messages');
                     widgetState.messages = [...widgetState.messages, { 
                       role: messageRole, 
                       content: assistantMessage, 
                       timestamp: new Date().toISOString() 
                     }];
-                  } else if (data.routedToAgent === true) {
-                    // Handle case where message was routed to agent but no system message was provided
-                    console.log('🔍 [EMBED] Message routed to agent, no system message to display');
-                  } else {
-                    console.log('🔍 [EMBED] NOT displaying message - condition failed');
-                    console.log('🔍 [EMBED] assistantMessage:', assistantMessage);
-                    console.log('🔍 [EMBED] assistantMessage.trim():', assistantMessage.trim());
                   }
                   
                   // Join chat room for real-time updates if we have a visitor ID
@@ -1748,25 +1710,15 @@
                   break;
                 }
               } catch (e) {
-                console.warn('⚠️ [EMBED] Failed to parse SSE line:', {
-                  line: line.substring(0, 100),
-                  error: e instanceof Error ? e.message : String(e)
-                });
+                // Failed to parse SSE line
               }
-            } else {
-              console.log(`🔍 [EMBED] Line does not start with 'data: ': "${line}"`);
             }
           }
         }
         
-        console.log('🔍 [EMBED] Finished reading streaming response');
-        console.log('🔍 [EMBED] Final assistantMessage:', assistantMessage);
-        console.log('🔍 [EMBED] Final fullResponse:', fullResponse);
+
       } catch (error) {
-        console.error('❌ [EMBED] Chat error:', {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        });
+        // Chat error occurred
         
         // Remove peeking character indicator
         const peekingIndicator = chatWindow.querySelector('[style*="position: absolute"][style*="bottom: 80px"]');
@@ -2019,12 +1971,12 @@
     showSources: document.currentScript.getAttribute('data-show-sources') === 'true',
   };
 
-  console.log('Config loaded:', config);
+
 
   if (config.apiKey) {
     // Initialize immediately
     window.QurieusChat.init(config);
   } else {
-    console.warn('No API key found in data attributes');
+    // No API key found in data attributes
   }
 })(); 
