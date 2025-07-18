@@ -33,6 +33,13 @@ export async function checkTrialExpiration() {
 
       console.log(`[TRIAL] Trial expired for user: ${trial.user.email}`);
       
+      // Check if user has a paid subscription before sending expired email
+      const hasPaidSubscription = await checkIfUserHasPaidSubscription(trial.userId);
+      if (hasPaidSubscription) {
+        console.log(`[TRIAL] Skipping expired email for ${trial.user.email} - user has paid subscription`);
+        continue;
+      }
+      
       // Send trial expired email using existing email service
       try {
         const { sendTrialExpiredEmail } = await import("@/lib/email");
@@ -57,12 +64,22 @@ export async function sendTrialExpiringWarnings() {
   try {
     console.log("[TRIAL] Checking for trials expiring soon...");
     
-    // Get trials expiring in 1, 3, and 7 days
-    const warningDays = [1, 3, 7];
+    // Get trials expiring in 1, 3 days, and the day of expiration (0 days)
+    const warningDays = [1, 3, 0];
     
     for (const days of warningDays) {
-      const warningDate = new Date();
-      warningDate.setDate(warningDate.getDate() + days);
+      let targetDate: Date;
+      
+      if (days === 0) {
+        // For day of expiration, check trials that expire today
+        targetDate = new Date();
+        targetDate.setHours(0, 0, 0, 0); // Start of today
+      } else {
+        // For future warnings, check trials expiring in X days
+        targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + days);
+        targetDate.setHours(0, 0, 0, 0); // Start of that day
+      }
       
       const expiringTrials = await prisma.userSubscription.findMany({
         where: {
@@ -70,8 +87,8 @@ export async function sendTrialExpiringWarnings() {
             name: "Free Trial"
           },
           currentPeriodEnd: {
-            gte: new Date(warningDate.getTime() - 24 * 60 * 60 * 1000), // Within 24 hours of warning date
-            lt: new Date(warningDate.getTime() + 24 * 60 * 60 * 1000)
+            gte: targetDate,
+            lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000) // Within 24 hours of target date
           },
           status: "active"
         },
@@ -82,6 +99,13 @@ export async function sendTrialExpiringWarnings() {
       });
 
       for (const trial of expiringTrials) {
+        // Check if user has a paid subscription before sending warning email
+        const hasPaidSubscription = await checkIfUserHasPaidSubscription(trial.userId);
+        if (hasPaidSubscription) {
+          console.log(`[TRIAL] Skipping ${days}-day warning for ${trial.user.email} - user has paid subscription`);
+          continue;
+        }
+
         console.log(`[TRIAL] Sending ${days}-day warning to: ${trial.user.email}`);
         
         try {
@@ -99,5 +123,28 @@ export async function sendTrialExpiringWarnings() {
     }
   } catch (error) {
     console.error("[TRIAL] Error sending trial expiring warnings:", error);
+  }
+}
+
+// Helper function to check if user has a paid subscription
+async function checkIfUserHasPaidSubscription(userId: string): Promise<boolean> {
+  try {
+    // Check for any active paid subscription (not Free Trial)
+    const paidSubscription = await prisma.userSubscription.findFirst({
+      where: {
+        userId: userId,
+        status: "active",
+        plan: {
+          name: {
+            not: "Free Trial"
+          }
+        }
+      }
+    });
+
+    return !!paidSubscription;
+  } catch (error) {
+    console.error("[TRIAL] Error checking paid subscription:", error);
+    return false; // Default to false to ensure emails are sent if there's an error
   }
 } 

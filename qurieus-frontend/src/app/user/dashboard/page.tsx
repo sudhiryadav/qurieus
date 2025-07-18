@@ -44,7 +44,7 @@ export default function Dashboard() {
   }, [session?.user?.role, router]);
 
   const fetchDashboardData = useCallback(async () => {
-    if (session?.user?.role === "AGENT") return;
+    if (!session?.user?.id || session?.user?.role === "AGENT") return;
     try {
       const response = await axiosInstance.get('/api/admin/analytics/dashboard');
       setDashboardData(response.data);
@@ -53,7 +53,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.role]);
+  }, [session?.user?.id, session?.user?.role]);
 
   useEffect(() => {
     setMounted(true);

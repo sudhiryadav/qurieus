@@ -134,9 +134,19 @@ export async function sendTrialExpiringEmail(data: {
   days_left: number;
   trial_end_date: string;
 }) {
+  let subject: string;
+  
+  if (data.days_left === 0) {
+    subject = "Your Trial Expires Today!";
+  } else if (data.days_left === 1) {
+    subject = "Your Trial Expires Tomorrow!";
+  } else {
+    subject = `Your Trial Expires in ${data.days_left} Days`;
+  }
+  
   return sendEmail({
     to: data.email,
-    subject: data.days_left === 1 ? "Your Trial Expires Tomorrow!" : `Your Trial Expires in ${data.days_left} Days`,
+    subject,
     template: "trial-expiring",
     context: { ...data, ...footerData },
   });

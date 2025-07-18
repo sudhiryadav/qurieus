@@ -10,11 +10,19 @@
   
   <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 5px; margin: 20px 0;">
     <h3 style="margin: 0 0 15px 0; color: #856404;">⚠️ Important Notice</h3>
+    {{#if (eq days_left 0)}}
+    <p style="margin: 0 0 10px 0; color: #856404;">Your free trial <strong>expires today</strong> ({{trial_end_date}}).</p>
+    {{else}}
     <p style="margin: 0 0 10px 0; color: #856404;">Your free trial will expire in <strong>{{days_left}} {{#if (eq days_left 1)}}day{{else}}days{{/if}}</strong> (on {{trial_end_date}}).</p>
+    {{/if}}
     <p style="margin: 0; color: #856404;">After expiration, you'll lose access to your uploaded documents and AI insights.</p>
   </div>
   
+  {{#if (eq days_left 0)}}
+  <p style="margin: 20px 0; font-size: 16px;"><strong>This is your final reminder!</strong> Upgrade now to keep your documents and continue using Qurieus.</p>
+  {{else}}
   <p style="margin: 20px 0; font-size: 16px;">To continue using Qurieus and keep your data safe, upgrade to a paid plan today!</p>
+  {{/if}}
   
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
     <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd; text-align: center;">
@@ -42,7 +50,11 @@
     <li style="margin-bottom: 8px;">You'll need to re-upload documents if you upgrade later</li>
   </ul>
   
+  {{#if (eq days_left 0)}}
+  <p style="margin: 20px 0; font-size: 16px;"><strong>This is your last chance!</strong> Upgrade now to ensure uninterrupted access to your documents.</p>
+  {{else}}
   <p style="margin: 20px 0; font-size: 16px;">Don't wait until the last minute! Upgrade now to ensure uninterrupted access to your documents.</p>
+  {{/if}}
   
   <p style="margin: 20px 0; font-size: 16px;">If you have any questions about our plans or need help with the upgrade process, please contact our support team.</p>
   

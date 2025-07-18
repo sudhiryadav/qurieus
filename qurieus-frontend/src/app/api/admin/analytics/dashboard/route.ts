@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/utils/auth';
 import { prisma } from '@/utils/prismaDB';
-import { subDays, startOfDay, endOfDay, format } from 'date-fns';
-import { logger } from '@/lib/logger';
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
+import { format, subDays } from 'date-fns';
+import { getServerSession } from 'next-auth';
+import { NextResponse } from 'next/server';
 
 export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (request: Request) => {
   const startTime = Date.now();
