@@ -1,16 +1,15 @@
 import { footerData, sendEmail } from "@/lib/email";
-import paddle,{ EventName, upsertUserSubscriptionFromPaddle } from "@/lib/paddle";
+import { logger } from "@/lib/logger";
+import paddle, { EventName, upsertUserSubscriptionFromPaddle } from "@/lib/paddle";
 import { prisma } from "@/utils/prismaDB";
 import { ensureSingleActiveSubscription } from "@/utils/subscription";
+import { createHmac, timingSafeEqual } from "crypto";
 import fs from "fs/promises";
 import handlebars from "handlebars";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import path from "path";
 import puppeteer from "puppeteer";
-import { createHmac, timingSafeEqual } from "crypto";
-import { isNullOrUndefined } from "util";
-import { logger } from "@/lib/logger";
 
 // Register Handlebars helpers
 handlebars.registerHelper("formatDate", (date: Date) =>
