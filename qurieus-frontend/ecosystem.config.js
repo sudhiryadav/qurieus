@@ -4,7 +4,7 @@ module.exports = {
       name: 'qurieus-frontend',
       cwd: './qurieus-frontend',
       script: 'yarn',
-      args: 'dev',
+      args: 'start',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
