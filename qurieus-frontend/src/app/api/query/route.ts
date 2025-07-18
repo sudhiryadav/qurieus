@@ -5,7 +5,10 @@ import { cacheGet, cacheSet, generateQueryCacheKey } from "@/utils/redis";
 import { errorResponse } from "@/utils/responser";
 import { sendEscalationNotificationToUser, sendEscalationNotificationToAgents } from "@/lib/email";
 import { handleUserDisconnect } from "@/lib/agentChatRecovery";
+import { corsErrorResponse, createOptionsHandler } from "@/utils/cors";
 
+// Handle OPTIONS request for CORS preflight
+export const OPTIONS = createOptionsHandler();
 
 // Rate Limiting Setup
 const RATE_LIMIT = parseInt(process.env.QUERY_RATE_LIMIT || "100", 10);
@@ -638,15 +641,15 @@ export async function POST(request: Request) {
     }, { userId });
 
     if (!message)
-      return errorResponse({ error: "Message is required", status: 400 });
+      return corsErrorResponse("Message is required", 400);
     if (!apiKey)
-      return errorResponse({ error: "API Key is required", status: 400 });
+      return corsErrorResponse("API Key is required", 400);
 
     // Rate Limiting
     const rateKey = `rate:${apiKey}:${ip}`;
     if (await isRateLimited(rateKey)) {
       logger.warn("Query API: Rate limit exceeded", { apiKey, ip, rateKey }, { userId });
-      return errorResponse({ error: "Rate limit exceeded", status: 429 });
+      return corsErrorResponse("Rate limit exceeded", 429);
     }
 
     // Fetch user and check domain/origin/referrer/ip restrictions
@@ -675,13 +678,13 @@ export async function POST(request: Request) {
       : null;
 
     if (!userWithSubscription)
-      return errorResponse({ error: "Invalid API Key", status: 404, errorCode: "INVALID_API_KEY" });
+      return corsErrorResponse({ error: "Invalid API Key", errorCode: "INVALID_API_KEY" }, 404);
     if (!checkAllowed(userWithSubscription.allowedOrigins, origin))
-      return errorResponse({ error: "Origin not allowed", status: 403, errorCode: "ORIGIN_NOT_ALLOWED" });
+      return corsErrorResponse({ error: "Origin not allowed", errorCode: "ORIGIN_NOT_ALLOWED" }, 403);
     if (!checkAllowed(userWithSubscription.allowedReferrers, referer))
-      return errorResponse({ error: "Referrer not allowed", status: 403, errorCode: "REFERER_NOT_ALLOWED" });
+      return corsErrorResponse({ error: "Referrer not allowed", errorCode: "REFERER_NOT_ALLOWED" }, 403);
     if (!checkAllowed(userWithSubscription.allowedIPs, ip))
-      return errorResponse({ error: "IP not allowed", status: 403, errorCode: "IP_NOT_ALLOWED" });
+      return corsErrorResponse({ error: "IP not allowed", errorCode: "IP_NOT_ALLOWED" }, 403);
 
     // Check if user has a subscription
     const subscription = await prisma.userSubscription.findFirst({
@@ -689,7 +692,7 @@ export async function POST(request: Request) {
       orderBy: { createdAt: 'desc' },
     });
     if (!subscription)
-      return errorResponse({ error: "User has no subscription", status: 403, errorCode: "NO_SUBSCRIPTION" });
+      return corsErrorResponse({ error: "User has no subscription", errorCode: "NO_SUBSCRIPTION" }, 403);
 
     // Check if number of request is greater than the subscription plan
     const queryCount = await prisma.queryAnalytics.count({
@@ -698,7 +701,7 @@ export async function POST(request: Request) {
     // Use planSnapshot if available, otherwise fall back to plan for backward compatibility
     const plan = userWithSubscription.subscription?.planSnapshot || userWithSubscription.subscription?.plan;
     if (plan?.maxQueriesPerDay && plan.maxQueriesPerDay < queryCount)
-      return errorResponse({ error: "Number of requests exceeded", status: 403, errorCode: "QUERY_LIMIT_EXCEEDED" });
+      return corsErrorResponse({ error: "Number of requests exceeded", errorCode: "QUERY_LIMIT_EXCEEDED" }, 403);
 
     // (DEV) Test Response
     if (process.env.NODE_ENV === "development" && false) {
@@ -1114,14 +1117,19 @@ export async function POST(request: Request) {
         }
       });
 
-      return new Response(stream, {
+      const streamResponse = new Response(stream, {
         headers: {
           "Content-Type": "text/plain", // Changed to text/plain for SSE
           "Cache-Control": "no-cache",
           "Connection": "keep-alive",
           "x-conversation-id": chatConversation.id,
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, x-api-key, Authorization",
+          "Access-Control-Max-Age": "86400",
         },
       });
+      return streamResponse;
     }
 
     // Query based on environment configuration
@@ -1130,15 +1138,15 @@ export async function POST(request: Request) {
       message: message.substring(0, 100)
     }, { userId });
 
-    let response;
+    let modalResponse;
     // Query with Modal.com (Qdrant integration)
     // Use environment variable for collection name, fallback to default
     const collectionName = process.env.QDRANT_COLLECTION;
     
-    response = await queryWithModal(message, apiKey, history, collectionName);
+    modalResponse = await queryWithModal(message, apiKey, history, collectionName);
 
-    if (!response.ok)
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!modalResponse.ok)
+      throw new Error(`HTTP error! status: ${modalResponse.status}`);
 
 
     // Create a stream that processes Modal.com chunks and handles "No relevant documents found"
@@ -1147,7 +1155,7 @@ export async function POST(request: Request) {
       start(controller) {
         const processStream = async () => {
           try {
-            const reader = response.body?.getReader();
+            const reader = modalResponse.body?.getReader();
             if (!reader) {
               throw new Error("No response body reader available");
             }
@@ -1278,14 +1286,19 @@ export async function POST(request: Request) {
     });
     
     // Return the streaming response immediately
-    return new Response(stream, {
+    const finalResponse = new Response(stream, {
       headers: {
         "Content-Type": "text/plain", // Changed to text/plain for SSE
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
         "x-conversation-id": chatConversation.id,
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, x-api-key, Authorization",
+        "Access-Control-Max-Age": "86400",
       },
     });
+    return finalResponse;
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
     logger.error("Query API: Error processing query", { 
@@ -1295,10 +1308,9 @@ export async function POST(request: Request) {
     }, { userId });
     
     console.error("Query error:", error);
-    return errorResponse({ 
+    return corsErrorResponse({ 
       error: "An error occurred while processing your query", 
-      status: 500,
       errorCode: "QUERY_ERROR"
-    });
+    }, 500);
   }
 }

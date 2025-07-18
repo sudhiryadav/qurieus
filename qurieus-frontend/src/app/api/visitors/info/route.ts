@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/utils/prismaDB';
 import { logger } from '@/lib/logger';
 import { sendEmail } from '@/lib/email';
+import { corsResponse, corsErrorResponse, createOptionsHandler } from '@/utils/cors';
+
+// Handle OPTIONS request for CORS preflight
+export const OPTIONS = createOptionsHandler();
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -12,10 +16,7 @@ export async function POST(request: NextRequest) {
     
     if (!apiKey) {
       logger.warn("Visitor Info API: Missing API key");
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 401 }
-      );
+      return corsErrorResponse("API key is required", 401);
     }
 
     // Validate API key by checking if user exists
@@ -26,10 +27,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       logger.warn("Visitor Info API: Invalid API key", { apiKey });
-      return NextResponse.json(
-        { error: "Invalid API key" },
-        { status: 401 }
-      );
+      return corsErrorResponse("Invalid API key", 401);
     }
 
     const { visitorId, name, email, phone, company, source = 'chat_widget' } = await request.json();
@@ -46,28 +44,19 @@ export async function POST(request: NextRequest) {
 
     if (!visitorId) {
       logger.warn("Visitor Info API: Missing visitor ID");
-      return NextResponse.json(
-        { error: "Visitor ID is required" },
-        { status: 400 }
-      );
+      return corsErrorResponse("Visitor ID is required", 400);
     }
 
     if (!name || !email) {
       logger.warn("Visitor Info API: Missing required fields", { visitorId });
-      return NextResponse.json(
-        { error: "Name and email are required" },
-        { status: 400 }
-      );
+      return corsErrorResponse("Name and email are required", 400);
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       logger.warn("Visitor Info API: Invalid email format", { visitorId, email });
-      return NextResponse.json(
-        { error: "Invalid email format" },
-        { status: 400 }
-      );
+      return corsErrorResponse("Invalid email format", 400);
     }
 
     // Upsert visitor information
@@ -137,7 +126,7 @@ export async function POST(request: NextRequest) {
       responseTime 
     });
 
-    return NextResponse.json({ 
+    return corsResponse({ 
       success: true, 
       message: "Visitor information saved successfully",
       visitorInfo
@@ -151,10 +140,7 @@ export async function POST(request: NextRequest) {
       stack: error.stack 
     });
     
-    return NextResponse.json(
-      { error: "Failed to save visitor information" },
-      { status: 500 }
-    );
+    return corsErrorResponse("Failed to save visitor information", 500);
   }
 }
 
@@ -167,10 +153,7 @@ export async function GET(request: NextRequest) {
     
     if (!visitorId) {
       logger.warn("Visitor Info API: Missing visitor ID in GET request");
-      return NextResponse.json(
-        { error: "Visitor ID is required" },
-        { status: 400 }
-      );
+      return corsErrorResponse("Visitor ID is required", 400);
     }
 
     const visitorInfo = await prisma.visitorInfo.findUnique({
@@ -194,7 +177,7 @@ export async function GET(request: NextRequest) {
       responseTime 
     });
 
-    return NextResponse.json({ visitorInfo });
+    return corsResponse({ visitorInfo });
 
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
@@ -204,9 +187,6 @@ export async function GET(request: NextRequest) {
       stack: error.stack 
     });
     
-    return NextResponse.json(
-      { error: "Failed to retrieve visitor information" },
-      { status: 500 }
-    );
+    return corsErrorResponse("Failed to retrieve visitor information", 500);
   }
 } 
