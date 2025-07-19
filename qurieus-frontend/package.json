@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=8000 node server.js",
+    "dev": "PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 node server.js",
     "build": "next build",
-    "start": "PORT=8000 next start",
+    "start": "NODE_ENV=production PORT=8000 NODE_NO_WARNINGS=1 node server.js",
+    "start:dev": "NODE_ENV=development PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 node server.js",
     "lint": "next lint",
     "tunnel": "ngrok http 8000",
     "reset-db": "ts-node --project prisma/tsconfig.json scripts/reset-db.ts"
