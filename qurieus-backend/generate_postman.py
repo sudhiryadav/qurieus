@@ -106,7 +106,7 @@ def generate_postman_collection(app):
                             "key": "files",
                             "type": "file",
                             "src": "/path/to/your/file.pdf",
-                            "description": "Upload PDF or DOC files. Make sure you have set the auth_token in environment variables."
+                            "description": "Upload PDF, DOC, DOCX, TXT, CSV, XLS, or XLSX files. Make sure you have set the auth_token in environment variables."
                         }
                     ]
                 }

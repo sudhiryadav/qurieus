@@ -234,6 +234,18 @@ def process_file(
             doc = docx.Document(doc_stream)
             for para in doc.paragraphs:
                 text_content += para.text + "\n"
+        elif file_extension.lower() == '.txt':
+            # Handle plain text files
+            try:
+                # Try UTF-8 first
+                text_content = file_content.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    # Fallback to UTF-8 with error handling
+                    text_content = file_content.decode('utf-8', errors='replace')
+                except Exception:
+                    # Final fallback to latin-1
+                    text_content = file_content.decode('latin-1', errors='replace')
         elif file_extension.lower() in ['.xlsx', '.xls', '.csv']:
             file_stream = io.BytesIO(file_content)
             try:
@@ -439,7 +451,7 @@ async def upload_files(
     api_key: str = Header(..., alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """Upload one or more documents (PDF or DOC) for processing."""
+    """Upload one or more documents (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX) for processing."""
     try:
         # Validate API key
         if api_key != settings.BACKEND_API_KEY:

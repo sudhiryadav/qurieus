@@ -17,24 +17,29 @@ const getRedisClient = () => {
 
 // Initialize Redis client
 let redisClient: Redis | null = null;
+let instanceId = 0;
 
 // Get Redis client instance (singleton pattern)
 export const getRedis = () => {
   if (!redisClient) {
+    instanceId++;
+    console.log(`[Redis] Creating new Redis instance #${instanceId}`);
     redisClient = getRedisClient();
     
     // Add event listeners for debugging
     redisClient.on('connect', () => {
-      console.log('[Redis] Client connected');
+      console.log(`[Redis] Instance #${instanceId} connected`);
     });
     
     redisClient.on('error', (error) => {
-      console.error('[Redis] Client error:', error);
+      console.error(`[Redis] Instance #${instanceId} error:`, error);
     });
     
     redisClient.on('ready', () => {
-      console.log('[Redis] Client ready');
+      console.log(`[Redis] Instance #${instanceId} ready`);
     });
+  } else {
+    console.log(`[Redis] Reusing existing Redis instance #${instanceId}`);
   }
   return redisClient;
 };

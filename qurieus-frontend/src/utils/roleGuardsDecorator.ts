@@ -43,7 +43,7 @@ import { UserRole } from "@prisma/client";
 import { cacheGet, cacheSet, getRedis } from "./redis";
 
 // Type definitions
-export type RouteHandler = (request: NextRequest, user?: any) => Promise<NextResponse>;
+export type RouteHandler = (request: NextRequest, context?: any) => Promise<NextResponse>;
 
 // Cache configuration
 // USER_CACHE_TTL: Time to live for user cache in seconds (default: 300 = 5 minutes)
@@ -124,7 +124,7 @@ async function getUserWithCache(userId: string) {
 // Single decorator function that accepts roles array
 function RequireRoles(roles: UserRole[], actionName?: string) {
   return function (handler: RouteHandler): RouteHandler {
-    return async (request: NextRequest) => {
+    return async (request: NextRequest, context?: any) => {
       const startTime = Date.now();
       let userId: string | undefined;
       const guardName = actionName || `API (${roles.join(', ')})`;
@@ -167,8 +167,8 @@ function RequireRoles(roles: UserRole[], actionName?: string) {
           requiredRoles: roles
         });
 
-        // Execute the handler with user context
-        const response = await handler(request, user);
+        // Execute the handler with the original context (not user)
+        const response = await handler(request, context);
         
         // Log response time
         const responseTime = Date.now() - startTime;

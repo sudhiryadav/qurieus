@@ -5,7 +5,7 @@ import { authOptions } from "@/utils/auth";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
-export const GET = RequireRoles([UserRole.USER])(async () => {
+export const GET = RequireRoles([UserRole.USER,UserRole.SUPER_ADMIN])(async () => {
   try {
     const session = await getServerSession(authOptions);
 

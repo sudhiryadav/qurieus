@@ -3,9 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
 import { prisma } from '@/utils/prismaDB';
 import { logger } from '@/lib/logger';
-import { RequireUser } from '@/utils/roleGuardsDecorator';
+import { OptionalAuth, RequireUser } from '@/utils/roleGuardsDecorator';
 
-export const POST = RequireUser("Link Visitor API")(async (request: NextRequest, user: any) => {
+export const POST = OptionalAuth("Link Visitor API")(async (request: NextRequest, user: any) => {
   const startTime = Date.now();
   const userId = user.id;
   

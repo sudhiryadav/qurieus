@@ -9,7 +9,7 @@ import { RequireRoles, invalidateUserCache } from "@/utils/roleGuardsDecorator";
 // NOTE: If you get type errors for UserRole.AGENT or parentUserId, run 'yarn prisma generate' to update types.
 
 // POST /api/agents - Create/invite a new agent
-export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN])(async (request: Request) => {
+export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (request: Request) => {
   const session = await getServerSession(authOptions);
   const { name, email, password } = await request.json();
   if (!name || !email || !password) {
@@ -65,7 +65,7 @@ export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN])(async (request
 });
 
 // GET /api/agents - List all agents for the current owner
-export const GET = RequireRoles([UserRole.USER, UserRole.ADMIN])(async (request: Request) => {
+export const GET = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (request: Request) => {
   const session = await getServerSession(authOptions);
   const agents = await prisma.user.findMany({
     where: {
