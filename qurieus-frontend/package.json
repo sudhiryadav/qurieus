@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 node server.js",
     "build": "next build",
-    "start": "NODE_ENV=production PORT=8000 NODE_NO_WARNINGS=1 node server.js",
+    "start": "NODE_ENV=production PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 NEXTAUTH_SECRET='r0ykrYJHo9NRYFQBx2qcPBGXuPphJBO/0lY7ega2z8E=' node server.js",
     "start:dev": "NODE_ENV=development PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 node server.js",
     "lint": "next lint",
     "tunnel": "ngrok http 8000",
