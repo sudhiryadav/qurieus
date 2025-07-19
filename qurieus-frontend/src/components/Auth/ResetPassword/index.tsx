@@ -56,11 +56,15 @@ const ResetPassword = ({ token }: { token: string }) => {
       return;
     }
 
+    if (data.newPassword !== data.ReNewPassword) {
+      showToast.error("Passwords do not match.");
+      return;
+    }
+
     try {
-      await axios.post("/api/auth/reset-password", {
-        token,
+      await axios.post("/api/forgot-password/update", {
+        email: user.email,
         password: data.newPassword,
-        confirmPassword: data.ReNewPassword,
       });
 
       showToast.success("Password reset successfully");
@@ -89,7 +93,7 @@ const ResetPassword = ({ token }: { token: string }) => {
               <form onSubmit={handleSubmit}>
                 <div className="mb-[22px]">
                   <input
-                    type="text"
+                    type="password"
                     placeholder="New password"
                     name="newPassword"
                     value={data?.newPassword}
@@ -101,10 +105,10 @@ const ResetPassword = ({ token }: { token: string }) => {
 
                 <div className="mb-[22px]">
                   <input
-                    type="text"
-                    placeholder="New password"
-                    name="newPassword"
-                    value={data?.newPassword}
+                    type="password"
+                    placeholder="Confirm new password"
+                    name="ReNewPassword"
+                    value={data?.ReNewPassword}
                     onChange={handleChange}
                     required
                     className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"

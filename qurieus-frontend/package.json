@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "PORT=8000 node server.js",
     "build": "next build",
-    "start": "next start",
+    "start": "PORT=8000 next start",
     "lint": "next lint",
     "tunnel": "ngrok http 8000",
     "reset-db": "ts-node --project prisma/tsconfig.json scripts/reset-db.ts"
