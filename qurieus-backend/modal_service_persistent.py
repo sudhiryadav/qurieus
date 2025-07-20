@@ -92,7 +92,8 @@ def get_embedding_model():
     global embedding_model
     if embedding_model is None:
         print("Initializing embedding model...")
-        embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
+        # Use a better model for document Q&A
+        embedding_model = SentenceTransformer("BAAI/bge-small-en-v1.5", device="cuda")
         print("Embedding model initialized successfully")
     return embedding_model
 
@@ -230,7 +231,7 @@ async def query_documents_endpoint(
         qdrant_api_key = os.environ.get("QDRANT_API_KEY")
         
         # Determine collection name: header override > request body > environment default
-        default_collection = os.environ.get("QDRANT_COLLECTION", "user_documents_embeddings")
+        default_collection = os.environ.get("QDRANT_COLLECTION")
         qdrant_collection = x_collection or request.collection_name or default_collection
         
         print(f"Using Qdrant collection: {qdrant_collection}")
@@ -292,6 +293,7 @@ async def query_documents_endpoint(
         # Search Qdrant for similar vectors with optimized parameters
         search_start = time.time()
         try:
+            # First search with higher threshold for quality results
             search_results = qdrant_client.search(
                 collection_name=qdrant_collection,
                 query_vector=query_embedding,
@@ -300,10 +302,26 @@ async def query_documents_endpoint(
                         {"key": "user_id", "match": {"value": user_id}}
                     ]
                 },
-                limit=8,  # Increased from 5 to 8 for better contact information retrieval
+                limit=12,  # Increased for better coverage
                 with_payload=True,
-                score_threshold=0.25  # Reduced threshold to capture more potential contact information
+                score_threshold=0.3  # Higher threshold for better quality
             )
+            
+            # If we don't get enough results, try with lower threshold
+            if len(search_results) < 3:
+                print(f"Only {len(search_results)} results with high threshold, trying lower threshold...")
+                search_results = qdrant_client.search(
+                    collection_name=qdrant_collection,
+                    query_vector=query_embedding,
+                    query_filter={
+                        "must": [
+                            {"key": "user_id", "match": {"value": user_id}}
+                        ]
+                    },
+                    limit=8,
+                    with_payload=True,
+                    score_threshold=0.2  # Lower threshold as fallback
+                )
             
             print(f"PERFLOG: Qdrant search completed in {time.time() - search_start:.2f}s")
             
@@ -329,21 +347,40 @@ async def query_documents_endpoint(
             relevant_sources = []
             
             # For contact-related queries, be more lenient with score filtering
-            contact_keywords = ['contact', 'phone', 'email', 'address', 'call', 'reach', 'get in touch']
+            contact_keywords = ['contact', 'phone', 'email', 'address', 'call', 'reach', 'get in touch', 'support']
             is_contact_query = any(keyword in query.lower() for keyword in contact_keywords)
             
-            for result in search_results:
+            # Sort results by score for better quality selection
+            sorted_results = sorted(search_results, key=lambda x: x.score, reverse=True)
+            
+            for result in sorted_results:
                 if result.payload:
-                    # Use lower threshold for contact queries to capture more potential matches
-                    score_threshold = 0.3 if is_contact_query else 0.4
+                    content = result.payload.get("content", "")
+                    
+                    # Skip empty content
+                    if not content.strip():
+                        continue
+                    
+                    # Dynamic threshold based on query type and result quality
+                    base_threshold = 0.25 if is_contact_query else 0.35
+                    
+                    # Lower threshold for top results to ensure we get some content
+                    if len(relevant_chunks) < 3:
+                        score_threshold = base_threshold * 0.8
+                    else:
+                        score_threshold = base_threshold
                     
                     if result.score > score_threshold:
-                        content = result.payload.get("content", "")
                         relevant_chunks.append(content)
                         relevant_sources.append({
                             "document": result.payload.get("filename", "Unknown"),
-                            "similarity": float(result.score)
+                            "similarity": float(result.score),
+                            "chunk_id": result.payload.get("chunk_id", "unknown")
                         })
+                        
+                        # Limit to prevent context overflow
+                        if len(relevant_chunks) >= 6:
+                            break
             
             # Build context with better organization
             if is_contact_query:
@@ -366,6 +403,8 @@ async def query_documents_endpoint(
             max_length = 3000 if is_contact_query else 2500
             context = context[:max_length]
             print(f"PERFLOG: Selected {len(relevant_chunks)} chunks from Qdrant, context length: {len(context)}")
+            print(f"PERFLOG: Search scores: {[f'{r.score:.3f}' for r in sorted_results[:5]]}")
+            print(f"PERFLOG: Query type: {'contact' if is_contact_query else 'general'}")
             
         except Exception as e:
             print(f"Failed to search Qdrant: {e}")
@@ -403,10 +442,12 @@ Context: {context}
 Question: {query}
 
 Instructions:
-- Provide comprehensive and accurate information
+- Provide comprehensive and accurate information based ONLY on the provided context
 - If asked about contact details, include all available phone numbers, emails, addresses, and websites
 - If asked about services or company information, be detailed and clear
+- If the context doesn't contain relevant information, say "I don't have information about that in the provided documents"
 - Structure your response logically and be concise
+- Do not make up information that's not in the context
 [/INST]"""
         
         print(f"Generating response with prompt length: {len(prompt)}")
@@ -543,12 +584,6 @@ Instructions:
     except Exception as e:
         print(f"PERFLOG: Exception in query_documents_endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# --- PERFORMANCE TUNING RECOMMENDATIONS ---
-# PERFLOG: To further improve performance at scale, consider using a vector database (Qdrant, Pinecone, FAISS) instead of loading all embeddings from disk.
-# PERFLOG: Use Modal's keep-warm endpoint and increase warm containers to reduce cold start latency.
-# PERFLOG: Use a smaller GGUF model if latency is more important than accuracy.
-# PERFLOG: Profile each step using the PERFLOG markers above.
 
 @app.function(
     image=image,

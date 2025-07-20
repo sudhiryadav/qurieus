@@ -34,9 +34,9 @@ from app.core.config import settings
 from app.database import get_db
 from models import Document as DBDocument, Users
 
-# Initialize the embedding model with a smaller model
+# Initialize the embedding model with the same model as query service
 try:
-    embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+    embedding_model = SentenceTransformer("BAAI/bge-small-en-v1.5", device="cpu")
     print("✅ Embedding model initialized successfully")
 except Exception as e:
     print(f"Warning: Could not initialize SentenceTransformer: {str(e)}")
