@@ -95,7 +95,7 @@ async function generateInvoicePDF({
 }) {
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
   });
   const page = await browser.newPage();
