@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, H
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import text
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 import os
 import sys
@@ -12,7 +11,6 @@ import docx
 import json
 import traceback
 import base64
-import requests
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -23,7 +21,6 @@ from functools import lru_cache
 import datetime
 import pandas as pd
 import io
-from langdetect import detect
 import uuid
 import re
 
@@ -124,9 +121,20 @@ def get_cached_embedding(text: str) -> List[float]:
     """Get cached embedding or compute new one."""
     return embedding_model.encode(text).tolist()
 
-def optimize_chunk_size(text: str, target_size: int = 500) -> List[str]:
-    """Optimize chunk size based on content."""
-    # Split by sentences first
+def optimize_chunk_size(text: str, target_size: int = 800) -> List[str]:
+    """Optimize chunk size based on content with contact information preservation."""
+    # First, try to identify contact information sections
+    contact_sections = []
+    contact_keywords = ['contact', 'phone', 'email', 'address', 'call', 'reach', 'get in touch']
+    
+    # Split by paragraphs first to preserve contact sections
+    paragraphs = text.split('\n\n')
+    
+    for paragraph in paragraphs:
+        if any(keyword in paragraph.lower() for keyword in contact_keywords):
+            contact_sections.append(paragraph.strip())
+    
+    # Split by sentences for regular content
     sentences = text.split('. ')
     chunks = []
     current_chunk = []
@@ -136,16 +144,39 @@ def optimize_chunk_size(text: str, target_size: int = 500) -> List[str]:
         sentence = sentence.strip() + '. '
         sentence_size = len(sentence)
         
-        if current_size + sentence_size > target_size and current_chunk:
-            chunks.append(''.join(current_chunk))
-            current_chunk = [sentence]
-            current_size = sentence_size
+        # If this sentence contains contact info, try to keep it with related content
+        if any(keyword in sentence.lower() for keyword in contact_keywords):
+            # If current chunk is getting large, start a new one
+            if current_size > target_size * 0.7 and current_chunk:
+                chunks.append(''.join(current_chunk))
+                current_chunk = [sentence]
+                current_size = sentence_size
+            else:
+                current_chunk.append(sentence)
+                current_size += sentence_size
         else:
-            current_chunk.append(sentence)
-            current_size += sentence_size
+            # Regular content
+            if current_size + sentence_size > target_size and current_chunk:
+                chunks.append(''.join(current_chunk))
+                current_chunk = [sentence]
+                current_size = sentence_size
+            else:
+                current_chunk.append(sentence)
+                current_size += sentence_size
     
     if current_chunk:
         chunks.append(''.join(current_chunk))
+    
+    # If we found contact sections, ensure they're in their own chunks
+    if contact_sections:
+        contact_chunk = '\n\n'.join(contact_sections)
+        if len(contact_chunk) <= target_size:
+            # Add contact chunk at the beginning for better retrieval
+            chunks.insert(0, contact_chunk)
+        else:
+            # Split contact chunk if too large
+            contact_chunks = [contact_chunk[i:i+target_size] for i in range(0, len(contact_chunk), target_size)]
+            chunks = contact_chunks + chunks
     
     return chunks
 

@@ -1,14 +1,7 @@
 import modal
-import fitz
-import docx
-import pandas as pd
-import io
 import json
-import base64
 import os
-import pickle
-
-import time # Added for timing download if needed later
+import time
 
 # Fix NumPy compatibility issue
 import numpy as np
@@ -19,7 +12,7 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
-import hashlib
+import re
 
 # Initialize Modal app with unique identifier to force rebuild
 app = modal.App("qurieus-app-v58")  # Increment version for rebuild
@@ -194,41 +187,7 @@ class QueryRequest(BaseModel):
     history: Optional[List[dict]] = None
     collection_name: Optional[str] = None  # Allow collection override
 
-def analyze_financial_data(df: pd.DataFrame) -> Dict[str, Any]:
-    """Analyze financial data from DataFrame and return key metrics."""
-    analysis = {}
-    
-    # Basic statistics for numeric columns
-    numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
-    if not numeric_cols.empty:
-        analysis['numeric_summary'] = df[numeric_cols].describe().to_dict()
-    
-    # Try to identify financial metrics
-    for col in df.columns:
-        col_lower = col.lower()
-        # Revenue/Income analysis
-        if any(term in col_lower for term in ['revenue', 'income', 'sales']):
-            analysis['revenue_metrics'] = {
-                'total': float(df[col].sum()),
-                'average': float(df[col].mean()),
-                'trend': float(df[col].pct_change().mean())
-            }
-        # Expense analysis
-        elif any(term in col_lower for term in ['expense', 'cost', 'spend']):
-            analysis['expense_metrics'] = {
-                'total': float(df[col].sum()),
-                'average': float(df[col].mean()),
-                'trend': float(df[col].pct_change().mean())
-            }
-        # Profit analysis
-        elif any(term in col_lower for term in ['profit', 'margin', 'earnings']):
-            analysis['profit_metrics'] = {
-                'total': float(df[col].sum()),
-                'average': float(df[col].mean()),
-                'trend': float(df[col].pct_change().mean())
-            }
-    
-    return analysis
+
 
 # Upload endpoint
 # Upload endpoint removed - now handled by FastAPI backend with Qdrant
@@ -293,7 +252,6 @@ async def query_documents_endpoint(
         except Exception as e:
             print(f"Failed to connect to Qdrant: {e}")
             from fastapi.responses import StreamingResponse
-            import json
             
             def generate_qdrant_error_stream():
                 yield f"data: {json.dumps({'response': 'Vector database is currently unavailable.', 'done': False})}\n\n"
@@ -317,7 +275,6 @@ async def query_documents_endpoint(
         except Exception as e:
             print(f"Failed to generate query embedding: {e}")
             from fastapi.responses import StreamingResponse
-            import json
             
             def generate_embedding_error_stream():
                 yield f"data: {json.dumps({'response': 'Failed to process your query.', 'done': False})}\n\n"
@@ -343,9 +300,9 @@ async def query_documents_endpoint(
                         {"key": "user_id", "match": {"value": user_id}}
                     ]
                 },
-                limit=5,  # Reduced from 10 to 5 for better performance
+                limit=8,  # Increased from 5 to 8 for better contact information retrieval
                 with_payload=True,
-                score_threshold=0.3  # Add score threshold to filter low-quality matches
+                score_threshold=0.25  # Reduced threshold to capture more potential contact information
             )
             
             print(f"PERFLOG: Qdrant search completed in {time.time() - search_start:.2f}s")
@@ -353,7 +310,6 @@ async def query_documents_endpoint(
             if not search_results:
                 print("No relevant documents found in Qdrant")
                 from fastapi.responses import StreamingResponse
-                import json
                 
                 def generate_no_results_stream():
                     yield f"data: {json.dumps({'response': 'No relevant documents found.', 'done': False})}\n\n"
@@ -368,26 +324,52 @@ async def query_documents_endpoint(
                     }
                 )
             
-            # Extract chunks and sources from Qdrant results
+            # Extract chunks and sources from Qdrant results with better filtering
             relevant_chunks = []
             relevant_sources = []
-            for result in search_results:
-                if result.payload and result.score > 0.4:  # Additional score filtering
-                    relevant_chunks.append(result.payload.get("content", ""))
-                    relevant_sources.append({
-                        "document": result.payload.get("filename", "Unknown"),
-                        "similarity": float(result.score)
-                    })
             
-            # Optimize context length - reduce from 2000 to 1500 characters
-            context = "\n".join(relevant_chunks)
-            context = context[:1500]  # Further reduced context length for faster processing
+            # For contact-related queries, be more lenient with score filtering
+            contact_keywords = ['contact', 'phone', 'email', 'address', 'call', 'reach', 'get in touch']
+            is_contact_query = any(keyword in query.lower() for keyword in contact_keywords)
+            
+            for result in search_results:
+                if result.payload:
+                    # Use lower threshold for contact queries to capture more potential matches
+                    score_threshold = 0.3 if is_contact_query else 0.4
+                    
+                    if result.score > score_threshold:
+                        content = result.payload.get("content", "")
+                        relevant_chunks.append(content)
+                        relevant_sources.append({
+                            "document": result.payload.get("filename", "Unknown"),
+                            "similarity": float(result.score)
+                        })
+            
+            # Build context with better organization
+            if is_contact_query:
+                # For contact queries, prioritize chunks that contain contact information
+                contact_chunks = []
+                other_chunks = []
+                
+                for chunk in relevant_chunks:
+                    if any(keyword in chunk.lower() for keyword in contact_keywords):
+                        contact_chunks.append(chunk)
+                    else:
+                        other_chunks.append(chunk)
+                
+                # Put contact chunks first, then others
+                context = "\n".join(contact_chunks + other_chunks)
+            else:
+                context = "\n".join(relevant_chunks)
+            
+            # Adjust context length based on query type
+            max_length = 3000 if is_contact_query else 2500
+            context = context[:max_length]
             print(f"PERFLOG: Selected {len(relevant_chunks)} chunks from Qdrant, context length: {len(context)}")
             
         except Exception as e:
             print(f"Failed to search Qdrant: {e}")
             from fastapi.responses import StreamingResponse
-            import json
             
             def generate_error_stream():
                 yield f"data: {json.dumps({'response': 'Failed to search documents.', 'done': False})}\n\n"
@@ -413,14 +395,25 @@ async def query_documents_endpoint(
             print(f"Error loading LLM model: {e}")
             raise RuntimeError(f"Failed to load LLM model: {e}")
         
-        # Format prompt according to Mistral Instruct template with optimized length
-        prompt = f"[INST] Answer this question based on the context:\n\nContext: {context}\n\nQuestion: {query} [/INST]"
+        # Create an enhanced prompt that works well for all types of queries
+        prompt = f"""[INST] You are a helpful AI assistant. Answer the following question based on the provided context. Be thorough and provide complete information.
+
+Context: {context}
+
+Question: {query}
+
+Instructions:
+- Provide comprehensive and accurate information
+- If asked about contact details, include all available phone numbers, emails, addresses, and websites
+- If asked about services or company information, be detailed and clear
+- Structure your response logically and be concise
+[/INST]"""
+        
         print(f"Generating response with prompt length: {len(prompt)}")
         
         try:
             # Try streaming first, fallback to non-streaming if it fails
             from fastapi.responses import StreamingResponse
-            import json
             
             def generate_stream():
                 try:
@@ -655,6 +648,8 @@ async def download_model_endpoint(x_api_key: str = Header(...)):
     except Exception as e:
         print(f"❌ Model download failed: {e}")
         raise HTTPException(status_code=500, detail=f"Model download failed: {str(e)}")
+
+
 
 if __name__ == "__main__":
     # For local testing of Modal functions
