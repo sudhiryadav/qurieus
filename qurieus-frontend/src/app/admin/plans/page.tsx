@@ -210,7 +210,7 @@ export default function AdminPlansPage() {
 
 
   return (
-    <div className="mx-auto px-4">
+    <div>
       <LoadingOverlay loading={loading} htmlText="Loading plans..." />
       {/* Workflow Note */}
       <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">

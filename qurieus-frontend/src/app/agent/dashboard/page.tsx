@@ -20,7 +20,8 @@ import axiosInstance from '@/lib/axios';
 import {
   LogOut,
   Settings,
-  User
+  User,
+  Mail
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -54,11 +55,11 @@ interface AgentChat {
 export default function AgentDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  const [assignedChats, setAssignedChats] = useState<AgentChat[]>([]);
-  const [isOnline, setIsOnline] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [chats, setChats] = useState<AgentChat[]>([]);
+  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(true);
 
   // Socket.IO hooks
   const { isConnected } = useSocket({
@@ -67,7 +68,7 @@ export default function AgentDashboard() {
     autoConnect: true
   });
 
-  const agentStatuses = useAgentStatus();
+  const agentStatus = useAgentStatus();
 
   // Check if user is an agent
   useEffect(() => {
@@ -119,7 +120,7 @@ export default function AgentDashboard() {
   const loadAssignedChats = async () => {
     try {
       const response = await axiosInstance.get('/api/agent/chats');
-      setAssignedChats(response.data.chats);
+      setChats(response.data.chats);
     } catch (error) {
       console.error('Error loading assigned chats:', error);
       toast.error('Failed to load assigned chats');
@@ -186,6 +187,49 @@ export default function AgentDashboard() {
     }
   };
 
+  // Update agent status
+  const updateAgentStatus = async (isOnline: boolean, isAvailable: boolean) => {
+    try {
+      const response = await axiosInstance.put('/api/agent/status', {
+        isOnline,
+        isAvailable
+      });
+      
+      if (response.data.success) {
+        setIsOnline(isOnline);
+        setIsAvailable(isAvailable);
+        toast.success('Status updated successfully');
+      }
+    } catch (error: any) {
+      console.error('Error updating agent status:', error);
+      toast.error(error.response?.data?.error || 'Failed to update status');
+    }
+  };
+
+  // Send periodic activity updates
+  useEffect(() => {
+    const sendActivityUpdate = async () => {
+      try {
+        await axiosInstance.post('/api/agent/activity', {
+          isOnline: isOnline,
+          isAvailable: isAvailable
+        });
+      } catch (error) {
+        console.error('Error sending activity update:', error);
+      }
+    };
+
+    // Send initial activity update
+    sendActivityUpdate();
+
+    // Send activity updates every 2 minutes
+    const activityInterval = setInterval(sendActivityUpdate, 2 * 60 * 1000);
+
+    return () => {
+      clearInterval(activityInterval);
+    };
+  }, [isOnline, isAvailable]);
+
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -198,9 +242,9 @@ export default function AgentDashboard() {
     return null;
   }
 
-  const pendingChats = assignedChats.filter(chat => chat.status === 'PENDING');
-  const activeChats = assignedChats.filter(chat => chat.status === 'ACTIVE');
-  const resolvedChats = assignedChats.filter(chat => chat.status === 'RESOLVED');
+  const pendingChats = chats.filter(chat => chat.status === 'PENDING');
+  const activeChats = chats.filter(chat => chat.status === 'ACTIVE');
+  const resolvedChats = chats.filter(chat => chat.status === 'RESOLVED');
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -221,10 +265,22 @@ export default function AgentDashboard() {
                 </span>
               </div>
               
+              {/* Agent Info */}
+              <div className="flex items-center space-x-4 text-sm text-gray-600 border-l border-gray-200 pl-4">
+                <div className="flex items-center space-x-2">
+                  <User className="w-4 h-4" />
+                  <span className="font-medium">{session?.user?.name || 'Agent'}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Mail className="w-4 h-4" />
+                  <span>{session?.user?.email || 'No email'}</span>
+                </div>
+              </div>
+              
               <AgentStatusToggle
                 isOnline={isOnline}
                 isAvailable={isAvailable}
-                onStatusChange={handleStatusUpdate}
+                onStatusChange={updateAgentStatus}
               />
             </div>
           </div>
@@ -240,7 +296,7 @@ export default function AgentDashboard() {
               <CardHeader className="flex-shrink-0">
                 <CardTitle className="flex items-center justify-between">
                   <span>Assigned Chats</span>
-                  <Badge variant="secondary">{assignedChats.length}</Badge>
+                  <Badge variant="secondary">{chats.length}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden p-0">
@@ -299,7 +355,7 @@ export default function AgentDashboard() {
           <AgentChatWindow
             chatId={selectedChat || ''}
             agentId={session?.user?.id || ''}
-            chat={assignedChats.find(chat => chat.conversationId === selectedChat)}
+            chat={chats.find(chat => chat.conversationId === selectedChat)}
             onStatusUpdate={loadAssignedChats}
           />
         </div>

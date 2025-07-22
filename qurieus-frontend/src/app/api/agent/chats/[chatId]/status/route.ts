@@ -82,26 +82,41 @@ export const PUT = RequireRoles([UserRole.AGENT])(async (request: Request, conte
       }
     });
 
-    // If chat is resolved, send email notification to the user
-    if (statusEnum === 'RESOLVED') {
-      // Get conversation and user email
-      const conversation = await prisma.chatConversation.findUnique({
-        where: { id: chatId },
-        select: {
-          user: { select: { email: true, name: true } },
-        }
-      });
-      if (conversation?.user?.email) {
-        await sendEmail({
-          to: conversation.user.email,
-          subject: 'Your support chat has been resolved',
-          template: 'chat-resolved-notification',
-          context: {
-            userName: conversation.user.name || 'User',
-            chatId,
-          },
-        });
+    // Get conversation and user info for notifications
+    const conversation = await prisma.chatConversation.findUnique({
+      where: { id: chatId },
+      select: {
+        user: { select: { email: true, name: true } },
+        visitorId: true,
       }
+    });
+
+    // Add a system message to the conversation to notify the user
+    const completionMessage = statusEnum === 'RESOLVED' 
+      ? `✅ Your chat has been resolved by ${session!.user!.name}. Thank you for contacting us!`
+      : `🔒 Your chat has been closed by ${session!.user!.name}. If you need further assistance, please start a new conversation.`;
+
+    await prisma.chatMessage.create({
+      data: {
+        conversationId: chatId,
+        content: completionMessage,
+        role: 'system',
+        createdAt: new Date()
+      }
+    });
+
+    // If chat is resolved, send email notification to the user
+    if (statusEnum === 'RESOLVED' && conversation?.user?.email) {
+      await sendEmail({
+        to: conversation.user.email,
+        subject: 'Your support chat has been resolved',
+        template: 'chat-resolved-notification',
+        context: {
+          userName: conversation.user.name || 'User',
+          chatId,
+          agentName: session!.user!.name,
+        },
+      });
     }
 
     // Emit Socket.IO event for real-time updates
@@ -110,7 +125,12 @@ export const PUT = RequireRoles([UserRole.AGENT])(async (request: Request, conte
       if (io) {
         io.to(chatId).emit('chat_status', {
           status: newStatus.toLowerCase(),
-          meta: { agentId, agentName: session!.user!.name }
+          meta: { 
+            agentId, 
+            agentName: session!.user!.name,
+            completionMessage,
+            chatCompleted: true
+          }
         });
       }
     } catch (socketError) {

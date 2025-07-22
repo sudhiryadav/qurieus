@@ -142,6 +142,20 @@
           addMessageToUI(message.role, message.content, message.createdAt || new Date().toISOString());
         }
       });
+
+      // Listen for chat status updates (e.g., resolved, closed)
+      socket.on('chat_status', (data) => {
+        if (data.meta && data.meta.chatCompleted) {
+          // Show completion message
+          addMessageToUI('system', data.meta.completionMessage, new Date().toISOString());
+          
+          // Show transcription download offer
+          setTimeout(() => {
+            const downloadMessage = '📄 Would you like to download a transcript of this conversation?';
+            addMessageToUI('system', downloadMessage, new Date().toISOString(), false, false, null, true);
+          }, 1000);
+        }
+      });
       
       return socket;
     } catch (error) {
@@ -162,7 +176,7 @@
   }
 
   // Add message to UI without re-rendering everything
-  function addMessageToUI(role, content, timestamp, showAgentButtons = false) {
+  function addMessageToUI(role, content, timestamp, showAgentButtons = false, showQueueInfo = false, queuePosition = null, isSystemMessage = false) {
     const messagesContainer = document.querySelector('.qurieus-chat-messages');
     if (!messagesContainer) {
       return;
@@ -370,7 +384,116 @@
       messageContentContainer.appendChild(buttonsContainer);
     }
     
-    // Auto-scroll to bottom
+    // Show queue info if agents are busy
+    if (showQueueInfo && role === 'assistant') {
+      const queueContainer = document.createElement('div');
+      queueContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-top: 8px;
+        background: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
+        padding: 10px 14px;
+        border-radius: 8px;
+        color: ${widgetConfig.theme === 'dark' ? 'white' : '#111827'};
+        font-size: 13px;
+        border-left: 3px solid #f59e0b;
+      `;
+      
+      const queueMessage = document.createElement('div');
+      queueMessage.textContent = `All agents are currently busy. You are in the queue (position ${queuePosition}). Please wait for the next available agent.`;
+      queueContainer.appendChild(queueMessage);
+      
+      messageContentContainer.appendChild(queueContainer);
+    }
+
+    // Show transcription download offer for system messages
+    if (isSystemMessage && content.includes('download a transcript')) {
+      const downloadContainer = document.createElement('div');
+      downloadContainer.style.cssText = `
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      `;
+      
+      // Download Transcript button
+      const downloadBtn = document.createElement('button');
+      downloadBtn.textContent = '📄 Download Transcript';
+      downloadBtn.style.cssText = `
+        padding: 8px 12px;
+        background-color: ${widgetConfig.theme === 'dark' ? '#10b981' : '#10b981'};
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background-color 0.2s ease;
+        flex: 1;
+        min-width: 160px;
+      `;
+      downloadBtn.onmouseenter = () => downloadBtn.style.backgroundColor = '#059669';
+      downloadBtn.onmouseleave = () => downloadBtn.style.backgroundColor = '#10b981';
+      downloadBtn.onclick = () => {
+        // Download transcript using the API endpoint
+        if (currentChatId) {
+          const downloadUrl = `${widgetConfig.baseUrl}/api/chat/${currentChatId}/transcript`;
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = `chat-transcript-${currentChatId}-${new Date().toISOString().split('T')[0]}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } else {
+          // Fallback to local transcript if no chat ID
+          const transcript = widgetState.messages.map(msg => 
+            `${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content}`
+          ).join('\n\n');
+          
+          // Create and download file
+          const blob = new Blob([transcript], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `chat-transcript-${new Date().toISOString().split('T')[0]}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      };
+      
+      // No Thanks button
+      const noThanksBtn = document.createElement('button');
+      noThanksBtn.textContent = 'No Thanks';
+      noThanksBtn.style.cssText = `
+        padding: 8px 12px;
+        background-color: ${widgetConfig.theme === 'dark' ? '#6b7280' : '#6b7280'};
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background-color 0.2s ease;
+        flex: 1;
+        min-width: 100px;
+      `;
+      noThanksBtn.onmouseenter = () => noThanksBtn.style.backgroundColor = '#4b5563';
+      noThanksBtn.onmouseleave = () => noThanksBtn.style.backgroundColor = '#6b7280';
+      noThanksBtn.onclick = () => {
+        // Remove the download offer
+        downloadContainer.remove();
+      };
+      
+      downloadContainer.appendChild(downloadBtn);
+      downloadContainer.appendChild(noThanksBtn);
+      messageContentContainer.appendChild(downloadContainer);
+    }
+    
+    // Scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
@@ -954,21 +1077,32 @@
         text: 'Download Chat',
         icon: '📥',
         action: () => {
-          // Create chat transcript
-          const transcript = widgetState.messages.map(msg => 
-            `${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content}`
-          ).join('\n\n');
-          
-          // Create and download file
-          const blob = new Blob([transcript], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `chat-transcript-${new Date().toISOString().split('T')[0]}.txt`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          // Download transcript using the API endpoint
+          if (currentChatId) {
+            const downloadUrl = `${widgetConfig.baseUrl}/api/chat/${currentChatId}/transcript`;
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `chat-transcript-${currentChatId}-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          } else {
+            // Fallback to local transcript if no chat ID
+            const transcript = widgetState.messages.map(msg => 
+              `${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content}`
+            ).join('\n\n');
+            
+            // Create and download file
+            const blob = new Blob([transcript], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chat-transcript-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }
         }
       }
     ];
@@ -1662,24 +1796,45 @@
                   
                   // Display the complete message - only if we have content
                   if (assistantMessage && assistantMessage.trim()) {
-                    // Check if this is an agent-related message that needs action buttons
-                    const needsAgentButtons = (assistantMessage.toLowerCase().includes('active conversation') && 
-                                            assistantMessage.toLowerCase().includes('agent')) ||
-                                            assistantMessage.toLowerCase().includes('connect with a human agent') ||
-                                            data.showAgentButtons === true;
-                    
+                    // Loosened trigger for agent button
+                    const lowerMsg = assistantMessage.toLowerCase();
+                    const agentKeywords = [
+                      'agent',
+                      'support team',
+                      'representative',
+                      'escalated',
+                      'human help',
+                      'real person',
+                      'customer service',
+                      'queue'
+                    ];
+                    const needsAgentButtons =
+                      agentKeywords.some(k => lowerMsg.includes(k)) ||
+                      data.showAgentButtons === true;
+
                     // Determine message type for visual distinction
                     let messageRole = 'assistant';
-                    let showAgentButtons = needsAgentButtons;
-                    
+                    let showAgentButtons = false;
+                    let showQueueInfo = false;
+                    let queuePosition = null;
+
+                    // Only show connect button if agents are available
+                    if (needsAgentButtons && data.agentsAvailable === true) {
+                      showAgentButtons = true;
+                    } else if (needsAgentButtons && data.queuePosition !== undefined && data.queuePosition !== null) {
+                      showQueueInfo = true;
+                      queuePosition = data.queuePosition;
+                    }
+
                     if (data.routedToAgent === true) {
                       // This is a system message indicating message was routed to agent
                       messageRole = 'system';
                       showAgentButtons = false;
+                      showQueueInfo = false;
                     }
-                    
-                    addMessageToUI(messageRole, assistantMessage, new Date().toISOString(), showAgentButtons);
-                    
+
+                    addMessageToUI(messageRole, assistantMessage, new Date().toISOString(), showAgentButtons, showQueueInfo, queuePosition);
+
                     // Final update to state
                     widgetState.messages = [...widgetState.messages, { 
                       role: messageRole, 

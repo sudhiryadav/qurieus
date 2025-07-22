@@ -326,11 +326,11 @@ async def query_documents_endpoint(
             print(f"PERFLOG: Qdrant search completed in {time.time() - search_start:.2f}s")
             
             if not search_results:
-                print("No relevant documents found in Qdrant")
+                print("No relevant information found in Qdrant")
                 from fastapi.responses import StreamingResponse
                 
                 def generate_no_results_stream():
-                    yield f"data: {json.dumps({'response': 'No relevant documents found.', 'done': False})}\n\n"
+                    yield f"data: {json.dumps({'response': 'No relevant information found.', 'done': False})}\n\n"
                     yield f"data: {json.dumps({'response': '', 'sources': [], 'done': True})}\n\n"
                 
                 return StreamingResponse(

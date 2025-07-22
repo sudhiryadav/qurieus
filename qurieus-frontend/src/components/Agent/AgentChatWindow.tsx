@@ -291,40 +291,6 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
               {localStatus || status}
             </Badge>
             
-            {/* Status Management Buttons - Only show if chat is not resolved or closed */}
-            {!isChatResolvedOrClosed && (
-              <div className="flex items-center space-x-2 ml-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusUpdate('RESOLVED')}
-                  className="text-green-600 border-green-200 hover:bg-green-50"
-                  disabled={resolving || closing}
-                >
-                  {resolving ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  ) : (
-                    <CheckSquare className="w-4 h-4 mr-1" />
-                  )}
-                  {resolving ? 'Resolving...' : 'Resolve'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusUpdate('CLOSED')}
-                  className="text-gray-600 border-gray-200 hover:bg-gray-50"
-                  disabled={resolving || closing}
-                >
-                  {closing ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  ) : (
-                    <Square className="w-4 h-4 mr-1" />
-                  )}
-                  {closing ? 'Closing...' : 'Close'}
-                </Button>
-              </div>
-            )}
-
             {/* Show resolution info if chat is resolved or closed */}
             {isChatResolvedOrClosed && (
               <div className="flex items-center space-x-2 ml-4 text-sm text-gray-600">
@@ -393,6 +359,40 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
             >
               <Send className="w-4 h-4" />
             </Button>
+            
+            {/* Status Management Buttons - Only show if chat is not resolved or closed */}
+            {!isChatResolvedOrClosed && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusUpdate('RESOLVED')}
+                  className="text-green-600 border-green-200 hover:bg-green-50"
+                  disabled={resolving || closing}
+                >
+                  {resolving ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <CheckSquare className="w-4 h-4 mr-1" />
+                  )}
+                  {resolving ? 'Resolving...' : 'Resolve'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusUpdate('CLOSED')}
+                  className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                  disabled={resolving || closing}
+                >
+                  {closing ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Square className="w-4 h-4 mr-1" />
+                  )}
+                  {closing ? 'Closing...' : 'Close'}
+                </Button>
+              </>
+            )}
           </div>
           <div className="text-xs text-gray-500 mt-2">
             {!isConnected && 'Connecting to chat...'}

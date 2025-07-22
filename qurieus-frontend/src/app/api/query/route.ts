@@ -415,7 +415,11 @@ async function findAvailableAgent(userId: string): Promise<string | null> {
           isOnline: true,
           isAvailable: true,
           currentChats: {
+            gte: 0, // Only allow non-negative currentChats
             lt: prisma.agent.fields.maxConcurrentChats
+          },
+          maxConcurrentChats: {
+            gt: 0 // Only allow agents who can actually take chats
           }
         }
       },
@@ -455,162 +459,369 @@ async function findAvailableAgent(userId: string): Promise<string | null> {
   }
 }
 
+// Function to check if agent is active and online
+async function isAgentActive(agentId: string): Promise<boolean> {
+  try {
+    // Check if agent is online and available
+    const agent = await prisma.user.findUnique({
+      where: { id: agentId },
+      select: { 
+        is_active: true,
+        updated_at: true,
+        // You might want to add lastSeen or lastActivity fields to track agent activity
+      }
+    });
+
+    if (!agent || !agent.is_active) {
+      logger.info("Query API: Agent marked as inactive - not active in database", { agentId });
+      return false;
+    }
+
+    // Check if agent has been active in the last 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
+    // Consider agent inactive if they haven't updated their status in the last 5 minutes
+    if (agent.updated_at < fiveMinutesAgo) {
+      logger.info("Query API: Agent marked as inactive due to no recent activity", { 
+        agentId, 
+        lastActivity: agent.updated_at,
+        fiveMinutesAgo 
+      });
+      return false;
+    }
+
+    // Additional check: Try to see if agent is connected via Socket.IO
+    try {
+      const io = (global as any).io;
+      if (io) {
+        // Get all connected sockets
+        const sockets = await io.fetchSockets();
+        const agentSocket = sockets.find((socket: any) => 
+          socket.data && socket.data.agentId === agentId
+        );
+        
+        if (!agentSocket) {
+          logger.info("Query API: Agent marked as inactive - not connected via Socket.IO", { agentId });
+          return false;
+        }
+      }
+    } catch (socketError) {
+      logger.warn("Query API: Could not check Socket.IO connection status", { 
+        error: socketError instanceof Error ? socketError.message : String(socketError),
+        agentId 
+      });
+      // If we can't check Socket.IO, fall back to timestamp check
+    }
+    
+    logger.info("Query API: Agent is active and online", { agentId });
+    return true;
+  } catch (error) {
+    logger.error("Query API: Error checking agent activity", { 
+      error: error instanceof Error ? error.message : String(error),
+      agentId 
+    });
+    return false;
+  }
+}
+
+// Function to handle inactive agent and reassign chat
+async function handleInactiveAgent(existingAgentChat: any, conversationId: string, userId: string, message: string, visitorId: string) {
+  try {
+    logger.info("Query API: Handling inactive agent", { 
+      agentId: existingAgentChat.agentId,
+      conversationId 
+    });
+
+    // Try to find another available agent
+    const newAgentId = await findAvailableAgent(userId);
+    
+    if (newAgentId && newAgentId !== existingAgentChat.agentId) {
+      // Reassign to new agent
+      await prisma.agentChat.update({
+        where: { id: existingAgentChat.id },
+        data: {
+          agentId: newAgentId,
+          status: 'ACTIVE',
+          assignedAt: new Date(),
+          priority: 'HIGH' // Mark as high priority since it was reassigned
+        }
+      });
+
+      // Send notification to new agent
+      const newAgent = await prisma.user.findUnique({
+        where: { id: newAgentId },
+        select: { email: true, name: true }
+      });
+
+      if (newAgent?.email) {
+        await sendEscalationNotificationToUser({
+          userEmail: newAgent.email,
+          userMessage: `Chat reassigned from inactive agent. User message: ${message}`
+        });
+      }
+
+      // Add system message to inform user about reassignment
+      const reassignmentMessage = "All our agents are currently unavailable. I've connected you with another agent who will assist you shortly.";
+      
+      await prisma.chatMessage.create({
+        data: {
+          conversationId,
+          content: reassignmentMessage,
+          role: 'system',
+          createdAt: new Date(),
+        },
+      });
+
+      logger.info("Query API: Chat reassigned to new agent", { 
+        oldAgentId: existingAgentChat.agentId,
+        newAgentId,
+        conversationId 
+      });
+
+      return { reassigned: true, message: reassignmentMessage };
+    } else {
+      // No other agents available, escalate to support
+      await prisma.agentChat.update({
+        where: { id: existingAgentChat.id },
+        data: {
+          status: 'PENDING',
+          assignedAt: new Date(),
+          priority: 'URGENT'
+        }
+      });
+
+      // Fetch the application owner/admin (parent user)
+      const parentUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true }
+      });
+
+      // Send escalation email to the application owner/admin
+      if (parentUser?.email) {
+        await sendEscalationNotificationToUser({
+          userEmail: parentUser.email,
+          userMessage: `Escalation: No agents available. Visitor message: ${message}`
+        });
+      }
+
+      const escalationMessage = "All our agents are currently unavailable. I've escalated your request to our support team. You'll receive an email confirmation shortly.";
+
+      await prisma.chatMessage.create({
+        data: {
+          conversationId,
+          content: escalationMessage,
+          role: 'system',
+          createdAt: new Date(),
+        },
+      });
+
+      logger.info("Query API: Chat escalated due to inactive agent", { 
+        agentId: existingAgentChat.agentId,
+        conversationId 
+      });
+
+      return { reassigned: false, message: escalationMessage };
+    }
+  } catch (error) {
+    logger.error("Query API: Error handling inactive agent", { 
+      error: error instanceof Error ? error.message : String(error),
+      agentId: existingAgentChat.agentId,
+      conversationId 
+    });
+
+    // If the error is a known agent greeting/socket error, escalate to support
+    if (String(error).includes('Greeting never received')) {
+      const escalationMessage = "All our agents are currently unavailable. I've escalated your request to our support team. You'll receive an email confirmation shortly.";
+      await prisma.chatMessage.create({
+        data: {
+          conversationId,
+          content: escalationMessage,
+          role: 'system',
+          createdAt: new Date(),
+        },
+      });
+      return { 
+        reassigned: false, 
+        message: escalationMessage
+      };
+    }
+
+    // Fallback message for other errors
+    return { 
+      reassigned: false, 
+      message: "I apologize, but there seems to be a technical issue. Please try again in a moment." 
+    };
+  }
+}
+
 // Enhanced escalation function with agent assignment and email notifications
 async function escalateChatToAgent(conversationId: string, userId: string, userMessage: string, visitorId: string) {
   try {
+    logger.info("Query API: Starting escalation process", { conversationId, userId, visitorId });
+    
     // Find an available agent
     const agentId = await findAvailableAgent(userId);
+    let queuePosition = null;
+    let hasAnyAgents = false;
+    
+    // Check if there are any agents at all for this user
+    const totalAgents = await prisma.user.count({
+      where: {
+        parentUserId: userId,
+        role: "AGENT" as any,
+        is_active: true
+      }
+    });
+    hasAnyAgents = totalAgents > 0;
+    
+    logger.info("Query API: Agent availability check", { 
+      agentId, 
+      hasAnyAgents, 
+      totalAgents,
+      conversationId 
+    });
     
     if (agentId) {
-      // Check if there's already an agent chat for this conversation (regardless of status)
+      // Check if there's already an agent chat for this conversation
       const existingAgentChat = await prisma.agentChat.findUnique({
-        where: { conversationId: conversationId }
+        where: { conversationId }
       });
 
       if (existingAgentChat) {
-        // Update existing agent chat for re-escalation (regardless of previous status)
+        // Update existing agent chat
         await prisma.agentChat.update({
-          where: { conversationId: conversationId },
+          where: { conversationId },
           data: {
-            agentId: agentId,
-            status: "PENDING" as any,
-            priority: "NORMAL" as any,
+            agentId,
+            status: 'ACTIVE',
             assignedAt: new Date(),
-            startedAt: null,
-            endedAt: null
+            priority: 'NORMAL'
           }
         });
-        
-        logger.info("Query API: Updated existing agent chat for re-escalation", { 
-          conversationId,
-          userId,
-          agentId,
-          previousStatus: existingAgentChat.status
-        });
+        logger.info("Query API: Updated existing agent chat", { conversationId, agentId });
       } else {
-        // Create new AgentChat record to assign the chat to the agent
+        // Create new agent chat
         await prisma.agentChat.create({
           data: {
-            conversationId: conversationId,
-            agentId: agentId,
-            status: "PENDING" as any,
-            priority: "NORMAL" as any,
-            assignedAt: new Date()
+            conversationId,
+            agentId,
+            status: 'ACTIVE',
+            assignedAt: new Date(),
+            priority: 'NORMAL'
           }
         });
-        
-        logger.info("Query API: Created new agent chat assignment", { 
-          conversationId,
-          userId,
-          agentId
-        });
+        logger.info("Query API: Created new agent chat", { conversationId, agentId });
       }
 
-      // Update agent's current chat count
-      await prisma.agent.update({
-        where: { userId: agentId },
-        data: {
-          currentChats: { increment: 1 }
-        }
-      });
-
-      // Update conversation status to indicate escalation
-      await prisma.chatConversation.update({
-        where: { id: conversationId },
-        data: {
-          status: "ESCALATED" as any,
-          escalatedAt: new Date(),
-          escalationReason: "User requested human support"
-        } as any
-      });
-
-      logger.info("Query API: Chat escalated and assigned to agent", { 
-        conversationId,
-        userId,
-        agentId,
-        isReEscalation: !!existingAgentChat
-      });
-    } else {
-      // No available agents - mark as escalated without assignment and send email notifications
-      const escalatedAt = new Date();
-      const escalationReason = "User requested human support - No agents available";
-      
-      await prisma.chatConversation.update({
-        where: { id: conversationId },
-        data: {
-          status: "ESCALATED" as any,
-          escalatedAt,
-          escalationReason
-        } as any
-      });
-
-      logger.warn("Query API: Chat escalated but no agents available", { 
-        conversationId,
-        userId
-      });
-
-      // Send email notifications
+      // Send email notification to the agent
       try {
-        // Get user email
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { email: true }
+        const agent = await prisma.user.findUnique({
+          where: { id: agentId },
+          select: { email: true, name: true }
         });
 
-        // Get all agents for this user
-        const agents = await prisma.user.findMany({
-          where: {
-            parentUserId: userId,
-            role: "AGENT" as any,
-            is_active: true
-          },
-          select: { email: true }
-        });
-
-        const agentEmails = agents.map(agent => agent.email).filter(Boolean);
-
-        // Send email to user
-        if (user?.email) {
+        if (agent?.email) {
           await sendEscalationNotificationToUser({
-            userEmail: user.email,
-            userMessage
+            userEmail: agent.email,
+            userMessage: userMessage
           });
-          logger.info("Query API: Escalation notification sent to user", { 
-            userEmail: user.email,
-            conversationId
-          });
-        }
-
-        // Send email to agents
-        if (agentEmails.length > 0) {
-          await sendEscalationNotificationToAgents({
-            agentEmails,
-            userId,
-            visitorId,
-            conversationId,
-            userMessage,
-            escalationReason,
-            escalatedAt: escalatedAt.toISOString()
-          });
-          logger.info("Query API: Escalation notifications sent to agents", { 
-            agentEmails,
-            conversationId
-          });
+          logger.info("Query API: Sent escalation notification to agent", { agentEmail: agent.email });
         }
       } catch (emailError) {
-        logger.error("Query API: Error sending escalation emails", { 
-          conversationId,
-          userId,
-          error: emailError instanceof Error ? emailError.message : String(emailError)
+        logger.error("Query API: Failed to send agent notification email", { 
+          error: emailError instanceof Error ? emailError.message : String(emailError),
+          agentId 
         });
+        // Don't throw error for email failures
       }
+
+      return { agentAssigned: true, queuePosition: null, hasAnyAgents };
+    } else {
+      // Check if there's already an agent chat for this conversation
+      const existingAgentChat = await prisma.agentChat.findUnique({
+        where: { conversationId }
+      });
+
+      if (existingAgentChat) {
+        // Update existing agent chat to pending status
+        await prisma.agentChat.update({
+          where: { conversationId },
+          data: {
+            status: 'PENDING',
+            assignedAt: new Date(),
+            priority: 'NORMAL'
+          }
+        });
+        logger.info("Query API: Updated existing agent chat to pending", { conversationId });
+      } else {
+        // No available agents - update conversation status and add to queue
+        await prisma.chatConversation.update({
+          where: { id: conversationId },
+          data: {
+            status: 'ESCALATED' as any,
+            escalatedAt: new Date(),
+            escalationReason: hasAnyAgents ? 'No agents available' : 'No agents configured'
+          } as any
+        });
+        logger.info("Query API: Updated conversation status to escalated", { conversationId, hasAnyAgents });
+      }
+
+      // Calculate queue position only if there are agents
+      if (hasAnyAgents) {
+        const pendingChats = await prisma.agentChat.count({
+          where: {
+            conversation: {
+              userId: userId
+            },
+            status: 'PENDING'
+          }
+        });
+        queuePosition = pendingChats;
+        logger.info("Query API: Calculated queue position", { queuePosition, conversationId });
+      }
+
+      // Send email notification to the user about escalation
+      try {
+        const conversation = await prisma.chatConversation.findUnique({
+          where: { id: conversationId },
+          select: {
+            user: { select: { email: true, name: true } },
+          }
+        });
+
+        if (conversation?.user?.email) {
+          await sendEscalationNotificationToUser({
+            userEmail: conversation.user.email,
+            userMessage: userMessage
+          });
+          logger.info("Query API: Sent escalation notification to user", { userEmail: conversation.user.email });
+        }
+      } catch (emailError) {
+        logger.error("Query API: Failed to send user notification email", { 
+          error: emailError instanceof Error ? emailError.message : String(emailError),
+          conversationId 
+        });
+        // Don't throw error for email failures
+      }
+
+      logger.info("Query API: Escalation completed", { 
+        agentAssigned: false, 
+        queuePosition: hasAnyAgents ? queuePosition : null, 
+        hasAnyAgents,
+        conversationId 
+      });
+      
+      return { agentAssigned: false, queuePosition: hasAnyAgents ? queuePosition : null, hasAnyAgents };
     }
   } catch (error) {
-    logger.error("Query API: Error escalating chat", { 
-      conversationId,
-      userId,
-      error: error instanceof Error ? error.message : String(error)
+    logger.error("Query API: Error escalating chat to agent", { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      conversationId, 
+      userId, 
+      visitorId 
     });
+    throw error;
   }
 }
 
@@ -825,7 +1036,115 @@ export async function POST(request: Request) {
       logger.info("Query API: Active agent chat found, routing message to agent", { 
         chatId: chatConversation.id,
         agentId: existingAgentChat.agentId,
-        message: message.substring(0, 100)
+        message: message.substring(0, 100),
+        chatStatus: existingAgentChat.status
+      });
+      
+      // Check if the assigned agent is still active
+      const agentIsActive = await isAgentActive(existingAgentChat.agentId);
+      
+      logger.info("Query API: Agent activity check result", { 
+        agentId: existingAgentChat.agentId,
+        agentIsActive,
+        conversationId: chatConversation.id 
+      });
+      
+      if (!agentIsActive) {
+        logger.info("Query API: Assigned agent is inactive, handling reassignment", { 
+          agentId: existingAgentChat.agentId,
+          conversationId: chatConversation.id 
+        });
+        
+        // Handle inactive agent
+        const inactiveAgentResult = await handleInactiveAgent(
+          existingAgentChat, 
+          chatConversation.id, 
+          apiKey, 
+          message, 
+          effectiveVisitorId
+        );
+        
+        // Store user message
+        await prisma.chatMessage.create({
+          data: {
+            conversationId: chatConversation.id,
+            content: message,
+            role: 'user',
+            createdAt: new Date(),
+          },
+        });
+
+        // Update conversation stats
+        await prisma.chatConversation.update({
+          where: { id: chatConversation.id },
+          data: {
+            totalMessages: { increment: 2 }, // User message + system message
+            lastSeen: new Date(),
+          },
+        });
+
+        // Emit Socket.IO event to notify about reassignment
+        try {
+          const io = (global as any).io;
+          if (io) {
+            io.to(chatConversation.id).emit('chat_message', {
+              id: `temp-${Date.now()}`,
+              content: inactiveAgentResult.message,
+              role: 'system',
+              createdAt: new Date().toISOString(),
+              conversationId: chatConversation.id
+            });
+          }
+        } catch (socketError) {
+          logger.warn("Query API: Failed to emit reassignment Socket.IO event", { 
+            error: socketError instanceof Error ? socketError.message : String(socketError)
+          });
+        }
+
+        // Track analytics
+        const responseTime = Date.now() - startTime;
+        await trackAnalytics({
+          apiKey,
+          message,
+          response: inactiveAgentResult.message,
+          responseTime,
+          visitorId: effectiveVisitorId,
+          success: true,
+          error: null,
+          request: request,
+          startTime,
+        });
+
+        // Return reassignment response
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            const responseData = {
+              response: inactiveAgentResult.message,
+              sources: [],
+              done: true
+            };
+            
+            const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+            controller.enqueue(encoder.encode(sseData));
+            controller.close();
+          }
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "x-conversation-id": chatConversation.id,
+          },
+        });
+      }
+      
+      // If agent is active, proceed with normal message routing
+      logger.info("Query API: Agent is active, proceeding with normal message routing", { 
+        agentId: existingAgentChat.agentId,
+        conversationId: chatConversation.id 
       });
       
       // Check if user is requesting a new topic
@@ -1018,118 +1337,159 @@ export async function POST(request: Request) {
         requestWordsFound: requestWords.filter(word => lowerMessage.includes(word))
       }, { userId });
 
-      // Check if there's a resolved/closed agent chat that we should allow to be re-escalated
-      const previousResolvedChat = await prisma.agentChat.findFirst({
-        where: {
-          conversation: {
-            visitorId: effectiveVisitorId,
-            userId: apiKey
-          },
-          status: {
-            in: ['RESOLVED', 'CLOSED']
-          }
-        },
-        include: {
-          agent: {
-            select: { name: true, email: true }
-          }
-        }
-      });
-
-      // Escalate the conversation
-      await escalateChatToAgent(chatConversation.id, apiKey, message, effectiveVisitorId);
-
-      // Create escalation message based on whether this is a re-escalation
-      let escalationMessage;
-      if (previousResolvedChat) {
-        escalationMessage = `I understand you'd like to speak with a human agent again. Ive escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.`;
-      } else {
-        escalationMessage = "I understand you'd like to speak with a human agent. I've escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.";
-      }
-      // Store escalation message as assistant response
-      await prisma.chatMessage.create({
-        data: {
-          conversationId: chatConversation.id,
-          content: escalationMessage,
-          role: 'assistant',
-          createdAt: new Date(),
-        },
-      });
-
-      // Update conversation stats
-      await prisma.chatConversation.update({
-        where: { id: chatConversation.id },
-        data: {
-          totalMessages: { increment: 2 },
-          lastSeen: new Date(),
-        },
-      });
-
-      // Emit Socket.IO event for escalation
       try {
-        const io = (global as any).io;
-        if (io) {
-          io.to(chatConversation.id).emit('chat_status', {
-            status: 'escalated',
-            meta: { 
-              reason: 'User requested human support',
-              escalatedAt: new Date(),
-              isUserRequest: true
+        // Check if there's a resolved/closed agent chat that we should allow to be re-escalated
+        const previousResolvedChat = await prisma.agentChat.findFirst({
+          where: {
+            conversation: {
+              visitorId: effectiveVisitorId,
+              userId: apiKey
+            },
+            status: {
+              in: ['RESOLVED', 'CLOSED']
             }
+          },
+          include: {
+            agent: {
+              select: { name: true, email: true }
+            }
+          }
+        });
+
+        logger.info("Query API: Previous resolved chat check", { 
+          hasPreviousChat: !!previousResolvedChat,
+          conversationId: chatConversation.id 
+        });
+
+        // Escalate the conversation and get agent/queue info
+        const escalationResult = await escalateChatToAgent(chatConversation.id, apiKey, message, effectiveVisitorId);
+        const agentsAvailable = escalationResult.agentAssigned;
+        const queuePosition = escalationResult.queuePosition;
+        const hasAnyAgents = escalationResult.hasAnyAgents;
+
+        logger.info("Query API: Escalation result", { 
+          agentsAvailable, 
+          queuePosition, 
+          hasAnyAgents,
+          conversationId: chatConversation.id 
+        });
+
+        // Create escalation message based on whether this is a re-escalation
+        let escalationMessage;
+        if (previousResolvedChat) {
+          escalationMessage = `I understand you'd like to speak with a human agent again. I've escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.`;
+        } else if (agentsAvailable) {
+          escalationMessage = `I've connected you with a human agent. They'll be with you shortly.`;
+        } else if (hasAnyAgents) {
+          escalationMessage = `All agents are currently busy. You are in the queue (position ${(queuePosition || 0) + 1}). Please wait for the next available agent.`;
+        } else {
+          escalationMessage = "I understand you'd like to speak with a human agent. I've escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.";
+        }
+
+        logger.info("Query API: Escalation message created", { escalationMessage });
+
+        // Store escalation message as assistant response
+        await prisma.chatMessage.create({
+          data: {
+            conversationId: chatConversation.id,
+            content: escalationMessage,
+            role: 'assistant',
+            createdAt: new Date(),
+          },
+        });
+
+        // Update conversation stats
+        await prisma.chatConversation.update({
+          where: { id: chatConversation.id },
+          data: {
+            totalMessages: { increment: 2 },
+            lastSeen: new Date(),
+          },
+        });
+
+        // Emit Socket.IO event for escalation
+        try {
+          const io = (global as any).io;
+          if (io) {
+            io.to(chatConversation.id).emit('chat_status', {
+              status: 'escalated',
+              meta: { 
+                reason: 'User requested human support',
+                escalatedAt: new Date(),
+                isUserRequest: true
+              }
+            });
+          }
+        } catch (socketError) {
+          logger.warn("Query API: Failed to emit escalation Socket.IO event", { 
+            error: socketError instanceof Error ? socketError.message : String(socketError)
           });
         }
-      } catch (socketError) {
-        logger.warn("Query API: Failed to emit escalation Socket.IO event", { 
-          error: socketError instanceof Error ? socketError.message : String(socketError)
+
+        // Track analytics
+        const responseTime = Date.now() - startTime;
+        await trackAnalytics({
+          apiKey,
+          message,
+          response: escalationMessage,
+          responseTime,
+          visitorId: effectiveVisitorId,
+          success: true,
+          error: null,
+          request: request,
+          startTime,
         });
+
+        // Return escalation response as streaming (embed.js expects streaming)
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            // Send the escalation message in SSE format that embed.js expects
+            const responseData = {
+              response: escalationMessage,
+              sources: [],
+              done: true,
+              agentsAvailable,
+              ...(agentsAvailable === false && hasAnyAgents && queuePosition !== null ? { queuePosition } : {})
+            };
+            // Format as SSE with data: prefix
+            const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
+            controller.enqueue(encoder.encode(sseData));
+            controller.close();
+          }
+        });
+
+        const streamResponse = new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain", // Changed to text/plain for SSE
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "x-conversation-id": chatConversation.id,
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, x-api-key, Authorization",
+            "Access-Control-Max-Age": "86400",
+          },
+        });
+
+        logger.info("Query API: Returning escalation response", { 
+          conversationId: chatConversation.id,
+          responseTime: Date.now() - startTime 
+        });
+
+        return streamResponse;
+      } catch (escalationError) {
+        logger.error("Query API: Error during escalation process", { 
+          error: escalationError instanceof Error ? escalationError.message : String(escalationError),
+          stack: escalationError instanceof Error ? escalationError.stack : undefined,
+          conversationId: chatConversation.id,
+          apiKey,
+          visitorId: effectiveVisitorId
+        });
+
+        // Return error response instead of hanging
+        return corsErrorResponse("Failed to process escalation request", 500);
       }
-
-      // Track analytics
-      const responseTime = Date.now() - startTime;
-      await trackAnalytics({
-        apiKey,
-        message,
-        response: escalationMessage,
-        responseTime,
-        visitorId: effectiveVisitorId,
-        success: true,
-        error: null,
-        request: request,
-        startTime,
-      });
-
-      // Return escalation response as streaming (embed.js expects streaming)
-      const encoder = new TextEncoder();
-      
-      const stream = new ReadableStream({
-        start(controller) {
-          // Send the escalation message in SSE format that embed.js expects
-          const responseData = {
-            response: escalationMessage,
-            sources: [],
-            done: true
-          };
-          
-          // Format as SSE with data: prefix
-          const sseData = `data: ${JSON.stringify(responseData)}\n\n`;
-          controller.enqueue(encoder.encode(sseData));
-          controller.close();
-        }
-      });
-
-      const streamResponse = new Response(stream, {
-        headers: {
-          "Content-Type": "text/plain", // Changed to text/plain for SSE
-          "Cache-Control": "no-cache",
-          "Connection": "keep-alive",
-          "x-conversation-id": chatConversation.id,
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, x-api-key, Authorization",
-          "Access-Control-Max-Age": "86400",
-        },
-      });
-      return streamResponse;
     }
 
     // Query based on environment configuration
@@ -1149,7 +1509,7 @@ export async function POST(request: Request) {
       throw new Error(`HTTP error! status: ${modalResponse.status}`);
 
 
-    // Create a stream that processes Modal.com chunks and handles "No relevant documents found"
+    // Create a stream that processes Modal.com chunks and handles "No relevant information found"
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -1187,12 +1547,12 @@ export async function POST(request: Request) {
                 });
               }
               
-                          // Check if this is a "No relevant documents found" response
-            if (fullResponse.includes("No relevant documents found") && !hasProcessedNoDocuments) {
+                          // Check if this is a "No relevant information found" response
+            if (fullResponse.includes("No relevant information found") && !hasProcessedNoDocuments) {
               isNoDocumentsResponse = true;
               hasProcessedNoDocuments = true;
               
-              logger.info("Query API: Detected 'No relevant documents found' response, replacing with agent connection options", {
+              logger.info("Query API: Detected 'No relevant information found' response, replacing with agent connection options", {
                 conversationId: chatConversation.id,
                 userId: apiKey,
                 fullResponseLength: fullResponse.length,
@@ -1201,7 +1561,7 @@ export async function POST(request: Request) {
               
               // Create a modified response that includes the agent connection message and buttons flag
               const modifiedResponse = {
-                response: "No relevant documents found.\n\nI couldn't find relevant information in your documents. Would you like to connect with a human agent who can help you with your specific question?",
+                response: "No relevant information found.\n\nI couldn't find relevant information in your documents. Would you like to connect with a human agent who can help you with your specific question?",
                 sources: [],
                 done: true,
                 showAgentButtons: true
@@ -1226,12 +1586,12 @@ export async function POST(request: Request) {
                   const jsonStr = line.slice(6); // Remove 'data: ' prefix
                   const data = JSON.parse(jsonStr);
                   
-                  // Check if this is the "No relevant documents found" message
-                  if (data.response === "No relevant documents found." && !hasProcessedNoDocuments) {
+                  // Check if this is the "No relevant information found" message
+                  if (data.response === "No relevant information found." && !hasProcessedNoDocuments) {
                     isNoDocumentsResponse = true;
                     hasProcessedNoDocuments = true;
                     
-                    logger.info("Query API: Detected 'No relevant documents found' in SSE data, replacing with agent connection options", {
+                    logger.info("Query API: Detected 'No relevant information found' in SSE data, replacing with agent connection options", {
                       conversationId: chatConversation.id,
                       userId: apiKey,
                       detectedData: data
@@ -1239,7 +1599,7 @@ export async function POST(request: Request) {
                     
                     // Create a modified response that includes the agent connection message and buttons flag
                     const modifiedResponse = {
-                      response: "No relevant documents found.\n\nI couldn't find relevant information in your documents. Would you like to connect with a human agent who can help you with your specific question?",
+                      response: "No relevant information found.\n\nI couldn't find relevant information in your documents. Would you like to connect with a human agent who can help you with your specific question?",
                       sources: [],
                       done: true,
                       showAgentButtons: true
@@ -1261,13 +1621,13 @@ export async function POST(request: Request) {
               }
             }
               
-              // Only forward chunks if we haven't processed a "No relevant documents found" response
+              // Only forward chunks if we haven't processed a "No relevant information found" response
               if (!isNoDocumentsResponse) {
                 controller.enqueue(encoder.encode(chunk));
               }
             }
             
-            // If we didn't find "No relevant documents found", close normally
+            // If we didn't find "No relevant information found", close normally
             if (!isNoDocumentsResponse) {
               controller.close();
             } else {

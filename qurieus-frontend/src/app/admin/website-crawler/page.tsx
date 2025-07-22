@@ -63,14 +63,6 @@ export default function WebsiteCrawlerPage() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [logs]);
-
   const startCrawl = async () => {
     if (!url.trim()) {
       showToast.error('Please enter a URL');
@@ -263,7 +255,7 @@ export default function WebsiteCrawlerPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div>
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Website Crawler</h1>
         <div className="flex gap-2">
