@@ -10,6 +10,11 @@ interface Agent {
   email: string;
   is_active: boolean;
   created_at: string;
+  agent?: {
+    isOnline?: boolean;
+    isAvailable?: boolean;
+    currentChats?: number;
+  };
 }
 
 export default function AgentsPage() {
@@ -167,6 +172,31 @@ export default function AgentsPage() {
                     }`}>
                       {agent.is_active ? "Active" : "Inactive"}
                     </span>
+                    {agent.agent && (
+                      <span className="ml-2 px-2 py-1 rounded text-xs border" style={{
+                        backgroundColor: agent.agent.isOnline
+                          ? agent.agent.isAvailable
+                            ? '#d1fae5' // green-100
+                            : '#fef3c7' // yellow-100
+                          : '#f3f4f6', // gray-100
+                        color: agent.agent.isOnline
+                          ? agent.agent.isAvailable
+                            ? '#065f46' // green-800
+                            : '#92400e' // yellow-800
+                          : '#374151', // gray-800
+                        borderColor: agent.agent.isOnline
+                          ? agent.agent.isAvailable
+                            ? '#6ee7b7' // green-200
+                            : '#fde68a' // yellow-200
+                          : '#d1d5db', // gray-200
+                      }}>
+                        {agent.agent.isOnline
+                          ? agent.agent.isAvailable
+                            ? 'Available for chat'
+                            : 'Busy'
+                          : 'Offline'}
+                      </span>
+                    )}
                   </td>
                   <td className="py-2">{new Date(agent.created_at).toLocaleDateString()}</td>
                   <td className="py-2">

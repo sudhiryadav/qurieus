@@ -78,6 +78,13 @@ export const GET = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_A
       email: true,
       is_active: true,
       created_at: true,
+      agent: {
+        select: {
+          isOnline: true,
+          isAvailable: true,
+          currentChats: true
+        }
+      }
     },
     orderBy: { created_at: "desc" },
   });
