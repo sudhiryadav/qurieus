@@ -67,7 +67,7 @@ export class WebsiteCrawler {
       try {
         this.browser = await puppeteer.launch({
           headless: true,
-          executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+          executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -144,7 +144,10 @@ export class WebsiteCrawler {
         }
       }
     }
-    
+    // Fallback: if no content found, use body text
+    if (!content || content.length < 100) {
+      content = $('body').text();
+    }
     return this.cleanText(content);
   }
 
@@ -263,16 +266,24 @@ export class WebsiteCrawler {
       
       // Add timeout wrapper around navigation
       const navigationPromise = page.goto(url, { 
-        waitUntil: 'domcontentloaded',
-        timeout: 10000 
+        waitUntil: 'networkidle2',
+        timeout: 20000 
       });
       
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Navigation timeout')), 10000);
+        setTimeout(() => reject(new Error('Navigation timeout')), 20000);
       });
       
       await Promise.race([navigationPromise, timeoutPromise]);
       await this.addLog(`Navigation completed for ${url}`, 'success', url);
+      
+      // Wait for main content selector (non-fatal)
+      try {
+        await page.waitForSelector('main', { timeout: 10000 });
+        await this.addLog(`'main' selector found for ${url}`, 'info', url);
+      } catch (e) {
+        await this.addLog(`'main' selector not found for ${url}, continuing`, 'warning', url);
+      }
       
       // Wait for content to load (reduced wait time)
       await this.addLog(`Waiting for content to load...`, 'info', url);

@@ -14,6 +14,7 @@ import "../styles/prism-vsc-dark-plus.css";
 import { Providers } from "@/lib/providers";
 import { usePathname } from "next/navigation";
 import { IdentityProvider } from "@/components/IdentityProvider";
+import Script from "next/script";
 
 export default function RootLayout({
   children,
@@ -159,6 +160,14 @@ export default function RootLayout({
             </ThemeProvider>
           )}
         </SessionProvider>
+        {shouldShowFooter && <Script
+          src="https://qurieus.com/embed.js"
+          data-api-key="cmd06jsu00000kuhtleyyd5ff"
+          data-initial-message="Hello! How can I help you today?"
+          data-position="bottom-right"
+          data-theme="light"
+          async
+        ></Script>}
       </body>
     </html>
   );
