@@ -117,37 +117,8 @@ export class WebsiteCrawler {
     // Remove unwanted elements
     $('script, style, nav, header, footer, aside, .sidebar, .navigation, .menu, .ad, .advertisement, .banner, .popup, .modal, .overlay').remove();
     
-    // Common content selectors (in order of preference)
-    const contentSelectors = [
-      'main',
-      'article',
-      '[role="main"]',
-      '.main-content',
-      '.content',
-      '.post-content',
-      '.entry-content',
-      '.article-content',
-      '#content',
-      '#main',
-      '.main',
-      'body'
-    ];
-    
-    let content = '';
-    
-    for (const selector of contentSelectors) {
-      const element = $(selector);
-      if (element.length > 0) {
-        content = element.text();
-        if (content.length > 100) { // Minimum content threshold
-          break;
-        }
-      }
-    }
-    // Fallback: if no content found, use body text
-    if (!content || content.length < 100) {
-      content = $('body').text();
-    }
+    // Always extract from body
+    const content = $('body').text();
     return this.cleanText(content);
   }
 
@@ -264,22 +235,39 @@ export class WebsiteCrawler {
       // Navigate to page with shorter timeout and more aggressive options
       await this.addLog(`Navigating to ${url}...`, 'info', url);
       
-      // Add timeout wrapper around navigation
-      const navigationPromise = page.goto(url, { 
-        waitUntil: 'networkidle2',
-        timeout: 20000 
-      });
-      
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Navigation timeout')), 20000);
-      });
-      
-      await Promise.race([navigationPromise, timeoutPromise]);
-      await this.addLog(`Navigation completed for ${url}`, 'success', url);
+      // Retry navigation up to 3 times if "Navigating frame was detached" error occurs
+      let navigationSuccess = false;
+      let lastError = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const navigationPromise = page.goto(url, { 
+            waitUntil: 'networkidle2',
+            timeout: 20000 
+          });
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Navigation timeout')), 20000);
+          });
+          await Promise.race([navigationPromise, timeoutPromise]);
+          navigationSuccess = true;
+          await this.addLog(`Navigation completed for ${url} (attempt ${attempt})`, 'success', url);
+          break;
+        } catch (err) {
+          lastError = err;
+          await this.addLog(`Navigation attempt ${attempt} failed for ${url}: ${err}`, 'warning', url);
+          if (!(err as Error).message.includes('Navigating frame was detached')) {
+            throw err;
+          }
+          // Optional: wait before retrying
+          await new Promise(res => setTimeout(res, 1000 * attempt));
+        }
+      }
+      if (!navigationSuccess) {
+        throw lastError;
+      }
       
       // Wait for main content selector (non-fatal)
       try {
-        await page.waitForSelector('main', { timeout: 10000 });
+        await page.waitForSelector('main', { timeout: 15000 }); // Increased timeout
         await this.addLog(`'main' selector found for ${url}`, 'info', url);
       } catch (e) {
         await this.addLog(`'main' selector not found for ${url}, continuing`, 'warning', url);
@@ -287,17 +275,38 @@ export class WebsiteCrawler {
       
       // Wait for content to load (reduced wait time)
       await this.addLog(`Waiting for content to load...`, 'info', url);
-      await new Promise(resolve => setTimeout(resolve, 500)); // Reduced to 500ms
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Increased to 1000ms
       
-      // Get the HTML content
-      await this.addLog(`Extracting HTML content from ${url}...`, 'info', url);
-      const html = await page.content();
-      await this.addLog(`HTML content extracted (${html.length} characters)`, 'success', url);
+      // Get the HTML content with robust error handling
+      let html = '';
+      try {
+        await this.addLog(`Extracting HTML content from ${url}...`, 'info', url);
+        html = await page.content();
+        await this.addLog(`HTML content extracted (${html.length} characters)`, 'success', url);
+      } catch (err) {
+        if ((err as Error).message && (err as Error).message.includes('Execution context was destroyed')) {
+          await this.addLog(`Page context destroyed before extraction for ${url}: ${err}`, 'error', url);
+        } else {
+          await this.addLog(`Error extracting HTML content from ${url}: ${err}`, 'error', url);
+          throw err;
+        }
+      }
       
-      // Close the page
-      await page.close();
-      page = null;
-      await this.addLog(`Page closed for ${url}`, 'info', url);
+      // Close the page with error handling
+      if (page) {
+        try {
+          await page.close();
+          page = null;
+          await this.addLog(`Page closed for ${url}`, 'info', url);
+        } catch (closeError) {
+          await this.addLog(`Error closing page after crawl for ${url}: ${closeError}`, 'warning', url);
+        }
+      }
+      
+      if (!html) {
+        await this.addLog(`No content extracted from ${url}`, 'warning', url);
+        return null;
+      }
       
       await this.addLog(`Successfully crawled with Puppeteer: ${url}`, 'success', url);
       return this.parseHtmlContent(html, url);
@@ -354,9 +363,7 @@ export class WebsiteCrawler {
     const title = $('title').text().trim() || $('h1').first().text().trim();
     
     // Extract main content
-    const text = this.settings.extractMainContent 
-      ? this.extractMainContentAdvanced(html, url)
-      : $('body').text();
+    const text = this.extractMainContentAdvanced(html, url);
     
     // Convert HTML to Markdown
     const markdown = this.turndownService.turndown(html);
