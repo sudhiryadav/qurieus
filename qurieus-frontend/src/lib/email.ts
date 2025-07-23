@@ -12,6 +12,19 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER || process.env.SMTP_USERNAME,
     pass: process.env.SMTP_PASSWORD,
   },
+  // Optimized timeout settings for faster sending
+  connectionTimeout: 15000, // 15 seconds (reduced from 60)
+  greetingTimeout: 10000,   // 10 seconds (reduced from 30)
+  socketTimeout: 15000,     // 15 seconds (reduced from 60)
+  // Add TLS options for better compatibility
+  tls: {
+    rejectUnauthorized: false
+  },
+  // Add connection pooling for better performance
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  rateLimit: 5, // Send max 5 emails per second
 });
 
 export const footerData = {
@@ -43,18 +56,43 @@ function renderTemplate(templateName: string, context: any) {
 }
 
 export async function sendEmail({ to, subject, template, context, html,attachments }: { to: string; subject: string; template?: string; context?: any; html?: string, attachments?: any }) {
-  let htmlContent = html;
-  if (template) {
-    htmlContent = renderTemplate(template, context || {});
+  try {
+    let htmlContent = html;
+    if (template) {
+      htmlContent = renderTemplate(template, context || {});
+    }
+    const mailOptions: any = {
+      from: process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USERNAME,
+      to,
+      subject,
+      html: htmlContent,
+      attachments,
+      // Add proper headers to improve deliverability
+      headers: {
+        'X-Priority': '3',
+        'X-MSMail-Priority': 'Normal',
+        'X-Mailer': 'Qurieus Email System',
+        'X-Report-Abuse': 'Please report abuse here: ' + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@qurieus.com'),
+        'List-Unsubscribe': '<mailto:' + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@qurieus.com') + '?subject=unsubscribe>',
+        'Precedence': 'bulk',
+        'Message-ID': '<' + Date.now() + '.' + Math.random().toString(36).substr(2, 9) + '@qurieus.com>'
+      },
+      // Add text version for better deliverability
+      text: htmlContent ? htmlContent.replace(/<[^>]*>/g, '') : '',
+    };
+    
+    logger.info("Sending email", { to, subject, template: template || 'custom' });
+    await transporter.sendMail(mailOptions);
+    logger.info("Email sent successfully", { to, subject });
+  } catch (error) {
+    logger.error("Failed to send email", { 
+      to, 
+      subject, 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    throw error;
   }
-  const mailOptions: any = {
-    from: process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USERNAME,
-    to,
-    subject,
-    html: htmlContent,
-    attachments,
-  };
-  await transporter.sendMail(mailOptions);
 }
 
 export async function sendVerificationEmail(email: string, code: string) {

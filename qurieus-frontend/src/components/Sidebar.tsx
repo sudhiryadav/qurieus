@@ -21,6 +21,7 @@ const adminNav = [
   { name: "Subscriptions", href: "/admin/subscriptions", icon: <BarChart3 className="h-4 w-4 mr-2" /> },
   { name: "Plans", href: "/admin/plans", icon: <Code className="h-4 w-4 mr-2" /> },
   { name: "Website Crawler", href: "/admin/website-crawler", icon: <Globe className="h-4 w-4 mr-2" /> },
+  { name: "Email Broadcast", href: "/admin/email-broadcast", icon: <MessageSquare className="h-4 w-4 mr-2" /> },
 ];
 
 const Sidebar = () => {
@@ -93,7 +94,8 @@ const Sidebar = () => {
               </Link>
             );
           })}
-          {session?.user?.role === "SUPER_ADMIN" && (
+          {/* Show admin menu for both ADMIN and SUPER_ADMIN */}
+          {(session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
             <div>
               <button
                 className="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-dark-3 rounded-md transition-colors focus:outline-none"

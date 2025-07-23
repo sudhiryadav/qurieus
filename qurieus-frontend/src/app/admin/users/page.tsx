@@ -26,11 +26,11 @@ interface User {
   jobTitle?: string;
   bio?: string;
   phone?: string;
-  subscription?: {
+  subscriptions?: Array<{
     plan: {
       name: string;
     };
-  };
+  }>;
 }
 
 const ROLE_DESCRIPTIONS = {
@@ -46,10 +46,18 @@ const ROLE_MAPPINGS = {
 } as const;
 
 const formatRole = (role: string) => {
-  return role
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+  return ROLE_MAPPINGS[role as keyof typeof ROLE_MAPPINGS] || role;
+};
+
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return format(date, "MMM d, yyyy");
+  } catch (error) {
+    return "Invalid Date";
+  }
 };
 
 export default function AdminUsersPage() {
@@ -81,10 +89,11 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/api/admin/users");
-      setUsers(response.data);
+      setUsers(response.data.users || []);
     } catch (error) {
       console.error("Error fetching users:", error);
       showToast.error("Failed to fetch users");
+      setUsers([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -174,7 +183,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = (users || []).filter(user => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -297,13 +306,13 @@ export default function AdminUsersPage() {
                   {user.email}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                  {ROLE_MAPPINGS[user.role as keyof typeof ROLE_MAPPINGS]}
+                  {formatRole(user.role)}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                  {user.subscription?.plan?.name || "No Plan"}
+                  {user.subscriptions?.[0]?.plan?.name || user.plan || "No Plan"}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                  {format(new Date(user.created_at), "MMM d, yyyy")}
+                  {formatDate(user.created_at)}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">

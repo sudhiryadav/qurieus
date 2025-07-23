@@ -5,28 +5,49 @@ import { prisma } from "@/utils/prismaDB";
 import { RequireRoles, invalidateUserCache } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
-export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
+export const GET = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (request: Request) => {
+  const session = await getServerSession(authOptions);
+  // Only allow admin/superadmin
+  if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
   const users = await prisma.user.findMany({
-    include: {
+    where: {
+      role: { not: 'AGENT' },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      is_active: true,
+      created_at: true,
+      company: true,
+      plan: true,
+      subscription_type: true,
+      subscription_start_date: true,
+      subscription_end_date: true,
+      is_verified: true,
+      jobTitle: true,
+      bio: true,
+      phone: true,
       subscriptions: {
-        where: { status: 'active' },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        include: { plan: true },
-      },
-    } as any, // bypass linter error
-    orderBy: { created_at: "desc" },
+        select: {
+          plan: {
+            select: {
+              name: true
+            }
+          }
+        },
+        where: {
+          status: 'active'
+        },
+        take: 1
+      }
+    },
+    orderBy: { name: 'asc' },
   });
-  // Flatten the subscriptions array to a single subscription (if any)
-  const usersWithLatestSubscription = users.map(user => {
-    const u = user as any;
-    return {
-      ...user,
-      subscription: u.subscriptions?.[0] || null,
-      subscriptions: undefined,
-    };
-  });
-  return NextResponse.json(usersWithLatestSubscription);
+  return NextResponse.json({ users });
 });
 
 export const PATCH = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
