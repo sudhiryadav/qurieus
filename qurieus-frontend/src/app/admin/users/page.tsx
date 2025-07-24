@@ -205,14 +205,12 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <LoadingOverlay loading={loading} htmlText="Loading users..." />
       <div className="flex items-center gap-3 mb-6">
         <UserIcon className="h-8 w-8 text-blue-600" />
         <h1 className="text-2xl font-bold">Users</h1>
       </div>
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Users List</h1>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
           {/* Search Box */}
           <div className="relative w-full md:w-64">
@@ -287,6 +285,7 @@ export default function AdminUsersPage() {
 
       {/* Users Table */}
       <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <LoadingOverlay loading={loading} htmlText="Loading users..." position="absolute" />
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-800 border-b dark:border-dark-3">

@@ -209,7 +209,6 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
 
   return (
     <>
-      <LoadingOverlay loading={deleteAllLoading || deleteSingleLoading} htmlText={deleteAllLoading ? "Deleting all documents..." : "Deleting document..."} />
       <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
         {documents.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400">
@@ -239,6 +238,7 @@ export default function DocumentList({ onFetchDocuments }: { onFetchDocuments: (
               </div>
             </div>
             <div className="overflow-x-auto">
+              <LoadingOverlay loading={deleteAllLoading || deleteSingleLoading} htmlText={deleteAllLoading ? "Deleting all documents..." : "Deleting document..."} position="absolute" />
               <table className="w-full">
                 <thead>
                   <tr className="border-b dark:border-dark-3">

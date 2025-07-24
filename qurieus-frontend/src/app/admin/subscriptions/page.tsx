@@ -87,7 +87,6 @@ export default function AdminSubscriptionsPage() {
 
   return (
     <div>
-      <LoadingOverlay loading={loading} htmlText="Loading subscriptions..." />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
           <BarChart3 className="h-8 w-8 text-blue-600" />
@@ -107,6 +106,7 @@ export default function AdminSubscriptionsPage() {
         </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <LoadingOverlay loading={loading} htmlText="Loading subscriptions..." position="absolute" />
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-800 border-b dark:border-dark-3">

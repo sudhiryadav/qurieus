@@ -146,7 +146,6 @@ export default function Dashboard() {
 
   return (
     <div>
-      <LoadingOverlay loading={loading} htmlText="Loading dashboard data..." />
       <div className="flex items-center gap-3 mb-6">
         <LayoutDashboard className="h-8 w-8 text-blue-600" />
         <h1 className="text-2xl font-bold text-dark dark:text-white">
@@ -201,7 +200,8 @@ export default function Dashboard() {
       <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
         <h2 className="mb-4 text-lg font-medium text-dark dark:text-white">Recent Activity</h2>
         <div className="overflow-x-auto">
-          <table className="w-full table-auto">
+        <LoadingOverlay loading={loading} htmlText="Loading dashboard data..." position="absolute" />
+        <table className="w-full table-auto">
             <thead>
               <tr className="border-b dark:border-dark-3">
                 <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Date</th>

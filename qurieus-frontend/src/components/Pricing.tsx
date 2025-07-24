@@ -295,7 +295,7 @@ export default function Pricing({
       id="pricing"
       className="bg-gray-1 pb-8 pt-8 dark:bg-dark-2 lg:pb-[70px] lg:pt-16"
     >
-      <LoadingOverlay loading={overlayLoading} htmlText="Applying subscription..." />
+      <LoadingOverlay loading={overlayLoading} htmlText="Applying subscription..." position="absolute" />
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}

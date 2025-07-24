@@ -57,7 +57,7 @@ export default function KnowledgeBase() {
           Upload Documents
         </button>
       </div>
-      <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-2xl">
+      <p className="mb-6 text-gray-600 dark:text-gray-300">
         Welcome to your Knowledge Base! Here you can securely upload, organize, and manage documents that power your workspace. Accepted file types include PDFs, Word documents, and text files. Use this space to store research, manuals, policies, or any reference material your team needs. Uploaded documents will be available for search and AI-powered insights. To get started, click &quot;Upload Documents&quot; and select your files. You can track your storage and file limits below.
       </p>
 

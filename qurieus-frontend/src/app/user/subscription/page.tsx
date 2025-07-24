@@ -125,12 +125,11 @@ export default function SubscriptionPage() {
 
   return (
     <div>
-      <LoadingOverlay loading={loading} htmlText="Loading subscription details..." />
       <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <CreditCard className="h-8 w-8 text-blue-600" />
-          <h1 className="mb-4 text-3xl font-bold">Subscription Details</h1>
-        </div>
+      <div className="flex items-center gap-3">
+      <CreditCard className="h-8 w-8 text-blue-600" />
+      <h1 className="text-3xl font-bold">Subscription Details</h1>
+      </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowPricingModal(true)}
@@ -149,6 +148,7 @@ export default function SubscriptionPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+      <LoadingOverlay loading={loading} htmlText="Loading subscription details..." position="absolute" />
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-4 text-xl font-semibold">Current Plan</h2>
           <div className="space-y-4">
