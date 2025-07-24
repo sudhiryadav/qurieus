@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { showToast } from "@/components/Common/Toast";
 import axiosInstance from "@/lib/axios";
+import { Users as UsersIcon } from "lucide-react";
 
 interface Agent {
   id: string;
@@ -134,7 +135,10 @@ export default function AgentsPage() {
   return (
     <div className="mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Agents</h1>
+        <div className="flex items-center gap-3">
+          <UsersIcon className="h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl font-bold">Agents</h1>
+        </div>
         <button
           className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
           onClick={() => setInviteModalOpen(true)}

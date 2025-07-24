@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Download, Play, Square, RotateCcw } from 'lucide-react';
+import { Download, Play, Square, RotateCcw, Globe } from 'lucide-react';
 import { showToast } from '@/components/Common/Toast';
 
 interface CrawlSettings {
@@ -256,8 +256,11 @@ export default function WebsiteCrawlerPage() {
 
   return (
     <div>
+      <div className="flex items-center gap-3 mb-6">
+        <Globe className="h-8 w-8 text-blue-600" />
+        <h1 className="text-2xl font-bold">Website Crawler</h1>
+      </div>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Website Crawler</h1>
         <div className="flex gap-2">
           {isCrawling ? (
             <Button onClick={stopCrawl} variant="destructive">

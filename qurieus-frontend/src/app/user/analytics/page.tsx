@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApexOptions } from "apexcharts";
 import axiosInstance from "@/lib/axios";
+import { BarChart3 } from "lucide-react";
 
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -124,7 +125,10 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Analytics</h1>
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-8 w-8 text-blue-600" />
+          <h1 className="text-3xl font-bold">Analytics</h1>
+        </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select time range" />

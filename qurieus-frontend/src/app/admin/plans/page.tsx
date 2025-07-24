@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Code } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "@/lib/axios";
@@ -212,6 +212,10 @@ export default function AdminPlansPage() {
   return (
     <div>
       <LoadingOverlay loading={loading} htmlText="Loading plans..." />
+      <div className="flex items-center gap-3 mb-6">
+        <Code className="h-8 w-8 text-blue-600" />
+        <h1 className="text-2xl font-bold">Plans</h1>
+      </div>
       {/* Workflow Note */}
       <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
         <div className="flex items-start">

@@ -98,6 +98,10 @@ export default function EmbedCode() {
             <div className="rounded-full bg-blue-100 p-4 dark:bg-blue-900/20">
               <Code className="h-12 w-12 text-blue-600 dark:text-blue-400" />
             </div>
+            <div className="flex items-center gap-3 ml-4">
+              <Code className="h-8 w-8 text-blue-600" />
+              <h1 className="text-2xl font-bold text-dark dark:text-white">Embed Code</h1>
+            </div>
           </div>
           
           <h1 className="mb-4 text-3xl font-bold">No Documents Found</h1>

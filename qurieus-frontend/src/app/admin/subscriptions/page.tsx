@@ -7,7 +7,7 @@ import ModalDialog from "@/components/ui/ModalDialog";
 import axios from "@/lib/axios";
 // import { UserSubscription } from "@prisma/client";
 import { UserSubscriptionWithUserAndPlan } from "@/types/subscription";
-import { Search } from "lucide-react";
+import { Search, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function AdminSubscriptionsPage() {
@@ -89,7 +89,10 @@ export default function AdminSubscriptionsPage() {
     <div>
       <LoadingOverlay loading={loading} htmlText="Loading subscriptions..." />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Subscriptions</h1>
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl font-bold">Subscriptions</h1>
+        </div>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

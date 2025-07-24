@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import axiosInstance from "@/lib/axios";
+import { LayoutDashboard } from "lucide-react";
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 import { useRouter } from "next/navigation";
@@ -146,9 +147,12 @@ export default function Dashboard() {
   return (
     <div>
       <LoadingOverlay loading={loading} htmlText="Loading dashboard data..." />
-      <h1 className="mb-6 text-2xl font-bold text-dark dark:text-white">
-        Welcome, {session?.user?.name}!
-      </h1>
+      <div className="flex items-center gap-3 mb-6">
+        <LayoutDashboard className="h-8 w-8 text-blue-600" />
+        <h1 className="text-2xl font-bold text-dark dark:text-white">
+          Welcome, {session?.user?.name}!
+        </h1>
+      </div>
 
       <div className="mb-8 grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">

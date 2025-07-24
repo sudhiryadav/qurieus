@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { Search, Plus, Filter } from "lucide-react";
+import { Search, Plus, Filter, User as UserIcon } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
@@ -206,6 +206,10 @@ export default function AdminUsersPage() {
   return (
     <div>
       <LoadingOverlay loading={loading} htmlText="Loading users..." />
+      <div className="flex items-center gap-3 mb-6">
+        <UserIcon className="h-8 w-8 text-blue-600" />
+        <h1 className="text-2xl font-bold">Users</h1>
+      </div>
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Users List</h1>

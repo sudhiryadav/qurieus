@@ -7,6 +7,7 @@ import { formatFileSize } from "@/lib/utils";
 import { Document } from "@prisma/client";
 import { useEffect, useState } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { Upload } from "lucide-react";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -43,9 +44,12 @@ export default function KnowledgeBase() {
   return (
     <div className="mx-auto">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-dark dark:text-white">
-          Knowledge Base
-        </h1>
+        <div className="flex items-center gap-3">
+          <Upload className="h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl font-bold text-dark dark:text-white">
+            Knowledge Base
+          </h1>
+        </div>
         <button
           onClick={() => setIsUploadDialogOpen(true)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"

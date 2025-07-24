@@ -11,6 +11,7 @@ import { format, differenceInDays } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 import { logger } from "@/lib/logger";
+import { CreditCard } from "lucide-react";
 
 const FullScreenPricing = ({
   showPricingModal,
@@ -126,7 +127,10 @@ export default function SubscriptionPage() {
     <div>
       <LoadingOverlay loading={loading} htmlText="Loading subscription details..." />
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="mb-4 text-3xl font-bold">Subscription Details</h1>
+        <div className="flex items-center gap-3">
+          <CreditCard className="h-8 w-8 text-blue-600" />
+          <h1 className="mb-4 text-3xl font-bold">Subscription Details</h1>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowPricingModal(true)}

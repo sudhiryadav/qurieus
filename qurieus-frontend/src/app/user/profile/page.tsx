@@ -5,6 +5,7 @@ import { showToast } from "@/components/Common/Toast";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axios";
+import { User as UserIcon } from "lucide-react";
 
 export default function Profile() {
   const { data: session, update } = useSession();
@@ -98,7 +99,10 @@ export default function Profile() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-dark dark:text-white">Profile Settings</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <UserIcon className="h-8 w-8 text-blue-600" />
+        <h1 className="text-2xl font-bold text-dark dark:text-white">Profile Settings</h1>
+      </div>
 
       <div className="space-y-6">
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">

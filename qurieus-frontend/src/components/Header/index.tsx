@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 import { showToast } from "@/components/Common/Toast";
 import { Menu } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
@@ -20,6 +21,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Home, Info, DollarSign, Phone, BookOpen, Users, Briefcase, Layers, Rocket } from "lucide-react";
+
+// Icon mapping for menu items
+const menuIcons: Record<string, JSX.Element> = {
+  Home: <Home className="mr-2 h-4 w-4 inline" />,
+  About: <Info className="mr-2 h-4 w-4 inline" />,
+  Pricing: <DollarSign className="mr-2 h-4 w-4 inline" />,
+  Contact: <Phone className="mr-2 h-4 w-4 inline" />,
+  Blog: <BookOpen className="mr-2 h-4 w-4 inline" />,
+  "For You": <Users className="mr-2 h-4 w-4 inline" />,
+  Lawyers: <Briefcase className="mr-2 h-4 w-4 inline" />,
+  HR: <Users className="mr-2 h-4 w-4 inline" />,
+  SaaS: <Layers className="mr-2 h-4 w-4 inline" />,
+  Startups: <Rocket className="mr-2 h-4 w-4 inline" />,
+};
 
 const Header: React.FC = () => {
   const { data: session } = useSession();
@@ -227,6 +243,7 @@ const Header: React.FC = () => {
                             pathUrl === menuItem?.path && "text-primary"
                           }`}
                         >
+                          {menuIcons[menuItem.title]}
                           {menuItem.title}
                           <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                         </button>
@@ -237,6 +254,7 @@ const Header: React.FC = () => {
                                 href={sub.path || '#'}
                                 className="block px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                               >
+                                {menuIcons[sub.title]}
                                 {sub.title}
                               </Link>
                             </li>
@@ -250,6 +268,7 @@ const Header: React.FC = () => {
                           pathUrl === menuItem?.path && "text-primary"
                         }`}
                       >
+                        {menuIcons[menuItem.title]}
                         {menuItem.title}
                       </Link>
                     )}
@@ -360,7 +379,7 @@ const Header: React.FC = () => {
                         pathUrl === menuItem?.path && "text-primary"
                       }`}
                     >
-                      {menuItem.title}
+                      <span className="flex items-center">{menuIcons[menuItem.title]}{menuItem.title}</span>
                       <svg className={`ml-2 h-4 w-4 transition-transform ${openIndex === index ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                     </button>
                     {openIndex === index && (
@@ -372,6 +391,7 @@ const Header: React.FC = () => {
                               onClick={navbarToggleHandler}
                               className="block px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                             >
+                              {menuIcons[sub.title]}
                               {sub.title}
                             </Link>
                           </li>
@@ -387,6 +407,7 @@ const Header: React.FC = () => {
                       pathUrl === menuItem?.path && "text-primary"
                     }`}
                   >
+                    {menuIcons[menuItem.title]}
                     {menuItem.title}
                   </Link>
                 )}
