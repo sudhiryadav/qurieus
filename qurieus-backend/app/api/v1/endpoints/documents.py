@@ -23,6 +23,8 @@ import pandas as pd
 import io
 import uuid
 import re
+import pytesseract
+from PIL import Image
 
 # Add the root directory to Python path
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -33,6 +35,15 @@ if backend_dir not in sys.path:
 from app.core.config import settings
 from app.database import get_db
 from models import Document as DBDocument, Users
+
+# OCR Configuration
+OCR_ENABLED = getattr(settings, 'OCR_ENABLED', True)  # Enable/disable OCR
+OCR_LANGUAGE = getattr(settings, 'OCR_LANGUAGE', 'eng')  # OCR language
+OCR_DPI = getattr(settings, 'OCR_DPI', 300)  # DPI for page rendering
+OCR_CONFIG = getattr(settings, 'OCR_CONFIG', '--oem 3 --psm 6')  # Tesseract config
+
+# Set Tesseract path if needed (uncomment and set path if tesseract is not in PATH)
+# pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'  # macOS with Homebrew
 
 # Initialize the embedding model with the same model as query service
 try:
@@ -258,7 +269,54 @@ def process_file(
         if file_extension.lower() == '.pdf':
             doc = fitz.open(stream=file_content, filetype="pdf")
             for page in doc:
-                text_content += page.get_text()
+                # Extract selectable text first
+                page_text = page.get_text()
+                text_content += page_text
+                
+                # If no text was extracted, the page might be scanned/image-based
+                if not page_text.strip() and OCR_ENABLED:
+                    log_to_frontend("info", f"Page {page.number + 1} appears to be image-based, running OCR...")
+                    try:
+                        # Render page as image for OCR
+                        pix = page.get_pixmap(dpi=OCR_DPI)  # Use configured DPI
+                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        
+                        # Run OCR on the page image
+                        ocr_text = pytesseract.image_to_string(
+                            img, 
+                            lang=OCR_LANGUAGE,
+                            config=OCR_CONFIG
+                        )
+                        if ocr_text.strip():
+                            text_content += f"\n[OCR Page {page.number + 1}]:\n{ocr_text}\n"
+                            log_to_frontend("info", f"OCR extracted {len(ocr_text)} characters from page {page.number + 1}")
+                        else:
+                            log_to_frontend("warning", f"No text found via OCR on page {page.number + 1}")
+                    except Exception as e:
+                        log_to_frontend("error", f"OCR failed on page {page.number + 1}: {str(e)}")
+                elif not page_text.strip() and not OCR_ENABLED:
+                    log_to_frontend("warning", f"Page {page.number + 1} appears to be image-based but OCR is disabled")
+                
+                # Also extract text from embedded images in the page
+                if OCR_ENABLED:
+                    try:
+                        for img_index, img in enumerate(page.get_images(full=True)):
+                            xref = img[0]
+                            base_image = doc.extract_image(xref)
+                            image_bytes = base_image["image"]
+                            image = Image.open(io.BytesIO(image_bytes))
+                            
+                            # Run OCR on embedded image
+                            ocr_text = pytesseract.image_to_string(
+                                image, 
+                                lang=OCR_LANGUAGE,
+                                config=OCR_CONFIG
+                            )
+                            if ocr_text.strip():
+                                text_content += f"\n[OCR Page {page.number + 1} Image {img_index + 1}]:\n{ocr_text}\n"
+                                log_to_frontend("info", f"OCR extracted {len(ocr_text)} characters from image {img_index + 1} on page {page.number + 1}")
+                    except Exception as e:
+                        log_to_frontend("warning", f"Failed to process embedded images on page {page.number + 1}: {str(e)}")
         elif file_extension.lower() in ['.docx', '.doc']:
             # Create a BytesIO object from the file content
             doc_stream = io.BytesIO(file_content)
@@ -298,6 +356,33 @@ def process_file(
             except Exception as e:
                 print(f"Error processing file: {str(e)}")
                 raise ValueError(f"Error processing file: {str(e)}")
+        elif file_extension.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif']:
+            # Handle image files with OCR
+            if not OCR_ENABLED:
+                raise ValueError(f"OCR is disabled. Cannot process image file: {file_extension}")
+            
+            try:
+                image = Image.open(io.BytesIO(file_content))
+                
+                # Convert to RGB if necessary (for better OCR accuracy)
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                
+                # Run OCR on the image
+                ocr_text = pytesseract.image_to_string(
+                    image, 
+                    lang=OCR_LANGUAGE,
+                    config=OCR_CONFIG
+                )
+                if ocr_text.strip():
+                    text_content = ocr_text
+                    log_to_frontend("info", f"OCR extracted {len(ocr_text)} characters from image {original_filename}")
+                else:
+                    log_to_frontend("warning", f"No text found via OCR in image {original_filename}")
+                    text_content = f"[Image file: {original_filename} - No text detected via OCR]"
+            except Exception as e:
+                log_to_frontend("error", f"Failed to process image file {original_filename}: {str(e)}")
+                raise ValueError(f"Error processing image file: {str(e)}")
         else:
             raise ValueError(f"Unsupported file type: {file_extension}")
         
