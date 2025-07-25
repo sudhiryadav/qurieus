@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         logger.info("Visitor Info API: Support notification email sent", { 
           visitorId, 
           email, 
-          supportEmail 
+          userEmail: user.email
         });
       }
     } catch (emailError) {
