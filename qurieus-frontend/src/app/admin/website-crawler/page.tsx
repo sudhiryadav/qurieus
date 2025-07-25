@@ -256,11 +256,11 @@ export default function WebsiteCrawlerPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <Globe className="h-8 w-8 text-blue-600" />
-        <h1 className="text-2xl font-bold">Website Crawler</h1>
-      </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3 mb-6 justify-between">
+        <div className="flex items-center gap-3">
+          <Globe className="h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl font-bold">Website Crawler</h1>
+        </div>
         <div className="flex gap-2">
           {isCrawling ? (
             <Button onClick={stopCrawl} variant="destructive">

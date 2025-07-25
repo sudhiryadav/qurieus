@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // Validate API key by checking if user exists
     const user = await prisma.user.findUnique({
       where: { id: apiKey },
-      select: { id: true }
+      select: { id: true, email: true }
     });
 
     if (!user) {
@@ -84,12 +84,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Send email notification to support team
+    // Send email notification to user
     try {
-      const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || process.env.ADMIN_EMAIL;
-      if (supportEmail) {
+      if (user.email) {
         await sendEmail({
-          to: supportEmail,
+          to: user.email,
           subject: `New Chat Visitor: ${name} (${email})`,
           template: "visitor-notification",
           context: {
