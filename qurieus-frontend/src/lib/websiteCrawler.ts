@@ -117,8 +117,57 @@ export class WebsiteCrawler {
     // Remove unwanted elements
     $('script, style, nav, header, footer, aside, .sidebar, .navigation, .menu, .ad, .advertisement, .banner, .popup, .modal, .overlay').remove();
     
-    // Always extract from body
-    const content = $('body').text();
+    // Try multiple content extraction strategies
+    let content = '';
+    
+    // Strategy 1: Try main content selectors
+    const mainSelectors = [
+      'main',
+      'article',
+      '.content',
+      '#content',
+      '.main',
+      '#main',
+      '.post-content',
+      '.entry-content',
+      '.page-content'
+    ];
+    
+    for (const selector of mainSelectors) {
+      const element = $(selector);
+      if (element.length > 0) {
+        content = element.text();
+        if (content.trim().length > 100) { // Ensure we have substantial content
+          break;
+        }
+      }
+    }
+    
+    // Strategy 2: If no main content found, try body with better filtering
+    if (!content || content.trim().length < 100) {
+      const body = $('body');
+      
+      // Remove more unwanted elements from body
+      body.find('script, style, nav, header, footer, aside, .sidebar, .navigation, .menu, .ad, .advertisement, .banner, .popup, .modal, .overlay, .cookie-banner, .newsletter-signup, .social-share').remove();
+      
+      content = body.text();
+    }
+    
+    // Strategy 3: If still no content, try all paragraphs and headings
+    if (!content || content.trim().length < 50) {
+      const textElements = $('p, h1, h2, h3, h4, h5, h6, div');
+      const texts: string[] = [];
+      
+      textElements.each((_, element) => {
+        const text = $(element).text().trim();
+        if (text.length > 20) { // Only include substantial text
+          texts.push(text);
+        }
+      });
+      
+      content = texts.join('\n');
+    }
+    
     return this.cleanText(content);
   }
 
@@ -215,16 +264,16 @@ export class WebsiteCrawler {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
       await this.addLog(`Set user agent for ${url}`, 'info', url);
       
-      // Set timeout
-      await page.setDefaultNavigationTimeout(10000); // Reduced to 10 seconds
-      await page.setDefaultTimeout(10000);
+      // Set timeout - increased for better compatibility
+      await page.setDefaultNavigationTimeout(30000); // Increased to 30 seconds
+      await page.setDefaultTimeout(30000);
       await this.addLog(`Set timeouts for ${url}`, 'info', url);
       
-      // Block unnecessary resources to speed up loading
+      // Block unnecessary resources but allow CSS for proper rendering
       await page.setRequestInterception(true);
       page.on('request', (req) => {
         const resourceType = req.resourceType();
-        if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+        if (['image', 'font', 'media'].includes(resourceType)) {
           req.abort();
         } else {
           req.continue();
@@ -232,7 +281,7 @@ export class WebsiteCrawler {
       });
       await this.addLog(`Set request interception for ${url}`, 'info', url);
       
-      // Navigate to page with shorter timeout and more aggressive options
+      // Navigate to page with more flexible wait strategy
       await this.addLog(`Navigating to ${url}...`, 'info', url);
       
       // Retry navigation up to 3 times if "Navigating frame was detached" error occurs
@@ -241,11 +290,11 @@ export class WebsiteCrawler {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           const navigationPromise = page.goto(url, { 
-            waitUntil: 'networkidle2',
-            timeout: 20000 
+            waitUntil: 'domcontentloaded', // Changed from networkidle2 to domcontentloaded
+            timeout: 30000 // Increased timeout
           });
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Navigation timeout')), 20000);
+            setTimeout(() => reject(new Error('Navigation timeout')), 30000);
           });
           await Promise.race([navigationPromise, timeoutPromise]);
           navigationSuccess = true;
@@ -265,17 +314,30 @@ export class WebsiteCrawler {
         throw lastError;
       }
       
-      // Wait for main content selector (non-fatal)
-      try {
-        await page.waitForSelector('main', { timeout: 15000 }); // Increased timeout
-        await this.addLog(`'main' selector found for ${url}`, 'info', url);
-      } catch (e) {
-        await this.addLog(`'main' selector not found for ${url}, continuing`, 'warning', url);
+      // Wait for content to load with multiple strategies
+      await this.addLog(`Waiting for content to load...`, 'info', url);
+      
+      // Try multiple selectors for content
+      const contentSelectors = ['main', 'article', '.content', '#content', '.main', '#main', 'body'];
+      let contentFound = false;
+      
+      for (const selector of contentSelectors) {
+        try {
+          await page.waitForSelector(selector, { timeout: 5000 });
+          await this.addLog(`Content selector '${selector}' found for ${url}`, 'info', url);
+          contentFound = true;
+          break;
+        } catch (e) {
+          // Continue to next selector
+        }
       }
       
-      // Wait for content to load (reduced wait time)
-      await this.addLog(`Waiting for content to load...`, 'info', url);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Increased to 1000ms
+      if (!contentFound) {
+        await this.addLog(`No content selectors found for ${url}, continuing anyway`, 'warning', url);
+      }
+      
+      // Wait a bit more for dynamic content
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Increased wait time
       
       // Get the HTML content with robust error handling
       let html = '';
@@ -396,11 +458,11 @@ export class WebsiteCrawler {
   }
 
   private async crawlPage(url: string): Promise<CrawlResult | null> {
-    // Add timeout wrapper to prevent hanging
+    // Add timeout wrapper to prevent hanging - increased to match navigation timeout
     const timeoutPromise = new Promise<null>((resolve) => {
       setTimeout(() => {
         resolve(null);
-      }, 15000); // Reduced to 15 seconds
+      }, 35000); // Increased to 35 seconds to allow for navigation + processing
     });
 
     const crawlPromise = (async () => {
@@ -412,8 +474,8 @@ export class WebsiteCrawler {
           await this.addLog(`Puppeteer crawl successful for ${url}`, 'success', url);
           return result;
         } else {
-          await this.addLog(`Puppeteer crawl failed for ${url}, disabling Puppeteer for remaining pages`, 'warning', url);
-          this.settings.usePuppeteer = false; // Disable Puppeteer for all future pages
+          await this.addLog(`Puppeteer crawl failed for ${url}, trying fetch fallback`, 'warning', url);
+          // Don't disable Puppeteer immediately, try fetch first
         }
       }
       
