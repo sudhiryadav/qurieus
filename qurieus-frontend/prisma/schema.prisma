@@ -287,11 +287,45 @@ model Document {
   keywords     String?  // Comma-separated list of keywords extracted from the document
   uploadedAt   DateTime @default(now())
   metadata     String?
-  modalDocumentId String?
+  
+  // Qdrant/AI Integration fields
+  qdrantDocumentId String?  // Document ID in Qdrant vector database
+  chunkCount       Int      @default(0)  // Number of chunks created
+  isProcessed      Boolean  @default(false)  // Whether document has been processed for embeddings
+  processedAt      DateTime?  // When the document was processed
+  
+  // Relationships
+  chunks          DocumentChunk[]
   
   @@index([userId])
   @@index([category])
   @@index([keywords])
+  @@index([qdrantDocumentId])
+  @@index([isProcessed])
+}
+
+model DocumentChunk {
+  id              String   @id @default(cuid())
+  documentId      String
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  // Chunk metadata
+  chunkIndex      Int      // Order of the chunk in the document
+  content         String   @db.Text  // The actual chunk content
+  contentLength   Int      // Length of the chunk content
+  
+  // Qdrant integration
+  qdrantPointId   String?  // Point ID in Qdrant vector database
+  embeddingVector Float[]  // The embedding vector (if stored locally)
+  
+  // Processing metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([documentId])
+  @@index([chunkIndex])
+  @@index([qdrantPointId])
+  @@unique([documentId, chunkIndex])
 }
 
 model Log {

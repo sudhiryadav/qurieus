@@ -113,6 +113,29 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (re
       where: {
         userId: userId,
       },
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        originalName: true,
+        fileType: true,
+        fileSize: true,
+        category: true,
+        description: true,
+        keywords: true,
+        uploadedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        // Qdrant/AI Integration fields
+        qdrantDocumentId: true,
+        chunkCount: true,
+        isProcessed: true,
+        processedAt: true,
+        metadata: true,
+      },
+      orderBy: {
+        uploadedAt: 'desc',
+      },
     });
 
     const responseTime = Date.now() - startTime;
@@ -319,15 +342,80 @@ async function processWithBackend(files: File[], description: string, category: 
 
   const data = backendResponse.data;
 
-  const processedFiles = files.map((file) => ({
-    name: file.name,
-    size: file.size,
-    type: file.type,
-    uploadedAt: new Date().toISOString(),
+  // Store processed documents in the database
+  const storedDocuments = [];
+  for (const processedFile of data.processed_files) {
+    try {
+      const document = await prisma.document.create({
+        data: {
+          id: processedFile.document_id,
+          title: processedFile.original_filename.replace(/\.[^/.]+$/, ""), // Remove file extension
+          content: processedFile.content,
+          fileName: processedFile.original_filename.replace(/\.[^/.]+$/, ""),
+          originalName: processedFile.original_filename,
+          fileType: processedFile.file_type,
+          fileSize: processedFile.file_size,
+          category: category || null,
+          description: description || null,
+          keywords: "", // Can be extracted later if needed
+          uploadedAt: new Date(processedFile.processed_at),
+          metadata: processedFile.financial_analysis ? JSON.stringify(processedFile.financial_analysis) : null,
+          qdrantDocumentId: processedFile.document_id, // Link to Qdrant document ID
+          chunkCount: processedFile.chunks,
+          isProcessed: true,
+          processedAt: new Date(processedFile.processed_at),
+          userId: user.id,
+        },
+      });
+      
+      // Store chunk data if available
+      if (processedFile.chunk_data && processedFile.chunk_data.length > 0) {
+        const chunkData = processedFile.chunk_data.map((chunk: any) => ({
+          documentId: document.id,
+          chunkIndex: chunk.chunk_index,
+          content: chunk.content,
+          contentLength: chunk.content_length,
+          qdrantPointId: chunk.qdrant_point_id,
+          embeddingVector: chunk.embedding_vector,
+        }));
+        
+        await prisma.documentChunk.createMany({
+          data: chunkData,
+        });
+        
+        logger.info("Documents API: Chunks stored in database", { 
+          userId: user.id, 
+          documentId: document.id,
+          chunkCount: chunkData.length 
+        });
+      }
+      
+      storedDocuments.push(document);
+      logger.info("Documents API: Document stored in database", { 
+        userId: user.id, 
+        documentId: document.id,
+        fileName: document.fileName 
+      });
+    } catch (dbError) {
+      logger.error("Documents API: Failed to store document in database", { 
+        userId: user.id, 
+        documentId: processedFile.document_id,
+        error: dbError instanceof Error ? dbError.message : String(dbError)
+      });
+      // Continue with other documents even if one fails
+    }
+  }
+
+  const processedFiles = storedDocuments.map((doc) => ({
+    id: doc.id,
+    name: doc.originalName,
+    size: doc.fileSize,
+    type: doc.fileType,
+    uploadedAt: doc.uploadedAt.toISOString(),
   }));
 
   return NextResponse.json({
-    message: "Files uploaded successfully with Qdrant integration",
+    message: data.message,
     files: processedFiles,
     totalChunks: data.total_chunks,
     user: {

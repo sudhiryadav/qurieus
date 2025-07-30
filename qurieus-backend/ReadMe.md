@@ -14,16 +14,19 @@ This is the backend service for Qurieus, a document querying and chat applicatio
 ### 1. Database Setup
 
 1. Install PostgreSQL if not already installed:
+
    ```bash
    brew install postgresql@14
    ```
 
 2. Start PostgreSQL service:
+
    ```bash
    brew services start postgresql@14
    ```
 
 3. Create the database:
+
    ```bash
    createdb qurieus
    ```
@@ -36,16 +39,19 @@ This is the backend service for Qurieus, a document querying and chat applicatio
 ### 2. Ollama Setup
 
 1. Install Ollama using Homebrew:
+
    ```bash
    brew install ollama
    ```
 
 2. Pull the required model (Mistral is recommended):
+
    ```bash
    ollama pull mistral
    ```
 
    Alternative models available:
+
    - `llama2`
    - `codellama`
    - `neural-chat`
@@ -58,34 +64,39 @@ This is the backend service for Qurieus, a document querying and chat applicatio
 ### 3. Backend Setup
 
 1. Create and activate a virtual environment:
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate
    ```
 
-3. Install dependencies:
+2. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Set up environment variables:
+3. Set up environment variables:
+
    ```bash
    cp .env.example .env
    ```
+
    Edit `.env` with your configuration:
+
    ```
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/qurieus
    OLLAMA_API_URL=http://localhost:11434
    OLLAMA_MODEL=mistral
    NEXTAUTH_SECRET=your-secret-key
    ```
 
-5. Run database migrations:
+4. Run database migrations:
+
    ```bash
    alembic upgrade head
    ```
 
-6. Start the backend server:
+5. Start the backend server:
    ```bash
    uvicorn app.main:app --reload
    ```
@@ -93,6 +104,7 @@ This is the backend service for Qurieus, a document querying and chat applicatio
 ## API Documentation
 
 Once the server is running, you can access:
+
 - API documentation: http://localhost:8001/docs
 - Alternative documentation: http://localhost:8001/redoc
 
@@ -105,7 +117,7 @@ Once the server is running, you can access:
 ## Environment Variables
 
 Key environment variables:
-- `DATABASE_URL`: PostgreSQL connection string
+
 - `OLLAMA_API_URL`: Ollama API endpoint (default: http://localhost:11434)
 - `OLLAMA_MODEL`: Ollama model to use (default: mistral, options: mistral, llama2, neural-chat, etc.)
 - `NEXTAUTH_SECRET`: Secret key for NextAuth.js token verification
@@ -114,11 +126,13 @@ Key environment variables:
 ## Troubleshooting
 
 1. If you get database connection errors:
+
    - Check if PostgreSQL is running
    - Verify the database exists
    - Confirm pgvector extension is installed
 
 2. If Ollama queries fail:
+
    - Ensure Ollama service is running (`ollama serve`)
    - Verify the model is downloaded (`ollama list`)
    - Check Ollama API URL in settings
@@ -142,6 +156,7 @@ Unauthorized copying, distribution, or use of this software, via any medium, is 
 This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 instance. It assumes you have completed the common "Backend Application Setup" steps (cloning, venv, installing dependencies, and creating the `.env` file) on your EC2 instance.
 
 ### Prerequisites for EC2:
+
 - An AWS account.
 - An EC2 instance (e.g., Ubuntu Server).
 - Python 3.8+ (ideally matching your development version) and `python3-venv` installed.
@@ -155,6 +170,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
 1. **SSH into your EC2 instance.**
 
 2. **Ensure System Packages are Up-to-Date & Install Python (if needed):**
+
    ```bash
    sudo apt update
    sudo apt upgrade -y
@@ -162,23 +178,25 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
    ```
 
 3. **Complete Backend Application Setup:**
-   Follow steps 1-5 from the "Backend Application Setup (Common Steps)" section *on your EC2 instance*. This includes:
+   Follow steps 1-5 from the "Backend Application Setup (Common Steps)" section _on your EC2 instance_. This includes:
+
    - Cloning the repository.
    - Creating and activating the virtual environment (`.venv`).
    - Installing Python dependencies (`pip install -r requirements.txt`).
    - Creating and configuring your `.env` file for the EC2 environment.
-       - **Crucially for `.env` on EC2:**
-           - `DATABASE_URL` must point to your production database.
-           - `FAST_API_HOST` should be set to `"0.0.0.0"` to allow Uvicorn to be accessed by Nginx.
-           - `FAST_API_PORT` should be set (e.g., `"8001"`). This is the internal port Nginx will proxy to.
-           - Configure `OLLAMA_API_URL`, `FRONTEND_URL` and any other production-specific settings.
+     - **Crucially for `.env` on EC2:**
+       - `FAST_API_HOST` should be set to `"0.0.0.0"` to allow Uvicorn to be accessed by Nginx.
+       - `FAST_API_PORT` should be set (e.g., `"8001"`). This is the internal port Nginx will proxy to.
+       - Configure `OLLAMA_API_URL`, `FRONTEND_URL` and any other production-specific settings.
    - Running database migrations (`alembic upgrade head`) against your production database.
 
 4. **Test Uvicorn manually (optional but recommended):**
    From the `qurieus-backend` directory (with `.venv` activated):
+
    ```bash
    uvicorn main:app --host $(grep FAST_API_HOST .env | cut -d '=' -f2) --port $(grep FAST_API_PORT .env | cut -d '=' -f2)
    ```
+
    Or explicitly: `uvicorn main:app --host 0.0.0.0 --port 8001` (if FAST_API_PORT=8001).
    Access `http://your-ec2-ip:<FAST_API_PORT>/docs` in your browser. Press `Ctrl+C` to stop.
 
@@ -186,18 +204,22 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
    PM2 will manage the Uvicorn process. Ensure you are in the `qurieus-backend` directory.
    The virtual environment (`.venv`) should **not** be active in your shell when running PM2 commands with an interpreter specified.
    Get the absolute path to your venv's Python:
+
    ```bash
    # Activate venv temporarily if needed to find path
    # source .venv/bin/activate
-   # which python 
+   # which python
    # Deactivate if you activated it
-   # deactivate 
+   # deactivate
    # Example path: /home/ubuntu/qurieus-backend/.venv/bin/python
    ```
+
    Then start with PM2 (replace with your actual FAST_API_PORT and Python path):
+
    ```bash
    pm2 start "uvicorn main:app --host 0.0.0.0 --port 8001" --name "qurieus-backend" --interpreter /home/ubuntu/qurieus-backend/.venv/bin/python
    ```
+
    - Check status: `pm2 list`
    - View logs: `pm2 logs qurieus-backend`
    - Save current PM2 process list to resurrect on reboot: `pm2 save`
@@ -205,6 +227,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
 
 6. **Configure Nginx as a reverse proxy:**
    Create an Nginx site configuration file (e.g., `/etc/nginx/sites-available/qurieus`):
+
    ```nginx
    server {
        listen 80;
@@ -215,7 +238,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
    server {
        listen 443 ssl;
        server_name qurieus.com www.qurieus.com;
-       
+
        # SSL Configuration
        ssl_certificate /etc/letsencrypt/live/qurieus.com/fullchain.pem;
        ssl_certificate_key /etc/letsencrypt/live/qurieus.com/privkey.pem;
@@ -232,7 +255,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
            proxy_set_header X-Real-IP $remote_addr;
            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
            proxy_set_header X-Forwarded-Proto $scheme;
-           
+
            # Increased timeouts for file uploads
            proxy_connect_timeout 60s;
            proxy_send_timeout 60s;
@@ -259,19 +282,24 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
    ```
 
 7. **Enable the Nginx site configuration:**
+
    ```bash
    sudo ln -sfn /etc/nginx/sites-available/qurieus /etc/nginx/sites-enabled/qurieus
    ```
+
    (If you have a default site enabled and it conflicts, remove its symlink: `sudo rm /etc/nginx/sites-enabled/default`)
 
 8. **Set up SSL with Let's Encrypt:**
+
    ```bash
    sudo apt install certbot python3-certbot-nginx -y
    sudo certbot --nginx -d qurieus.com -d www.qurieus.com
    ```
+
    Follow prompts. Certbot will automatically update your Nginx config for SSL.
 
 9. **Test and restart Nginx:**
+
    ```bash
    sudo nginx -t
    sudo systemctl restart nginx
@@ -287,22 +315,26 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
 ### Nginx Configuration Features
 
 1. **SSL/TLS Security**
+
    - Automatic HTTP to HTTPS redirection
    - Modern SSL protocols (TLSv1.2 and TLSv1.3)
    - Secure certificate storage with Let's Encrypt
 
 2. **API Proxy Settings**
+
    - Proxies `/api/v1/` requests to FastAPI backend
    - WebSocket support for real-time features
    - Increased timeouts for file uploads
    - Proper header forwarding for security
 
 3. **Frontend Proxy**
+
    - Serves Next.js frontend
    - WebSocket support
    - Client-side routing handling
 
 4. **File Upload Handling**
+
    - 60MB maximum file size
    - Optimized timeouts for large uploads
    - Secure multipart/form-data handling
@@ -315,11 +347,13 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
 ### Maintenance and Monitoring
 
 1. **Log Management**
+
    - Error logs: `/var/log/nginx/qurieus_error.log`
    - Access logs: `/var/log/nginx/qurieus_access.log`
    - Regular log rotation
 
 2. **SSL Certificate Management**
+
    - Automatic renewal via Certbot
    - Manual renewal check: `sudo certbot renew --dry-run`
 
@@ -329,6 +363,7 @@ This section outlines how to deploy the Qurieus FastAPI backend on an AWS EC2 in
    - View error logs: `sudo tail -f /var/log/nginx/qurieus_error.log`
 
 ### Troubleshooting Backend Deployment:
+
 - **502 Bad Gateway from Nginx:** Uvicorn/FastAPI app is not running or Nginx can't reach it.
   - Check PM2 status (`pm2 list`) and logs (`pm2 logs qurieus-backend`).
   - Ensure Uvicorn is listening on `0.0.0.0` and the correct port.

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 import os
@@ -27,20 +26,22 @@ import pytesseract
 from PIL import Image
 
 # Add the root directory to Python path
-backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+backend_dir = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+)
 if backend_dir not in sys.path:
     sys.path.append(backend_dir)
 
 # Now we can import from absolute paths
 from app.core.config import settings
-from app.database import get_db
-from models import Document as DBDocument, Users
 
 # OCR Configuration
-OCR_ENABLED = getattr(settings, 'OCR_ENABLED', True)  # Enable/disable OCR
-OCR_LANGUAGE = getattr(settings, 'OCR_LANGUAGE', 'eng')  # OCR language
-OCR_DPI = getattr(settings, 'OCR_DPI', 300)  # DPI for page rendering
-OCR_CONFIG = getattr(settings, 'OCR_CONFIG', '--oem 3 --psm 6')  # Tesseract config
+OCR_ENABLED = getattr(settings, "OCR_ENABLED", True)  # Enable/disable OCR
+OCR_LANGUAGE = getattr(settings, "OCR_LANGUAGE", "eng")  # OCR language
+OCR_DPI = getattr(settings, "OCR_DPI", 300)  # DPI for page rendering
+OCR_CONFIG = getattr(settings, "OCR_CONFIG", "--oem 3 --psm 6")  # Tesseract config
 
 # Set Tesseract path if needed (uncomment and set path if tesseract is not in PATH)
 # pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'  # macOS with Homebrew
@@ -56,247 +57,270 @@ except Exception as e:
 # Initialize Qdrant client
 try:
     from qdrant_client import QdrantClient
-    from qdrant_client.models import PointStruct, Distance, VectorParams
-    
-    # Initialize Qdrant client with optional authentication
-    if settings.QDRANT_API_KEY:
-        qdrant_client = QdrantClient(
-            url=settings.QDRANT_URL,
-            api_key=settings.QDRANT_API_KEY,
-            check_compatibility=False  # Skip version compatibility check
-        )
-    else:
-        qdrant_client = QdrantClient(
-            settings.QDRANT_URL,
-            check_compatibility=False  # Skip version compatibility check
-        )
-    
+    from qdrant_client.models import PointStruct
+
+    qdrant_url = settings.QDRANT_URL
+    qdrant_api_key = settings.QDRANT_API_KEY
     qdrant_collection = settings.QDRANT_COLLECTION
-    print(f"✅ Qdrant client initialized successfully for collection: {qdrant_collection}")
-    
+
+    qdrant_client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
+    print("✅ Qdrant client initialized successfully")
 except Exception as e:
     print(f"Warning: Could not initialize Qdrant client: {str(e)}")
     qdrant_client = None
 
+router = APIRouter()
+
+# Security scheme for API key authentication
+security = HTTPBearer(auto_error=False)
+
+
 def ensure_qdrant_collection_exists():
-    """Ensure Qdrant collection exists, create if it doesn't."""
+    """Ensure Qdrant collection exists with proper configuration."""
     if not qdrant_client:
-        print("Warning: Qdrant client not available")
         return False
-    
+
     try:
-        print(f"Checking if Qdrant collection '{qdrant_collection}' exists...")
-        qdrant_client.get_collection(qdrant_collection)
-        print(f"✅ Collection '{qdrant_collection}' already exists")
-        return True
-    except Exception as e:
-        print(f"❌ Collection '{qdrant_collection}' does not exist. Creating it now...")
-        try:
-            # Create collection if it doesn't exist
+        # Check if collection exists
+        collections = qdrant_client.get_collections()
+        collection_names = [col.name for col in collections.collections]
+
+        if qdrant_collection not in collection_names:
+            # Create collection with vector configuration
             qdrant_client.create_collection(
                 collection_name=qdrant_collection,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE)  # all-MiniLM-L6-v2 has 384 dimensions
+                vectors_config={
+                    "size": 384,  # BAAI/bge-small-en-v1.5 embedding size
+                    "distance": "Cosine",
+                },
             )
-            print(f"✅ Successfully created collection '{qdrant_collection}'")
-            
-            # Create payload indexes for filtering
-            try:
-                qdrant_client.create_payload_index(
-                    collection_name=qdrant_collection,
-                    field_name="user_id",
-                    field_schema="keyword"
-                )
-                print(f"✅ Created payload index for user_id in collection {qdrant_collection}")
-            except Exception as e:
-                print(f"⚠️  Warning: Could not create payload index for user_id: {e}")
-            
-            try:
-                qdrant_client.create_payload_index(
-                    collection_name=qdrant_collection,
-                    field_name="document_id",
-                    field_schema="keyword"
-                )
-                print(f"✅ Created payload index for document_id in collection {qdrant_collection}")
-            except Exception as e:
-                print(f"⚠️  Warning: Could not create payload index for document_id: {e}")
-            
-            print(f"🎉 Collection '{qdrant_collection}' setup completed successfully!")
-            return True
-        except Exception as e:
-            print(f"❌ Failed to create collection: {e}")
-            return False
+            print(f"✅ Created Qdrant collection: {qdrant_collection}")
+        else:
+            print(f"✅ Qdrant collection exists: {qdrant_collection}")
 
-# Cache for embeddings using lru_cache
+        return True
+    except Exception as e:
+        print(f"❌ Failed to ensure Qdrant collection: {str(e)}")
+        return False
+
+
 @lru_cache(maxsize=1000)
 def get_cached_embedding(text: str) -> List[float]:
-    """Get cached embedding or compute new one."""
-    return embedding_model.encode(text).tolist()
+    """Get embedding for text with caching."""
+    if embedding_model:
+        return embedding_model.encode(text).tolist()
+    return [0.0] * 384  # Fallback to zero vector
+
 
 def optimize_chunk_size(text: str, target_size: int = 800) -> List[str]:
-    """Optimize chunk size based on content with contact information preservation."""
-    # First, try to identify contact information sections
-    contact_sections = []
-    contact_keywords = ['contact', 'phone', 'email', 'address', 'call', 'reach', 'get in touch']
-    
-    # Split by paragraphs first to preserve contact sections
-    paragraphs = text.split('\n\n')
-    
-    for paragraph in paragraphs:
-        if any(keyword in paragraph.lower() for keyword in contact_keywords):
-            contact_sections.append(paragraph.strip())
-    
-    # Split by sentences for regular content
-    sentences = text.split('. ')
+    """Optimize text chunking for better retrieval."""
+    if not text.strip():
+        return []
+
+    # Clean the text first
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # Split into paragraphs first
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+
     chunks = []
-    current_chunk = []
-    current_size = 0
-    
-    for sentence in sentences:
-        sentence = sentence.strip() + '. '
-        sentence_size = len(sentence)
-        
-        # If this sentence contains contact info, try to keep it with related content
-        if any(keyword in sentence.lower() for keyword in contact_keywords):
-            # If current chunk is getting large, start a new one
-            if current_size > target_size * 0.7 and current_chunk:
-                chunks.append(''.join(current_chunk))
-                current_chunk = [sentence]
-                current_size = sentence_size
-            else:
-                current_chunk.append(sentence)
-                current_size += sentence_size
+    current_chunk = ""
+
+    # Keywords that indicate contact information
+    contact_keywords = [
+        "contact",
+        "phone",
+        "email",
+        "address",
+        "location",
+        "office",
+        "tel:",
+        "fax:",
+        "e-mail:",
+        "www.",
+        "http",
+        "https",
+        "call us",
+        "reach us",
+        "get in touch",
+        "contact us",
+    ]
+
+    # Prioritize paragraphs with contact information
+    contact_paragraphs = []
+    regular_paragraphs = []
+
+    for paragraph in paragraphs:
+        paragraph_lower = paragraph.lower()
+        if any(keyword in paragraph_lower for keyword in contact_keywords):
+            contact_paragraphs.append(paragraph)
         else:
-            # Regular content
-            if current_size + sentence_size > target_size and current_chunk:
-                chunks.append(''.join(current_chunk))
-                current_chunk = [sentence]
-                current_size = sentence_size
-            else:
-                current_chunk.append(sentence)
-                current_size += sentence_size
-    
-    if current_chunk:
-        chunks.append(''.join(current_chunk))
-    
-    # If we found contact sections, ensure they're in their own chunks
-    if contact_sections:
-        contact_chunk = '\n\n'.join(contact_sections)
-        if len(contact_chunk) <= target_size:
-            # Add contact chunk at the beginning for better retrieval
-            chunks.insert(0, contact_chunk)
+            regular_paragraphs.append(paragraph)
+
+    # Process contact paragraphs first
+    for paragraph in contact_paragraphs:
+        if len(current_chunk) + len(paragraph) <= target_size:
+            current_chunk += paragraph + "\n\n"
         else:
-            # Split contact chunk if too large
-            contact_chunks = [contact_chunk[i:i+target_size] for i in range(0, len(contact_chunk), target_size)]
-            chunks = contact_chunks + chunks
-    
-    return chunks
+            if current_chunk.strip():
+                chunks.append(current_chunk.strip())
+            current_chunk = paragraph + "\n\n"
+
+    # Process regular paragraphs
+    for paragraph in regular_paragraphs:
+        if len(current_chunk) + len(paragraph) <= target_size:
+            current_chunk += paragraph + "\n\n"
+        else:
+            if current_chunk.strip():
+                chunks.append(current_chunk.strip())
+            current_chunk = paragraph + "\n\n"
+
+    # Add the last chunk
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+
+    # If chunks are too large, split them further
+    final_chunks = []
+    for chunk in chunks:
+        if len(chunk) <= target_size:
+            final_chunks.append(chunk)
+        else:
+            # Split large chunks by sentences
+            sentences = re.split(r"[.!?]+", chunk)
+            current_sentence_chunk = ""
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if not sentence:
+                    continue
+                if len(current_sentence_chunk) + len(sentence) <= target_size:
+                    current_sentence_chunk += sentence + ". "
+                else:
+                    if current_sentence_chunk.strip():
+                        final_chunks.append(current_sentence_chunk.strip())
+                    current_sentence_chunk = sentence + ". "
+            if current_sentence_chunk.strip():
+                final_chunks.append(current_sentence_chunk.strip())
+
+    return final_chunks
+
 
 def analyze_financial_data(df: pd.DataFrame) -> Dict[str, Any]:
-    """Analyze financial data from DataFrame and return key metrics."""
-    analysis = {}
-    
-    # Basic statistics for numeric columns
-    numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
-    if not numeric_cols.empty:
-        analysis['numeric_summary'] = df[numeric_cols].describe().to_dict()
-    
-    # Try to identify financial metrics
-    for col in df.columns:
-        col_lower = col.lower()
-        # Revenue/Income analysis
-        if any(term in col_lower for term in ['revenue', 'income', 'sales']):
-            analysis['revenue_metrics'] = {
-                'total': df[col].sum(),
-                'average': df[col].mean(),
-                'trend': df[col].pct_change().mean()
-            }
-        # Expense analysis
-        elif any(term in col_lower for term in ['expense', 'cost', 'spend']):
-            analysis['expense_metrics'] = {
-                'total': df[col].sum(),
-                'average': df[col].mean(),
-                'trend': df[col].pct_change().mean()
-            }
-        # Profit analysis
-        elif any(term in col_lower for term in ['profit', 'margin', 'earnings']):
-            analysis['profit_metrics'] = {
-                'total': df[col].sum(),
-                'average': df[col].mean(),
-                'trend': df[col].pct_change().mean()
-            }
-    
-    return analysis
+    """Analyze financial data from Excel/CSV files."""
+    try:
+        analysis = {
+            "row_count": len(df),
+            "column_count": len(df.columns),
+            "columns": df.columns.tolist(),
+            "data_types": df.dtypes.to_dict(),
+            "summary_stats": {},
+        }
+
+        # Basic statistics for numeric columns
+        numeric_columns = df.select_dtypes(include=["number"]).columns
+        if len(numeric_columns) > 0:
+            analysis["summary_stats"] = df[numeric_columns].describe().to_dict()
+
+        # Sample data (first 5 rows)
+        analysis["sample_data"] = df.head().to_dict("records")
+
+        return analysis
+    except Exception as e:
+        return {"error": f"Analysis failed: {str(e)}"}
+
 
 def df_to_markdown(df: pd.DataFrame) -> str:
-    """Convert a DataFrame to a markdown table string."""
-    try:
-        return df.to_markdown(index=False)
-    except Exception:
-        # Fallback to CSV if markdown fails
-        return df.to_csv(index=False)
+    """Convert DataFrame to markdown table format."""
+    if df.empty:
+        return "Empty dataset"
+
+    # Create markdown table
+    markdown = "| " + " | ".join(str(col) for col in df.columns) + " |\n"
+    markdown += "| " + " | ".join("---" for _ in df.columns) + " |\n"
+
+    # Add rows (limit to first 50 rows to avoid huge tables)
+    for _, row in df.head(50).iterrows():
+        markdown += "| " + " | ".join(str(val) for val in row.values) + " |\n"
+
+    if len(df) > 50:
+        markdown += f"\n*... and {len(df) - 50} more rows*\n"
+
+    return markdown
+
 
 def clean_text_content(text: str) -> str:
-    """Clean text content by removing problematic characters."""
+    """Clean and normalize text content."""
     if not text:
         return ""
-    
-    # Remove NUL characters (0x00)
-    text = text.replace('\x00', '')
-    
-    # Remove other control characters except newlines and tabs
-    text = re.sub(r'[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
-    
-    # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text)
-    
-    # Remove leading/trailing whitespace
-    text = text.strip()
-    
-    return text
+
+    # Remove excessive whitespace
+    text = re.sub(r"\s+", " ", text)
+
+    # Remove special characters but keep important ones
+    text = re.sub(
+        r"[^\w\s\.\,\!\?\:\;\-\(\)\[\]\{\}\@\#\$\%\&\*\+\=\/\|\\\<\>\'\"\n]", "", text
+    )
+
+    # Normalize line breaks
+    text = re.sub(r"\n+", "\n", text)
+
+    return text.strip()
+
 
 def process_file(
-    file_content: bytes,
-    file_extension: str,
-    original_filename: str,
-    userId: str,
-    db: Session
+    file_content: bytes, file_extension: str, original_filename: str, userId: str
 ) -> dict:
     """Process uploaded file with optimized chunking and Qdrant integration."""
     try:
         text_content = ""
         financial_analysis = {}
-        
-        if file_extension.lower() == '.pdf':
+
+        if file_extension.lower() == ".pdf":
             doc = fitz.open(stream=file_content, filetype="pdf")
             for page in doc:
                 # Extract selectable text first
                 page_text = page.get_text()
                 text_content += page_text
-                
+
                 # If no text was extracted, the page might be scanned/image-based
                 if not page_text.strip() and OCR_ENABLED:
-                    log_to_frontend("info", f"Page {page.number + 1} appears to be image-based, running OCR...")
+                    log_to_frontend(
+                        "info",
+                        f"Page {page.number + 1} appears to be image-based, running OCR...",
+                    )
                     try:
                         # Render page as image for OCR
                         pix = page.get_pixmap(dpi=OCR_DPI)  # Use configured DPI
-                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                        
+                        img = Image.frombytes(
+                            "RGB", [pix.width, pix.height], pix.samples
+                        )
+
                         # Run OCR on the page image
                         ocr_text = pytesseract.image_to_string(
-                            img, 
-                            lang=OCR_LANGUAGE,
-                            config=OCR_CONFIG
+                            img, lang=OCR_LANGUAGE, config=OCR_CONFIG
                         )
                         if ocr_text.strip():
-                            text_content += f"\n[OCR Page {page.number + 1}]:\n{ocr_text}\n"
-                            log_to_frontend("info", f"OCR extracted {len(ocr_text)} characters from page {page.number + 1}")
+                            text_content += (
+                                f"\n[OCR Page {page.number + 1}]:\n{ocr_text}\n"
+                            )
+                            log_to_frontend(
+                                "info",
+                                f"OCR extracted {len(ocr_text)} characters from page {page.number + 1}",
+                            )
                         else:
-                            log_to_frontend("warning", f"No text found via OCR on page {page.number + 1}")
+                            log_to_frontend(
+                                "warning",
+                                f"No text found via OCR on page {page.number + 1}",
+                            )
                     except Exception as e:
-                        log_to_frontend("error", f"OCR failed on page {page.number + 1}: {str(e)}")
+                        log_to_frontend(
+                            "error", f"OCR failed on page {page.number + 1}: {str(e)}"
+                        )
                 elif not page_text.strip() and not OCR_ENABLED:
-                    log_to_frontend("warning", f"Page {page.number + 1} appears to be image-based but OCR is disabled")
-                
+                    log_to_frontend(
+                        "warning",
+                        f"Page {page.number + 1} appears to be image-based but OCR is disabled",
+                    )
+
                 # Also extract text from embedded images in the page
                 if OCR_ENABLED:
                     try:
@@ -305,40 +329,44 @@ def process_file(
                             base_image = doc.extract_image(xref)
                             image_bytes = base_image["image"]
                             image = Image.open(io.BytesIO(image_bytes))
-                            
+
                             # Run OCR on embedded image
                             ocr_text = pytesseract.image_to_string(
-                                image, 
-                                lang=OCR_LANGUAGE,
-                                config=OCR_CONFIG
+                                image, lang=OCR_LANGUAGE, config=OCR_CONFIG
                             )
                             if ocr_text.strip():
                                 text_content += f"\n[OCR Page {page.number + 1} Image {img_index + 1}]:\n{ocr_text}\n"
-                                log_to_frontend("info", f"OCR extracted {len(ocr_text)} characters from image {img_index + 1} on page {page.number + 1}")
+                                log_to_frontend(
+                                    "info",
+                                    f"OCR extracted {len(ocr_text)} characters from image {img_index + 1} on page {page.number + 1}",
+                                )
                     except Exception as e:
-                        log_to_frontend("warning", f"Failed to process embedded images on page {page.number + 1}: {str(e)}")
-        elif file_extension.lower() in ['.docx', '.doc']:
+                        log_to_frontend(
+                            "warning",
+                            f"Failed to process embedded images on page {page.number + 1}: {str(e)}",
+                        )
+        elif file_extension.lower() in [".docx", ".doc"]:
             # Create a BytesIO object from the file content
             doc_stream = io.BytesIO(file_content)
             doc = docx.Document(doc_stream)
             for para in doc.paragraphs:
                 text_content += para.text + "\n"
-        elif file_extension.lower() == '.txt':
+        elif file_extension.lower() == ".txt":
             # Handle plain text files
             try:
                 # Try UTF-8 first
-                text_content = file_content.decode('utf-8')
+                text_content = file_content.decode("utf-8")
             except UnicodeDecodeError:
                 try:
                     # Fallback to UTF-8 with error handling
-                    text_content = file_content.decode('utf-8', errors='replace')
+                    text_content = file_content.decode("utf-8", errors="replace")
                 except Exception:
                     # Final fallback to latin-1
-                    text_content = file_content.decode('latin-1', errors='replace')
-        elif file_extension.lower() in ['.xlsx', '.xls', '.csv']:
+                    text_content = file_content.decode("latin-1", errors="replace")
+        elif file_extension.lower() in [".xlsx", ".xls", ".csv"]:
             file_stream = io.BytesIO(file_content)
             try:
-                if file_extension.lower() == '.csv':
+                if file_extension.lower() == ".csv":
                     df = pd.read_csv(file_stream)
                     text_content = df_to_markdown(df)
                 else:
@@ -347,7 +375,9 @@ def process_file(
                     sheet_tables = []
                     for idx, sheet in enumerate(sheet_names):
                         df_sheet = pd.read_excel(xls, sheet_name=sheet)
-                        sheet_tables.append(f"Sheet: {sheet}\n\n{df_to_markdown(df_sheet)}\n")
+                        sheet_tables.append(
+                            f"Sheet: {sheet}\n\n{df_to_markdown(df_sheet)}\n"
+                        )
                         if idx == 0:
                             df = df_sheet  # Use first sheet for financial analysis
                     text_content = "\n\n".join(sheet_tables)
@@ -356,207 +386,209 @@ def process_file(
             except Exception as e:
                 print(f"Error processing file: {str(e)}")
                 raise ValueError(f"Error processing file: {str(e)}")
-        elif file_extension.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif']:
+        elif file_extension.lower() in [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".bmp",
+            ".tiff",
+            ".tif",
+        ]:
             # Handle image files with OCR
             if not OCR_ENABLED:
-                raise ValueError(f"OCR is disabled. Cannot process image file: {file_extension}")
-            
+                raise ValueError(
+                    f"OCR is disabled. Cannot process image file: {file_extension}"
+                )
+
             try:
                 image = Image.open(io.BytesIO(file_content))
-                
+
                 # Convert to RGB if necessary (for better OCR accuracy)
-                if image.mode != 'RGB':
-                    image = image.convert('RGB')
-                
+                if image.mode != "RGB":
+                    image = image.convert("RGB")
+
                 # Run OCR on the image
                 ocr_text = pytesseract.image_to_string(
-                    image, 
-                    lang=OCR_LANGUAGE,
-                    config=OCR_CONFIG
+                    image, lang=OCR_LANGUAGE, config=OCR_CONFIG
                 )
                 if ocr_text.strip():
                     text_content = ocr_text
-                    log_to_frontend("info", f"OCR extracted {len(ocr_text)} characters from image {original_filename}")
+                    log_to_frontend(
+                        "info",
+                        f"OCR extracted {len(ocr_text)} characters from image {original_filename}",
+                    )
                 else:
-                    log_to_frontend("warning", f"No text found via OCR in image {original_filename}")
-                    text_content = f"[Image file: {original_filename} - No text detected via OCR]"
+                    log_to_frontend(
+                        "warning", f"No text found via OCR in image {original_filename}"
+                    )
+                    text_content = (
+                        f"[Image file: {original_filename} - No text detected via OCR]"
+                    )
             except Exception as e:
-                log_to_frontend("error", f"Failed to process image file {original_filename}: {str(e)}")
+                log_to_frontend(
+                    "error",
+                    f"Failed to process image file {original_filename}: {str(e)}",
+                )
                 raise ValueError(f"Error processing image file: {str(e)}")
         else:
             raise ValueError(f"Unsupported file type: {file_extension}")
-        
-        # Create document record with all required fields
-        now = datetime.datetime.utcnow()
-        document = DBDocument(
-            title=original_filename.replace(file_extension, ""),  # Set title from filename without extension
-            fileName=original_filename.replace(file_extension, ""),  # Remove file extension for fileName
-            originalName=original_filename,
-            fileType=file_extension.lower().lstrip('.'),
-            fileSize=len(file_content),
-            userId=userId,
-            uploadedAt=now,
-            updatedAt=now,  # Set updatedAt to current time
-            content=clean_text_content(text_content),
-            description="",
-            category="",
-            keywords="",
-            doc_metadata=json.dumps(financial_analysis) if financial_analysis else None
-        )
-        db.add(document)
-        db.flush()
-        
-        # Commit the document record
-        db.commit()
-        
+
         # Clean text content before chunking
         cleaned_text_content = clean_text_content(text_content)
-        
+
         # Optimize chunks
         chunks = optimize_chunk_size(cleaned_text_content)
         total_chunks = len(chunks)
-        
-        # Store chunks directly in Qdrant (no database storage for chunks)
+
+        # Generate document ID for Qdrant
+        document_id = str(uuid.uuid4())
+
+        # Store chunks directly in Qdrant
+        chunk_data = []
         if qdrant_client:
             try:
                 points = []
                 for idx, chunk_text in enumerate(chunks):
                     embedding = get_cached_embedding(chunk_text)
-                    points.append(PointStruct(
-                        id=str(uuid.uuid4()),
-                        vector=embedding,
-                        payload={
-                            "document_id": document.id,
-                            "user_id": userId,
+                    point_id = str(uuid.uuid4())
+                    points.append(
+                        PointStruct(
+                            id=point_id,
+                            vector=embedding,
+                            payload={
+                                "document_id": document_id,
+                                "user_id": userId,
+                                "content": chunk_text,
+                                "filename": original_filename,
+                                "chunk_index": idx,
+                            },
+                        )
+                    )
+
+                    # Store chunk data for Next.js
+                    chunk_data.append(
+                        {
+                            "chunk_index": idx,
                             "content": chunk_text,
-                            "filename": original_filename,
-                            "chunk_index": idx
+                            "content_length": len(chunk_text),
+                            "qdrant_point_id": point_id,
+                            "embedding_vector": embedding,
                         }
-                    ))
-                
-                qdrant_client.upsert(
-                    collection_name=qdrant_collection,
-                    points=points
+                    )
+
+                qdrant_client.upsert(collection_name=qdrant_collection, points=points)
+                print(
+                    f"Upserted {len(points)} chunks to Qdrant for document {document_id}"
                 )
-                print(f"Upserted {len(points)} chunks to Qdrant for document {document.id}")
             except Exception as e:
                 print(f"Warning: Failed to upsert to Qdrant: {str(e)}")
                 # Continue processing even if Qdrant fails
-        
-        return {"chunks": total_chunks}
-        
+
+        # Return processed data for Next.js to store in database
+        return {
+            "document_id": document_id,
+            "chunks": total_chunks,
+            "content": cleaned_text_content,
+            "file_size": len(file_content),
+            "file_type": file_extension.lower().lstrip("."),
+            "original_filename": original_filename,
+            "financial_analysis": financial_analysis,
+            "processed_at": datetime.datetime.utcnow().isoformat(),
+            "chunk_data": chunk_data,
+        }
+
     except Exception as e:
-        db.rollback()
         raise e
-
-router = APIRouter()
-security = HTTPBearer()
-
 
 
 def derive_encryption_key(secret: str) -> bytes:
-    """Derive the encryption key using HKDF, matching NextAuth.js implementation."""
-    if not secret:
-        raise ValueError("NEXTAUTH_SECRET is not set")
-    
-    # Convert the secret to bytes
-    secret_bytes = secret.encode()
-    
-    # Use HKDF to derive the key
-    hkdf = HKDF(
+    """Derive encryption key from secret."""
+    salt = b"qurieus_salt"  # Fixed salt for consistency
+    kdf = HKDF(
         algorithm=hashes.SHA256(),
-        length=32,  # 32 bytes for AES-256
-        salt=b"",  # NextAuth.js uses no salt
-        info=b"NextAuth.js Generated Encryption Key",
-        backend=default_backend()
+        length=32,
+        salt=salt,
+        info=b"qurieus_key",
+        backend=default_backend(),
     )
-    return hkdf.derive(secret_bytes)
+    return kdf.derive(secret.encode())
+
 
 def decrypt_token(token: str) -> dict:
-    """Decrypt a NextAuth.js JWE token."""
+    """Decrypt JWE token using NEXTAUTH_SECRET."""
     try:
-        # Split the token into its components
-        header_b64, _, iv_b64, ciphertext_b64, tag_b64 = token.split('.')
-        
-        # Decode the header
-        header_padding = '=' * (-len(header_b64) % 4)
-        header = json.loads(base64.urlsafe_b64decode(header_b64 + header_padding))
-        
-        if header.get('alg') != 'dir' or header.get('enc') != 'A256GCM':
-            raise ValueError("Unsupported JWE algorithm or encryption")
-        
-        # Decode the other components
-        iv = base64.urlsafe_b64decode(iv_b64 + '=' * (-len(iv_b64) % 4))
-        ciphertext = base64.urlsafe_b64decode(ciphertext_b64 + '=' * (-len(ciphertext_b64) % 4))
-        tag = base64.urlsafe_b64decode(tag_b64 + '=' * (-len(tag_b64) % 4))
-        
-        # Derive the key using HKDF
-        key = derive_encryption_key(settings.NEXTAUTH_SECRET)
-        
-        # Create AESGCM cipher
-        aesgcm = AESGCM(key)
-        
-        # Decrypt the payload
-        plaintext = aesgcm.decrypt(iv, ciphertext + tag, header_b64.encode())
-        
-        # Parse and return the decrypted payload
-        return json.loads(plaintext)
-        
+        secret = settings.NEXTAUTH_SECRET
+        if not secret:
+            raise ValueError("NEXTAUTH_SECRET not configured")
+
+        key = derive_encryption_key(secret)
+
+        # Split the token
+        parts = token.split(".")
+        if len(parts) != 5:  # JWE format
+            raise ValueError("Invalid JWE token format")
+
+        header_b64, encrypted_key_b64, iv_b64, ciphertext_b64, tag_b64 = parts
+
+        # Decode base64 parts
+        encrypted_key = base64.urlsafe_b64decode(encrypted_key_b64 + "==")
+        iv = base64.urlsafe_b64decode(iv_b64 + "==")
+        ciphertext = base64.urlsafe_b64decode(ciphertext_b64 + "==")
+        tag = base64.urlsafe_b64decode(tag_b64 + "==")
+
+        # Combine ciphertext and tag
+        encrypted_data = ciphertext + tag
+
+        # Decrypt
+        cipher = AESGCM(key)
+        decrypted_data = cipher.decrypt(iv, encrypted_data, None)
+
+        # Parse JSON payload
+        payload = json.loads(decrypted_data.decode())
+        return payload
+
     except Exception as e:
-        print(f"Error decrypting token: {str(e)}")
+        print(f"Token decryption error: {str(e)}")
         print(traceback.format_exc())
         raise
 
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
 ):
     """Get current user from Next.js session token."""
     try:
         token = credentials.credentials
         print(f"Received token: {token[:20]}...")
-        
+
         # Enhanced debugging
         print(f"Token length: {len(token)}")
         print(f"Token parts: {len(token.split('.'))}")
-        print(f"Token format: {'JWE' if len(token.split('.')) == 5 else 'JWT' if len(token.split('.')) == 3 else 'Unknown'}")
-        
+        print(
+            f"Token format: {'JWE' if len(token.split('.')) == 5 else 'JWT' if len(token.split('.')) == 3 else 'Unknown'}"
+        )
+
         # Print NEXTAUTH_SECRET for debugging
         secret = settings.NEXTAUTH_SECRET
         print(f"Using NEXTAUTH_SECRET: {secret[:5] if secret else 'Not set'}...")
         print(f"NEXTAUTH_SECRET length: {len(secret) if secret else 0}")
-        
+
         # Decrypt the token
         try:
             payload = decrypt_token(token)
             print("Successfully decrypted token")
             print(f"Decoded payload: {json.dumps(payload, indent=2)}")
-            
-            # Check if user is active
-            user_id = payload.get("id")
-            if user_id:
-                user = db.query(Users).filter(Users.id == user_id).first()
-                if not user or not user.is_active:
-                    raise HTTPException(
-                        status_code=401,
-                        detail="Account has been deactivated"
-                    )
-            
+
             return payload
         except Exception as e:
             print(f"Token decryption error: {str(e)}")
-            raise HTTPException(
-                status_code=401,
-                detail=f"Invalid token: {str(e)}"
-            )
-                
+            raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
     except Exception as e:
         print(f"Authentication error: {str(e)}")
         print(traceback.format_exc())
-        raise HTTPException(
-            status_code=401,
-            detail=f"Authentication failed: {str(e)}"
-        )
+        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+
 
 @router.post("/upload")
 async def upload_files(
@@ -565,72 +597,65 @@ async def upload_files(
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     api_key: str = Header(..., alias="X-API-Key"),
-    db: Session = Depends(get_db)
 ):
     """Upload one or more documents (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX) for processing."""
     try:
         # Validate API key
         if api_key != settings.BACKEND_API_KEY:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid API key"
-            )
-        
+            raise HTTPException(status_code=401, detail="Invalid API key")
+
         # For now, we'll need to get user ID from the request or use a default
         # You might want to pass user ID in the form data or header
         if not userId:
-            raise HTTPException(
-                status_code=400,
-                detail="User ID is required"
-            )
-        
+            raise HTTPException(status_code=400, detail="User ID is required")
+
         log_to_frontend("info", f"Processing upload for user: {userId}")
-        
+
         # Ensure Qdrant collection exists before processing files
         if not ensure_qdrant_collection_exists():
             log_to_frontend("error", "Failed to ensure Qdrant collection exists")
-            raise HTTPException(
-                status_code=500,
-                detail="Vector database setup failed"
-            )
-        
+            raise HTTPException(status_code=500, detail="Vector database setup failed")
+
+        processed_files = []
         total_chunks = 0
+
         for file in files:
             log_to_frontend("info", f"Processing file: {file.filename}")
-            
+
             # Read file content
             content = await file.read()
-            
+
             # Get file extension
             _, ext = os.path.splitext(file.filename)
-            
+
             try:
                 # Process the document
-                chunks = process_file(
+                result = process_file(
                     file_content=content,
                     file_extension=ext,
                     original_filename=file.filename,
                     userId=userId,
-                    db=db
                 )
-                total_chunks += chunks.get("chunks")
-                log_to_frontend("info", f"Processed {chunks.get('chunks')} chunks from {file.filename}")
+
+                total_chunks += result["chunks"]
+                processed_files.append(result)
+                log_to_frontend(
+                    "info", f"Processed {result['chunks']} chunks from {file.filename}"
+                )
             except Exception as e:
                 error_msg = f"Error processing file {file.filename}"
                 log_to_frontend("error", error_msg, error=e)
-                raise HTTPException(
-                    status_code=500, 
-                    detail="Error processing document"
-                )
+                raise HTTPException(status_code=500, detail="Error processing document")
 
         return {
             "message": f"Successfully processed {len(files)} files",
             "total_chunks": total_chunks,
+            "processed_files": processed_files,
             "user": {
                 "id": userId,
                 "name": "User",  # We don't have user details from API key auth
-                "email": "user@example.com"
-            }
+                "email": "user@example.com",
+            },
         }
     except HTTPException:
         raise
@@ -638,7 +663,5 @@ async def upload_files(
         log_to_frontend("error", "Unexpected error in upload_files", error=e)
         raise HTTPException(
             status_code=500,
-            detail="An unexpected error occurred while processing your upload"
+            detail="An unexpected error occurred while processing your upload",
         )
-
- 
