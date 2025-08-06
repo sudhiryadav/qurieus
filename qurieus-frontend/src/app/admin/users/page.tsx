@@ -694,8 +694,8 @@ export default function AdminUsersPage() {
           setIsDocumentsModalOpen(false);
           setSelectedUserForDocuments(null);
         }}
-        title={`Documents - ${selectedUserForDocuments?.name || 'User'}`}
-        size="lg"
+        header={`Documents - ${selectedUserForDocuments?.name || 'User'}`}
+        width="80%"
       >
         {selectedUserForDocuments && (
           <UserDocumentsModal 
