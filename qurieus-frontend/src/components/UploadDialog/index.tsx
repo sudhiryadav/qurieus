@@ -13,6 +13,7 @@ interface UploadDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadSuccess: () => void;
+  customUploadEndpoint?: string;
 }
 
 const CATEGORY_OPTIONS = [
@@ -44,7 +45,7 @@ interface SelectedFile {
   id: string;
 }
 
-export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: UploadDialogProps) {
+export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customUploadEndpoint }: UploadDialogProps) {
   const { data: session } = useSession();
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [description, setDescription] = useState("");
@@ -211,7 +212,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess }: Uploa
         totalSize: validFiles.reduce((sum, f) => sum + f.file.size, 0)
       });
       
-      const { data } = await axiosInstance.post('/api/admin/documents', formData, {
+      const uploadEndpoint = customUploadEndpoint || '/api/admin/documents';
+      const { data } = await axiosInstance.post(uploadEndpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

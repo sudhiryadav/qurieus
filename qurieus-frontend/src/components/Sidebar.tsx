@@ -20,6 +20,7 @@ const adminNav = [
   { name: "Users", href: "/admin/users", icon: <User className="h-4 w-4 mr-2" /> },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: <BarChart3 className="h-4 w-4 mr-2" /> },
   { name: "Plans", href: "/admin/plans", icon: <Code className="h-4 w-4 mr-2" /> },
+  { name: "Knowledge Base", href: "/admin/knowledge-base", icon: <Upload className="h-4 w-4 mr-2" /> },
   { name: "Website Crawler", href: "/admin/website-crawler", icon: <Globe className="h-4 w-4 mr-2" /> },
   { name: "Email Broadcast", href: "/admin/email-broadcast", icon: <MessageSquare className="h-4 w-4 mr-2" /> },
 ];

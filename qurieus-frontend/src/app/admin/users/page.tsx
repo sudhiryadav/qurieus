@@ -4,11 +4,30 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { Search, Plus, Filter, User as UserIcon } from "lucide-react";
+import { Search, Plus, Filter, User as UserIcon, FileText } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import axiosInstance from "@/lib/axios";
+
+interface Document {
+  id: string;
+  title: string;
+  fileName: string;
+  originalName: string;
+  fileType: string;
+  fileSize: number;
+  category?: string;
+  description?: string;
+  uploadedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  qdrantDocumentId?: string;
+  chunkCount: number;
+  isProcessed: boolean;
+  processedAt?: string;
+  metadata?: string;
+}
 
 interface User {
   id: string;
@@ -31,6 +50,9 @@ interface User {
       name: string;
     };
   }>;
+  _count?: {
+    documents: number;
+  };
 }
 
 const ROLE_DESCRIPTIONS = {
@@ -66,6 +88,8 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUserForDocuments, setSelectedUserForDocuments] = useState<User | null>(null);
+  const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     role: "",
     plan: "",
@@ -294,6 +318,7 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Role</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Plan</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Created</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Documents</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Actions</th>
             </tr>
           </thead>
@@ -316,6 +341,22 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(user.created_at)}
+                </td>
+                <td className="px-4 py-3">
+                  {user._count?.documents && user._count.documents > 0 ? (
+                    <button
+                      onClick={() => {
+                        setSelectedUserForDocuments(user);
+                        setIsDocumentsModalOpen(true);
+                      }}
+                      className="flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 transition-colors"
+                      title={`View ${user._count.documents} document(s)`}
+                    >
+                      <FileText className="h-5 w-5" />
+                    </button>
+                  ) : (
+                    <span className="text-gray-400 text-sm">-</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
@@ -645,6 +686,128 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </ModalDialog>
+
+      {/* User Documents Modal */}
+      <ModalDialog
+        isOpen={isDocumentsModalOpen}
+        onClose={() => {
+          setIsDocumentsModalOpen(false);
+          setSelectedUserForDocuments(null);
+        }}
+        title={`Documents - ${selectedUserForDocuments?.name || 'User'}`}
+        size="lg"
+      >
+        {selectedUserForDocuments && (
+          <UserDocumentsModal 
+            user={selectedUserForDocuments}
+            onClose={() => {
+              setIsDocumentsModalOpen(false);
+              setSelectedUserForDocuments(null);
+            }}
+          />
+        )}
+      </ModalDialog>
+    </div>
+  );
+}
+
+// User Documents Modal Component
+function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserDocuments = async () => {
+      try {
+        setLoading(true);
+        const response = await axiosInstance.get(`/api/admin/users/${user.id}/documents`);
+        setDocuments(response.data.documents || []);
+      } catch (error) {
+        console.error("Error fetching user documents:", error);
+        showToast.error("Failed to fetch user documents");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user.id) {
+      fetchUserDocuments();
+    }
+  }, [user.id]);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm text-gray-600 dark:text-gray-400">
+        Showing {documents.length} document(s) for {user.name} ({user.email})
+      </div>
+      
+      {documents.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No documents found for this user.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left py-2 font-medium">Document Name</th>
+                <th className="text-left py-2 font-medium">Type</th>
+                <th className="text-left py-2 font-medium">Size</th>
+                <th className="text-left py-2 font-medium">Uploaded</th>
+                <th className="text-left py-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {documents.map((doc) => (
+                <tr key={doc.id} className="border-b border-gray-100 dark:border-gray-800">
+                  <td className="py-2">
+                    <div className="font-medium">{doc.originalName}</div>
+                    {doc.description && (
+                      <div className="text-xs text-gray-500 truncate max-w-xs">
+                        {doc.description}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2 text-gray-600 dark:text-gray-400">
+                    {doc.fileType.toUpperCase()}
+                  </td>
+                  <td className="py-2 text-gray-600 dark:text-gray-400">
+                    {formatFileSize(doc.fileSize)}
+                  </td>
+                  <td className="py-2 text-gray-600 dark:text-gray-400">
+                    {formatDate(doc.uploadedAt)}
+                  </td>
+                  <td className="py-2">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      doc.isProcessed 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                    }`}>
+                      {doc.isProcessed ? 'Processed' : 'Pending'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 } 

@@ -129,6 +129,12 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
             <p className="text-xs leading-none text-muted-foreground">
               {session.user.email}
             </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {session.user.role === 'SUPER_ADMIN' ? 'Super Admin' : 
+               session.user.role === 'ADMIN' ? 'Admin' : 
+               session.user.role === 'USER' ? 'User' : 
+               session.user.role === 'AGENT' ? 'Agent' : session.user.role}
+            </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

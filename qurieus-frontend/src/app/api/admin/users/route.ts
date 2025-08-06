@@ -43,6 +43,11 @@ export const GET = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (r
           status: 'active'
         },
         take: 1
+      },
+      _count: {
+        select: {
+          documents: true
+        }
       }
     },
     orderBy: { name: 'asc' },

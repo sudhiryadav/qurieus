@@ -95,6 +95,22 @@ const Header: React.FC = () => {
   const isUserRoute = pathUrl.startsWith("/user") || pathUrl.startsWith("/admin");
   const isAgentRoute = pathUrl.startsWith("/agent");
 
+  // Helper function to format user role
+  const formatUserRole = (role: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return 'Super Admin';
+      case 'ADMIN':
+        return 'Admin';
+      case 'USER':
+        return 'User';
+      case 'AGENT':
+        return 'Agent';
+      default:
+        return role;
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut({ redirect: false });
@@ -152,7 +168,12 @@ const Header: React.FC = () => {
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className={`flex items-center space-x-1 px-1 sm:px-2 py-2 text-xs sm:text-base font-medium max-w-[80px] sm:max-w-none truncate text-dark dark:text-white`}
             >
-              <span className="truncate">{session?.user?.name}</span>
+              <div className="flex flex-col items-start">
+                <span className="truncate">{session?.user?.name}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                  {formatUserRole(session?.user?.role || '')}
+                </span>
+              </div>
               <svg
                 className={`h-4 w-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
                 fill="none"
