@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Search, Upload, FileText, User as UserIcon } from "lucide-react";
+import { Search, Upload, FileText, User as UserIcon, Download, Trash2 } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
@@ -141,6 +141,54 @@ export default function AdminKnowledgeBasePage() {
 
   const handleUserChange = (option: UserOption | null) => {
     setSelectedUser(option);
+  };
+
+  const handleDownload = async (documentId: string, fileName: string) => {
+    if (!selectedUser) return;
+    
+    try {
+      const response = await axiosInstance.get(
+        `/api/admin/users/${selectedUser.user.id}/documents/${documentId}/download`,
+        { responseType: 'blob' }
+      );
+      
+      if (!response.data) throw new Error('Download failed');
+      
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showToast.success("Document downloaded successfully");
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      showToast.error('Failed to download document');
+    }
+  };
+
+  const handleDelete = async (documentId: string) => {
+    if (!selectedUser) return;
+    
+    if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await axiosInstance.delete(
+        `/api/admin/users/${selectedUser.user.id}/documents/${documentId}/delete`
+      );
+      
+      showToast.success("Document deleted successfully");
+      // Refresh the documents list
+      fetchUserDocuments(selectedUser.user.id);
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      showToast.error('Failed to delete document');
+    }
   };
 
   // React-select styles for dark mode support
@@ -287,6 +335,7 @@ export default function AdminKnowledgeBasePage() {
                     <th className="text-left py-2 font-medium">Uploaded</th>
                     <th className="text-left py-2 font-medium">Status</th>
                     <th className="text-left py-2 font-medium">Chunks</th>
+                    <th className="text-left py-2 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -320,6 +369,24 @@ export default function AdminKnowledgeBasePage() {
                       </td>
                       <td className="py-2 text-gray-600 dark:text-gray-400">
                         {doc.chunkCount}
+                      </td>
+                      <td className="py-2">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleDownload(doc.id, doc.originalName)}
+                            className="rounded-md bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600 transition-colors"
+                            title="Download document"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(doc.id)}
+                            className="rounded-md bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600 transition-colors"
+                            title="Delete document"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
