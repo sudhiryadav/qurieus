@@ -5,7 +5,7 @@ import { prisma } from "@/utils/prismaDB";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 import { logger } from "@/lib/logger";
-import axiosInstance from "@/lib/axios";
+import axios from "axios";
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || "50") * 1024 * 1024;
@@ -110,7 +110,18 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
     backendFormData.append("userId", userId);
 
     // Process with backend
-    const backendResponse = await axiosInstance.post(
+    logger.info("User Document Upload API: Making backend request", {
+      backendUrl: `${process.env.BACKEND_URL}/api/v1/admin/documents/upload`,
+      apiKeySet: !!process.env.BACKEND_API_KEY,
+      formDataEntries: Array.from(backendFormData.entries()).map(([key, value]) => ({
+        key,
+        type: typeof value,
+        isFile: value instanceof File,
+        fileName: value instanceof File ? value.name : undefined
+      }))
+    });
+
+    const backendResponse = await axios.post(
       `${process.env.BACKEND_URL}/api/v1/admin/documents/upload`,
       backendFormData,
       {
@@ -120,6 +131,11 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
         },
       }
     );
+
+    logger.info("User Document Upload API: Backend response received", {
+      status: backendResponse.status,
+      data: backendResponse.data
+    });
 
     const responseTime = Date.now() - startTime;
     logger.info("User Document Upload API: Backend processing completed successfully", { 
