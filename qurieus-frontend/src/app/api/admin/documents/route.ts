@@ -302,7 +302,7 @@ async function processWithBackend(files: File[], description: string, category: 
   backendFormData.append("category", category || "");
 
   const backendResponse = await axiosInstance.post(
-    `${process.env.BACKEND_URL}/api/v1/admin/documents/upload`,
+    `${process.env.BACKEND_URL}/api/v1/documents/upload`,
     backendFormData,
     {
       headers: {

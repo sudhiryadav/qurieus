@@ -199,7 +199,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
     }
 
     setLoading(true);
-    const uploadEndpoint = customUploadEndpoint || '/api/admin/documents';
+    const uploadEndpoint = customUploadEndpoint || '/api/documents/upload';
     
     try {
       const formData = new FormData();
