@@ -176,9 +176,13 @@ export async function POST(request: NextRequest) {
         s3Key: uploadedFileUrl 
       });
 
-      // Create document record in database
+      // Generate document ID in Next.js to ensure consistency
+      const documentId = crypto.randomUUID();
+      
+      // Create document record in database with the generated document ID
       createdDocument = await prisma.document.create({
         data: {
+          id: documentId, // Use the generated document ID
           title: title || file.name,
           description: description || '',
           fileName: fileName,
@@ -204,6 +208,7 @@ export async function POST(request: NextRequest) {
         const fileBlob = new Blob([buffer], { type: file.type });
         aiFormData.append('files', fileBlob, file.name);
         aiFormData.append('userId', userId);
+        aiFormData.append('documentIds', JSON.stringify([documentId])); // Pass as JSON array
         if (description) {
           aiFormData.append('description', description);
         }
@@ -263,6 +268,7 @@ export async function POST(request: NextRequest) {
             where: { id: createdDocument.id },
             data: {
               aiDocumentId: documentInfo.document_id,
+              qdrantDocumentId: documentId, // Use the generated document ID for Qdrant
               status: 'PROCESSING',
             },
           });
@@ -288,6 +294,7 @@ export async function POST(request: NextRequest) {
             where: { id: createdDocument.id },
             data: {
               aiDocumentId: documentInfo.document_id,
+              qdrantDocumentId: documentId, // Use the generated document ID for Qdrant
               content: documentInfo.content,
               status: 'PROCESSED',
               isProcessed: true,

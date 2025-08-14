@@ -260,15 +260,26 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (r
 
 async function processWithBackend(files: File[], description: string, category: string, user: any, req: NextRequest) {
   const backendFormData = new FormData();
+  
+  // Generate document IDs for each file
+  const documentIds: string[] = [];
   files.forEach((file) => {
     // Create a new File object to ensure proper handling
     const fileBlob = new Blob([file], { type: file.type });
     const newFile = new File([fileBlob], file.name, { type: file.type });
     backendFormData.append("files", newFile);
+    
+    // Generate document ID for this file
+    const documentId = crypto.randomUUID();
+    documentIds.push(documentId);
   });
+  
   backendFormData.append("userId", user.id);
   backendFormData.append("description", description || "");
   backendFormData.append("category", category || "");
+  
+  // Add document IDs to form data as JSON array
+  backendFormData.append("documentIds", JSON.stringify(documentIds));
 
   const backendResponse = await axiosInstance.post(
     `${process.env.BACKEND_URL}/api/v1/documents/upload`,
@@ -313,11 +324,14 @@ async function processWithBackend(files: File[], description: string, category: 
 
   // Store processed documents in the database
   const storedDocuments = [];
-  for (const processedFile of data.processed_files) {
+  for (let i = 0; i < data.processed_files.length; i++) {
+    const processedFile = data.processed_files[i];
+    const documentId = documentIds[i]; // Use the generated document ID
+    
     try {
       const document = await prisma.document.create({
         data: {
-          id: processedFile.document_id,
+          id: documentId, // Use the generated document ID
           title: processedFile.original_filename.replace(/\.[^/.]+$/, ""), // Remove file extension
           content: processedFile.content,
           fileName: processedFile.original_filename.replace(/\.[^/.]+$/, ""),
@@ -329,7 +343,7 @@ async function processWithBackend(files: File[], description: string, category: 
           keywords: "", // Can be extracted later if needed
           uploadedAt: new Date(processedFile.processed_at),
           metadata: processedFile.financial_analysis ? JSON.stringify(processedFile.financial_analysis) : null,
-          qdrantDocumentId: processedFile.document_id, // Link to Qdrant document ID
+          qdrantDocumentId: documentId, // Use the generated document ID for Qdrant
           chunkCount: processedFile.chunks,
           isProcessed: true,
           processedAt: new Date(processedFile.processed_at),

@@ -707,8 +707,8 @@ def process_file_with_progress(
         print(f"  Content preview: {cleaned_text_content[:200]}...")
         print(f"  Content is empty: {not cleaned_text_content.strip()}")
 
-        # Generate a unique document ID for vector storage
-        document_id_for_storage = str(uuid.uuid4())
+        # Use the provided document ID for vector storage
+        document_id_for_storage = document_id
 
         # Optimize chunks with page tracking
         chunks_with_pages = optimize_chunk_size_with_pages(
@@ -1229,7 +1229,7 @@ async def upload_files(
     userId: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
-    documentIds: Optional[List[str]] = Form(None),
+    documentIds: Optional[str] = Form(None),  # Changed from List[str] to str
     api_key: str = Header(..., alias="X-API-Key"),
 ):
     """Upload one or more documents (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX) for processing."""
@@ -1244,21 +1244,30 @@ async def upload_files(
             raise HTTPException(status_code=400, detail="User ID is required")
 
         log_to_backend("info", f"Processing upload for user: {userId}")
+        log_to_backend(
+            "info", f"Received documentIds: {documentIds} (type: {type(documentIds)})"
+        )
 
-        # Ensure Qdrant collection exists before processing files
+        # Parse documentIds from JSON string
+        if documentIds:
+            try:
+                document_id_list = json.loads(documentIds)
+                log_to_backend("info", f"Parsed documentIds: {document_id_list}")
+            except json.JSONDecodeError:
+                raise HTTPException(
+                    status_code=400, detail="Invalid documentIds format"
+                )
+        else:
+            document_id_list = []
+            log_to_backend("info", "No documentIds provided, using empty list")
+
+        # Ensure Qdrant collection exists before processing files.
         if not ensure_qdrant_collection_exists():
             log_to_backend("error", "Failed to ensure Qdrant collection exists")
             raise HTTPException(status_code=500, detail="Vector database setup failed")
 
         # Handle both single file and list of files
         file_list = files if isinstance(files, list) else [files]
-        document_id_list = (
-            documentIds
-            if isinstance(documentIds, list)
-            else [documentIds]
-            if documentIds
-            else []
-        )
         uploaded_documents = []
 
         for i, file in enumerate(file_list):
@@ -1310,14 +1319,17 @@ async def upload_files(
                         detail=f"File '{file.filename}' appears to be too small to be a valid PDF file",
                     )
 
-            # Use provided document ID or generate new one
-            document_id = (
-                document_id_list[i]
-                if i < len(document_id_list) and document_id_list[i]
-                else str(uuid.uuid4())
-            )
+            # Use provided document ID (required)
+            if i >= len(document_id_list) or not document_id_list[i]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Document ID is required for file: {file.filename}",
+                )
+
+            document_id = document_id_list[i]
             log_to_backend(
-                "info", f"Using document ID: {document_id} for file: {file.filename}"
+                "info",
+                f"Using provided document ID: {document_id} for file: {file.filename}",
             )
 
             # Initialize processing status

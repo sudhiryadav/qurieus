@@ -7,13 +7,13 @@ import { logger } from "@/lib/logger";
 import { qdrant, getQdrantConfig } from "@/lib/qdrant";
 
 // Function to delete vectors from Qdrant
-async function deleteVectorsForDocument(userId: string, documentId: string) {
+async function deleteVectorsForDocument(userId: string, qdrantDocumentId: string) {
   try {
     const config = getQdrantConfig();
     
     logger.info("deleteVectorsForDocument: Starting deletion", {
       userId,
-      documentId,
+      qdrantDocumentId,
       QDRANT_URL: config.QDRANT_URL ? 'SET' : 'NOT_SET',
       QDRANT_COLLECTION: config.QDRANT_COLLECTION ? 'SET' : 'NOT_SET',
       QDRANT_API_KEY: config.QDRANT_API_KEY ? 'SET' : 'NOT_SET'
@@ -44,7 +44,7 @@ async function deleteVectorsForDocument(userId: string, documentId: string) {
     const filter = {
       must: [
         { key: "user_id", match: { value: userId } },
-        { key: "document_id", match: { value: documentId } },
+        { key: "document_id", match: { value: qdrantDocumentId } },
       ],
     };
 
@@ -55,9 +55,9 @@ async function deleteVectorsForDocument(userId: string, documentId: string) {
     
     await qdrant.delete(config.QDRANT_COLLECTION, { filter });
     
-    logger.info(`Deleted vectors for document ${documentId} from Qdrant`);
+    logger.info(`Deleted vectors for document ${qdrantDocumentId} from Qdrant`);
   } catch (error) {
-    logger.error(`Error deleting vectors from Qdrant for document ${documentId}:`, error);
+    logger.error(`Error deleting vectors from Qdrant for document ${qdrantDocumentId}:`, error);
     throw error;
   }
 }
@@ -165,10 +165,10 @@ export async function DELETE(
       shouldDeleteFromQdrant: hasQdrantVectors
     });
     
-    if (hasQdrantVectors) {
+    if (hasQdrantVectors && document.qdrantDocumentId) {
       try {
-        // Delete vectors directly from Qdrant using the same approach as admin route
-        await deleteVectorsForDocument(document.userId, id);
+        // Delete vectors directly from Qdrant using the Qdrant document ID
+        await deleteVectorsForDocument(document.userId, document.qdrantDocumentId);
         
         logger.info("Document Delete API: Document deleted from Qdrant", {
           userId: session.user.id,

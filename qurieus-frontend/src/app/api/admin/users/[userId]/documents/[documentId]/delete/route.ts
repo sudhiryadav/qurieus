@@ -20,7 +20,7 @@ async function deleteVectorsFromQdrant(userId: string, docId: string) {
       if (!config.QDRANT_URL) {
         throw new Error("QDRANT_URL is not set");
       }
-      if (!config.QDRANT_API_KEY) {
+        if (!config.QDRANT_API_KEY) {
         throw new Error("QDRANT_API_KEY is not set");
       }
 
@@ -36,7 +36,7 @@ async function deleteVectorsFromQdrant(userId: string, docId: string) {
       filter: {
         must: [
           { key: "user_id", match: { value: userId } },
-          { key: "doc_id", match: { value: docId } },
+          { key: "document_id", match: { value: docId } }, // Fixed: use document_id instead of doc_id
         ],
       },
     });
