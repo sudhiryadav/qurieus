@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
         }
 
         const response = await fetch(
-          `${aiServiceUrl}/api/v1/admin/documents/upload`,
+          `${aiServiceUrl}/api/v1/documents/upload`,
           {
             method: 'POST',
             headers: {

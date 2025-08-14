@@ -45,9 +45,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
-app.include_router(
-    documents.router, prefix="/api/v1/admin/documents", tags=["Admin Documents"]
-)
 
 # Serve static frontend (Next.js export) at root
 frontend_path = os.path.join(os.path.dirname(__file__), "frontend")

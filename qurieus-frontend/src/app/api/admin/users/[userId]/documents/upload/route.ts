@@ -111,7 +111,7 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
 
     // Process with backend
     logger.info("User Document Upload API: Making backend request", {
-      backendUrl: `${process.env.BACKEND_URL}/api/v1/admin/documents/upload`,
+      backendUrl: `${process.env.BACKEND_URL}/api/v1/documents/upload`,
       apiKeySet: !!process.env.BACKEND_API_KEY,
       formDataEntries: Array.from(backendFormData.entries()).map(([key, value]) => ({
         key,

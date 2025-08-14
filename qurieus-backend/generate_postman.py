@@ -2,6 +2,7 @@ import json
 from fastapi.openapi.utils import get_openapi
 import os
 
+
 def generate_postman_collection(app):
     # Get OpenAPI schema
     openapi_schema = get_openapi(
@@ -17,33 +18,25 @@ def generate_postman_collection(app):
         "info": {
             "name": "MyQuery API",
             "description": "API collection for the MyQuery document AI chatbot",
-            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         },
         "item": [],
         "variable": [
-            {
-                "key": "base_url",
-                "value": "http://localhost:8000",
-                "type": "string"
-            },
+            {"key": "base_url", "value": "http://localhost:8000", "type": "string"},
             {
                 "key": "auth_token",
                 "value": "your_auth_token_here",
                 "type": "string",
-                "description": "Get this token from the /users endpoint response"
+                "description": "Get this token from the /users endpoint response",
             },
             {
                 "key": "userId",
                 "value": "your_userId_here",
                 "type": "string",
-                "description": "Get this ID from the /users endpoint response"
+                "description": "Get this ID from the /users endpoint response",
             },
-            {
-                "key": "session_id",
-                "value": "your_session_id_here",
-                "type": "string"
-            }
-        ]
+            {"key": "session_id", "value": "your_session_id_here", "type": "string"},
+        ],
     }
 
     # Group endpoints by tags
@@ -57,10 +50,7 @@ def generate_postman_collection(app):
 
     # Create Postman items for each tag
     for tag, routes in endpoints_by_tag.items():
-        tag_item = {
-            "name": tag.replace("_", " ").title(),
-            "item": []
-        }
+        tag_item = {"name": tag.replace("_", " ").title(), "item": []}
 
         for route in routes:
             # Skip non-API routes
@@ -76,19 +66,23 @@ def generate_postman_collection(app):
                     "url": {
                         "raw": f"{{{{base_url}}}}{route.path}",
                         "host": ["{{base_url}}"],
-                        "path": route.path.strip("/").split("/")
+                        "path": route.path.strip("/").split("/"),
                     },
-                    "description": route.description if hasattr(route, "description") else ""
-                }
+                    "description": route.description
+                    if hasattr(route, "description")
+                    else "",
+                },
             }
 
             # Add auth header if needed
             if any(dep for dep in route.dependencies if "get_user" in str(dep)):
-                request_item["request"]["header"].append({
-                    "key": "Authorization",
-                    "value": "Bearer {{auth_token}}",
-                    "description": "Required for authenticated endpoints"
-                })
+                request_item["request"]["header"].append(
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}",
+                        "description": "Required for authenticated endpoints",
+                    }
+                )
 
             # Special handling for file upload endpoint
             if route.path == "/upload":
@@ -96,7 +90,7 @@ def generate_postman_collection(app):
                     {
                         "key": "Authorization",
                         "value": "Bearer {{auth_token}}",
-                        "description": "Required for authenticated endpoints"
+                        "description": "Required for authenticated endpoints",
                     }
                 ]
                 request_item["request"]["body"] = {
@@ -106,9 +100,9 @@ def generate_postman_collection(app):
                             "key": "files",
                             "type": "file",
                             "src": "/path/to/your/file.pdf",
-                            "description": "Upload PDF, DOC, DOCX, TXT, CSV, XLS, or XLSX files. Make sure you have set the auth_token in environment variables."
+                            "description": "Upload PDF, DOC, DOCX, TXT, CSV, XLS, or XLSX files. Make sure you have set the auth_token in environment variables.",
                         }
-                    ]
+                    ],
                 }
             # Add body for other POST/PUT endpoints
             elif route.methods == {"POST", "PUT"}:
@@ -132,7 +126,7 @@ def generate_postman_collection(app):
 
                     request_item["request"]["body"] = {
                         "mode": "raw",
-                        "raw": json.dumps(example, indent=4)
+                        "raw": json.dumps(example, indent=4),
                     }
 
             tag_item["item"].append(request_item)
@@ -143,16 +137,17 @@ def generate_postman_collection(app):
     with open("myquery.postman_collection.json", "w") as f:
         json.dump(collection, f, indent=4)
 
+
 if __name__ == "__main__":
     # When run directly, we need to create a test app
     from fastapi import FastAPI
     from app.api.v1.endpoints import documents
-    
+
     test_app = FastAPI(
-        title="MyQuery API", 
-        description="Document AI Chatbot API", 
-        version="1.0.0"
+        title="MyQuery API", description="Document AI Chatbot API", version="1.0.0"
     )
-    test_app.include_router(documents.router, prefix="/api/v1/admin/documents", tags=["Documents"])
-    
-    generate_postman_collection(test_app) 
+    test_app.include_router(
+        documents.router, prefix="/api/v1/documents", tags=["Documents"]
+    )
+
+    generate_postman_collection(test_app)
