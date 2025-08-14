@@ -9,12 +9,15 @@ import axios from "@/lib/axios";
 import { UserSubscriptionWithUserAndPlan } from "@/types/subscription";
 import { Search, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
+import ConfirmDelete from '@/components/ConfirmDelete';
 
 export default function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<UserSubscriptionWithUserAndPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingSubscription, setEditingSubscription] = useState<UserSubscriptionWithUserAndPlan | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [subscriptionToDelete, setSubscriptionToDelete] = useState<UserSubscriptionWithUserAndPlan | null>(null);
   const [editForm, setEditForm] = useState({
     status: "",
     currentPeriodStart: "",
@@ -61,16 +64,28 @@ export default function AdminSubscriptionsPage() {
   };
 
   const handleDeleteSubscription = async (id: string) => {
-    if (!window.confirm("Are you sure you want to archive this subscription?")) return;
+    const subscription = subscriptions.find(s => s.id === id);
+    if (!subscription) return;
+    
+    setSubscriptionToDelete(subscription);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!subscriptionToDelete) return;
+    
     try {
       await axios.delete(`/api/admin/subscriptions`, {
-        data: { id }
+        data: { id: subscriptionToDelete.id }
       });
-      setSubscriptions(subscriptions.filter(s => s.id !== id));
+      setSubscriptions(subscriptions.filter(s => s.id !== subscriptionToDelete.id));
       showToast.success("Subscription archived successfully");
     } catch (error) {
       console.error("Error deleting subscription:", error);
       showToast.error("Failed to archive subscription");
+    } finally {
+      setDeleteConfirmOpen(false);
+      setSubscriptionToDelete(null);
     }
   };
 
@@ -174,6 +189,17 @@ export default function AdminSubscriptionsPage() {
           </div>
         </div>
       </ModalDialog>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDelete
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Archive Subscription"
+        message={`Are you sure you want to archive the subscription for ${subscriptionToDelete?.user.name}? This action cannot be undone.`}
+        confirmText="Archive"
+        isLoading={loading}
+      />
     </div>
   );
 } 

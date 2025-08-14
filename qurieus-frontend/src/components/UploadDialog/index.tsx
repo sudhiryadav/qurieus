@@ -1,6 +1,6 @@
 "use client";
 
-import axiosInstance from "@/lib/axios";
+import { uploadAxiosInstance } from "@/lib/axios";
 import { FileText, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRef, useState } from "react";
@@ -9,6 +9,8 @@ import { showToast } from "@/components/Common/Toast";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { logger } from "@/lib/logger";
 import { useTheme } from "next-themes";
+import ProgressToast from "@/components/ProgressToast";
+import { toast } from "react-hot-toast";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -53,10 +55,56 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(false);
+  const [processingDocuments, setProcessingDocuments] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isSuperAdmin = session?.user?.role?.toLowerCase() === "super_admin";
 
+  const monitorProcessingStatus = async (documentId: string, aiDocumentId: string, fileName: string) => {
+    if (!aiDocumentId) return;
+
+    const checkStatus = async () => {
+      try {
+        const response = await uploadAxiosInstance.get(`/api/documents/status/${aiDocumentId}`);
+        
+        if (response.data.success) {
+          const document = response.data.document;
+          
+          if (document.processingStatus === 'PROCESSED') {
+            // Processing completed
+            console.log('🎉 UploadDialog: Processing completed, showing completion message');
+            showToast.success(`${fileName} processing completed!`);
+            onUploadSuccess();
+            return true; // Stop monitoring
+          } else if (document.processingStatus === 'FAILED') {
+            // Processing failed
+            console.log('❌ UploadDialog: Processing failed, showing error message');
+            showToast.error(`${fileName} processing failed!`);
+            return true; // Stop monitoring
+          }
+        }
+        
+        return false; // Continue monitoring
+      } catch (error) {
+        console.error('Status check error:', error);
+        return false; // Continue monitoring
+      }
+    };
+
+    // Check status every 2 seconds
+    const interval = setInterval(async () => {
+      const shouldStop = await checkStatus();
+      if (shouldStop) {
+        clearInterval(interval);
+      }
+    }, 2000);
+
+    // Stop monitoring after 5 minutes
+    setTimeout(() => {
+      clearInterval(interval);
+      showToast.warning(`${fileName} processing timeout`);
+    }, 5 * 60 * 1000);
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -150,6 +198,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
     }
   };
 
+
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files) {
@@ -178,8 +228,47 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
     setSelectedFiles([]);
     setDescription("");
     setCategory("");
+    setProcessingDocuments([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  // Footer buttons
+  const footer = (
+    <>
+      <button
+        type="button"
+        onClick={onClose}
+        className="rounded-md border border-gray-300 dark:border-gray-500 px-4 py-2 text-sm font-medium text-gray-700 dark:text-white bg-gray-100 dark:bg-[#2d3543] hover:bg-gray-200 dark:hover:bg-[#393f4a]"
+        disabled={loading || processingDocuments.length > 0}
+      >
+        {processingDocuments.length > 0 ? 'Close' : 'Cancel'}
+      </button>
+      {processingDocuments.length === 0 && (
+        <button
+          type="submit"
+          form="upload-form"
+          disabled={loading || selectedFiles.length === 0 || selectedFiles.some(f => f.error)}
+          className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 ml-3"
+        >
+          {loading ? (
+            <>
+              <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+              Uploading...
+            </>
+          ) : (
+            `Upload ${selectedFiles.filter(f => !f.error).length} File${selectedFiles.filter(f => !f.error).length !== 1 ? 's' : ''}`
+          )}
+        </button>
+      )}
+    </>
+  );
+
+  // Header
+  const header = (
+    <span>
+      {processingDocuments.length > 0 ? 'Processing Documents' : 'Upload Files'}
+    </span>
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,43 +291,58 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
     const uploadEndpoint = customUploadEndpoint || '/api/documents/upload';
     
     try {
-      const formData = new FormData();
-      validFiles.forEach(sf => {
-        formData.append("files", sf.file);
-      });
-      formData.append("description", description);
-      formData.append("category", category);
-      formData.append("userId", session?.user?.id || "");
-      
-      logger.info("UploadDialog: Sending upload request", { 
-        fileCount: validFiles.length,
-        fileNames: validFiles.map(f => f.file.name),
-        totalSize: validFiles.reduce((sum, f) => sum + f.file.size, 0),
-        uploadEndpoint,
-        customUploadEndpoint: !!customUploadEndpoint
-      });
-      const { data } = await axiosInstance.post(uploadEndpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      // Handle backend (Qdrant) response
-      if (data.message && (data.files || data.processed_files)) {
-        const fileCount = data.files?.length || data.processed_files?.length || 0;
-        logger.info("UploadDialog: All files uploaded successfully via backend", { 
-          fileCount,
-          responseData: data 
+      // For the new API, we need to upload files one by one
+      // The new API expects 'file' (singular) not 'files' (plural)
+      if (validFiles.length === 1) {
+        // Single file upload
+        const formData = new FormData();
+        formData.append("file", validFiles[0].file);
+        formData.append("title", validFiles[0].file.name);
+        formData.append("description", description);
+        formData.append("category", category);
+        
+        logger.info("UploadDialog: Sending single file upload request", { 
+          fileName: validFiles[0].file.name,
+          fileSize: validFiles[0].file.size,
+          uploadEndpoint,
+          customUploadEndpoint: !!customUploadEndpoint
         });
-        showToast.success(`Successfully uploaded ${fileCount} file${fileCount !== 1 ? 's' : ''}`);
-        onUploadSuccess();
-        onClose();
-        handleReset();
+        
+        const { data } = await uploadAxiosInstance.post(uploadEndpoint, formData);
+        
+        // Handle the new API response format
+        if (data.success && data.document) {
+          const document = data.document;
+          
+          if (document.processingStatus === 'PROCESSING') {
+            // Background processing - show upload success without processing message
+            console.log('📤 UploadDialog: Showing upload success message for background processing');
+            showToast.success(`${validFiles[0].file.name} uploaded successfully`);
+            
+            // Start monitoring processing status
+            monitorProcessingStatus(document.id, document.aiDocumentId, validFiles[0].file.name);
+          } else {
+            // Processing completed immediately
+            console.log('✅ UploadDialog: Showing immediate success message');
+            showToast.success(`${validFiles[0].file.name} uploaded and processed successfully!`);
+            onUploadSuccess();
+          }
+          
+          onClose();
+          handleReset();
+        } else {
+          throw new Error(data.error || "Upload failed");
+        }
       } else {
-        logger.error("UploadDialog: Upload completed with unclear results", { data });
-        showToast.error(data.error || "Upload completed with unclear results");
-        handleReset();
+        // Multiple files - we'll need to handle this differently
+        logger.warn("UploadDialog: Multiple file upload not yet supported with new API", {
+          fileCount: validFiles.length
+        });
+        showToast.error("Multiple file upload not yet supported. Please upload files one at a time.");
+        return;
       }
+
+
     } catch (error: any) {
       logger.error("UploadDialog: Upload error", { 
         error: error.message,
@@ -254,45 +358,11 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
     }
   };
 
-  // Footer buttons
-  const footer = (
-    <>
-      <button
-        type="button"
-        onClick={onClose}
-        className="rounded-md border border-gray-300 dark:border-gray-500 px-4 py-2 text-sm font-medium text-gray-700 dark:text-white bg-gray-100 dark:bg-[#2d3543] hover:bg-gray-200 dark:hover:bg-[#393f4a]"
-        disabled={loading}
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        form="upload-form"
-        disabled={loading || selectedFiles.length === 0 || selectedFiles.some(f => f.error)}
-        className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 ml-3"
-      >
-        {loading ? (
-          <>
-            <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-            Uploading...
-          </>
-        ) : (
-          `Upload ${selectedFiles.filter(f => !f.error).length} File${selectedFiles.filter(f => !f.error).length !== 1 ? 's' : ''}`
-        )}
-      </button>
-    </>
-  );
-
-  // Header
-  const header = (
-    <span>Upload Files</span>
-  );
-
   if (!isOpen) return null;
 
   return (
     <>
-      <LoadingOverlay loading={loading} htmlText="Uploading files..." />
+      <LoadingOverlay loading={loading && processingDocuments.length === 0} htmlText="Uploading files..." />
       <ModalDialog isOpen={isOpen} onClose={onClose} header={header} footer={footer}>
       <form id="upload-form" onSubmit={handleSubmit} className="space-y-5 p-5">
         {/* Guidelines */}
@@ -381,6 +451,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
           </div>
         )}
 
+
+
         {/* Description */}
         <div className="hidden">
           <label htmlFor="description" className="mb-2 block text-base font-semibold text-gray-900 dark:text-white">
@@ -415,6 +487,8 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
             ))}
           </select>
         </div>
+
+
       </form>
       </ModalDialog>
     </>

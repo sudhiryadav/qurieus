@@ -1,5 +1,4 @@
 import requests
-import os
 import traceback
 import json
 from typing import Optional, Dict, Any
@@ -8,7 +7,7 @@ from app.core.config import settings
 FRONTEND_LOG_URL = settings.FRONTEND_URL + "/api/logs"
 
 
-def log_to_frontend(
+def log_to_backend(
     level: str,
     message: str,
     user: Optional[Dict[str, Any]] = None,

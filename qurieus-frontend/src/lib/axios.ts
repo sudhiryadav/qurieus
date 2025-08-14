@@ -18,5 +18,11 @@ const frontendAxiosInstance = axios.create({
   withCredentials: true,
 });
 
+// Create a separate instance for file uploads (no default Content-Type)
+const uploadAxiosInstance = axios.create({
+  baseURL,
+  withCredentials: true,
+});
+
 export default axiosInstance;
-export { frontendAxiosInstance }; 
+export { frontendAxiosInstance, uploadAxiosInstance }; 

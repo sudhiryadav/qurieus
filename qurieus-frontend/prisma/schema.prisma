@@ -36,6 +36,8 @@ enum UserRole {
   AGENT       @map("Agent")       /// Human agent for chat escalation
 }
 
+
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -273,7 +275,7 @@ model VisitorInfo {
 model Document {
   id          String   @id @default(cuid())
   title       String
-  content     String   @db.Text
+  content     String?  @db.Text  // Made optional since we'll extract it during processing
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   userId      String
@@ -287,6 +289,15 @@ model Document {
   keywords     String?  // Comma-separated list of keywords extracted from the document
   uploadedAt   DateTime @default(now())
   metadata     String?
+  
+  // S3 Integration
+  fileUrl      String?  // S3 key for the uploaded file
+  
+  // Simple status system (like NestJS app)
+  status       String   @default("DRAFT")  // DRAFT, REVIEW, APPROVED, FILED, ARCHIVED, PROCESSING, PROCESSED
+  
+  // AI Processing fields (simplified)
+  aiDocumentId String?  // Document ID from AI service (FastAPI)
   
   // Qdrant/AI Integration fields
   qdrantDocumentId String?  // Document ID in Qdrant vector database
@@ -302,6 +313,8 @@ model Document {
   @@index([keywords])
   @@index([qdrantDocumentId])
   @@index([isProcessed])
+  @@index([status])
+  @@index([aiDocumentId])
 }
 
 model DocumentChunk {

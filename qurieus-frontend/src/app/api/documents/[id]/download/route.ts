@@ -14,38 +14,27 @@ export async function GET(
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      logger.warn("Admin Document Download API: No authenticated session found");
+      logger.warn("Document Download API: No authenticated session found");
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    // Check if user is admin
-    if (session.user.role !== 'ADMIN') {
-      logger.warn("Admin Document Download API: User is not admin", {
-        userId: session.user.id,
-        userRole: session.user.role
-      });
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
-      );
-    }
-
-    logger.info("Admin Document Download API: Processing download request", { 
+    logger.info("Document Download API: Processing download request", { 
       userId: session.user.id,
       documentId: id
     });
 
-    // Find the document (admin can access any document)
+    // Find the document and ensure user owns it
     const document = await prisma.document.findUnique({
       where: {
         id,
+        userId: session.user.id,
       },
     });
 
-    logger.info("Admin Document Download API: Database query result", {
+    logger.info("Document Download API: Database query result", {
       userId: session.user.id,
       documentId: id,
       documentFound: !!document,
@@ -59,7 +48,7 @@ export async function GET(
     });
 
     if (!document) {
-      logger.warn("Admin Document Download API: Document not found", {
+      logger.warn("Document Download API: Document not found or access denied", {
         userId: session.user.id,
         documentId: id
       });
@@ -71,7 +60,7 @@ export async function GET(
 
     // Check if document has S3 key
     if (!document.fileName) {
-      logger.error("Admin Document Download API: Document missing S3 key", {
+      logger.error("Document Download API: Document missing S3 key", {
         userId: session.user.id,
         documentId: id
       });
@@ -85,7 +74,7 @@ export async function GET(
       // Get the file from S3
       const fileBuffer = await s3Service.getDocumentAsBuffer(document.fileName);
       
-      logger.info("Admin Document Download API: File retrieved from S3 successfully", {
+      logger.info("Document Download API: File retrieved from S3 successfully", {
         userId: session.user.id,
         documentId: id,
         fileName: document.fileName,
@@ -104,7 +93,7 @@ export async function GET(
       });
     } catch (s3Error: any) {
       const errorMessage = s3Error instanceof Error ? s3Error.message : String(s3Error);
-      logger.error("Admin Document Download API: S3 download error", {
+      logger.error("Document Download API: S3 download error", {
         userId: session.user.id,
         documentId: id,
         fileName: document.fileName,
@@ -118,7 +107,7 @@ export async function GET(
     }
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error("Admin Document Download API: Unexpected error", {
+    logger.error("Document Download API: Unexpected error", {
       error: errorMessage,
       stack: error.stack
     });
@@ -128,4 +117,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
@@ -8,25 +8,34 @@ import { Search, Plus, Filter, User as UserIcon, FileText } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import DocumentsList from "@/components/DocumentsList";
 import axiosInstance from "@/lib/axios";
+import { useSession } from "next-auth/react";
 
 interface Document {
   id: string;
   title: string;
+  description?: string;
   fileName: string;
   originalName: string;
   fileType: string;
   fileSize: number;
   category?: string;
-  description?: string;
-  uploadedAt: string;
-  createdAt: string;
-  updatedAt: string;
+  fileUrl?: string;
+  aiDocumentId?: string;
+  status?: string;
   qdrantDocumentId?: string;
   chunkCount: number;
   isProcessed: boolean;
-  processedAt?: string;
-  metadata?: string;
+  processedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 interface User {
@@ -37,8 +46,8 @@ interface User {
   is_active: boolean;
   created_at: string;
   company: string;
-  plan: string;
-  subscription_type: string;
+  plan: string | null;
+  subscription_type: string | null;
   subscription_start_date: string;
   subscription_end_date: string;
   is_verified: boolean;
@@ -99,10 +108,11 @@ export default function AdminUsersPage() {
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
+    password: "",
     role: "",
     company: "",
-    plan: "",
-    subscription_type: "",
+    plan: null as string | null,
+    subscription_type: null as string | null,
     is_verified: false,
     jobTitle: "",
     bio: "",
@@ -148,8 +158,9 @@ export default function AdminUsersPage() {
     setEditForm({
       name: user.name,
       email: user.email,
+      password: "", // Reset password field when editing
       role: user.role,
-      company: user.company,
+      company: user.company || "",
       plan: user.plan,
       subscription_type: user.subscription_type,
       is_verified: user.is_verified,
@@ -163,10 +174,20 @@ export default function AdminUsersPage() {
     if (!editingUser) return;
 
     try {
-      await axiosInstance.patch("/api/admin/users", {
+      // Clean up the form data before sending
+      const cleanFormData = {
         id: editingUser.id,
         ...editForm,
-      });
+        // Convert empty strings to null for optional fields
+        plan: editForm.plan && editForm.plan !== '' ? editForm.plan : null,
+        subscription_type: editForm.subscription_type && editForm.subscription_type !== '' ? editForm.subscription_type : null,
+        company: editForm.company && editForm.company !== '' ? editForm.company : null,
+        jobTitle: editForm.jobTitle && editForm.jobTitle !== '' ? editForm.jobTitle : null,
+        bio: editForm.bio && editForm.bio !== '' ? editForm.bio : null,
+        phone: editForm.phone && editForm.phone !== '' ? editForm.phone : null
+      };
+
+      await axiosInstance.patch("/api/admin/users", cleanFormData);
       
       setUsers(users.map(user => 
         user.id === editingUser.id 
@@ -176,34 +197,55 @@ export default function AdminUsersPage() {
       
       setEditingUser(null);
       showToast.success("User updated successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating user:", error);
-      showToast.error("Failed to update user");
+      const errorMessage = error.response?.data?.error || "Failed to update user";
+      showToast.error(errorMessage);
     }
   };
 
   const handleAddUser = async () => {
+    // Validate required fields
+    if (!editForm.name || !editForm.email || !editForm.password) {
+      showToast.error("Name, email, and password are required");
+      return;
+    }
+
     try {
-      const response = await axiosInstance.post("/api/admin/users", editForm);
+      // Clean up the form data before sending
+      const cleanFormData = {
+        ...editForm,
+        // Convert empty strings to null for optional fields
+        plan: editForm.plan && editForm.plan !== '' ? editForm.plan : null,
+        subscription_type: editForm.subscription_type && editForm.subscription_type !== '' ? editForm.subscription_type : null,
+        company: editForm.company && editForm.company !== '' ? editForm.company : null,
+        jobTitle: editForm.jobTitle && editForm.jobTitle !== '' ? editForm.jobTitle : null,
+        bio: editForm.bio && editForm.bio !== '' ? editForm.bio : null,
+        phone: editForm.phone && editForm.phone !== '' ? editForm.phone : null
+      };
+
+      const response = await axiosInstance.post("/api/admin/users", cleanFormData);
       
       setUsers([response.data, ...users]);
       setIsAddModalOpen(false);
       setEditForm({
         name: "",
         email: "",
+        password: "",
         role: "",
         company: "",
-        plan: "",
-        subscription_type: "",
+        plan: null,
+        subscription_type: null,
         is_verified: false,
         jobTitle: "",
         bio: "",
         phone: "",
       });
       showToast.success("User created successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating user:", error);
-      showToast.error("Failed to create user");
+      const errorMessage = error.response?.data?.error || "Failed to create user";
+      showToast.error(errorMessage);
     }
   };
 
@@ -407,7 +449,7 @@ export default function AdminUsersPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
-                Name
+                Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -418,7 +460,7 @@ export default function AdminUsersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
-                Email
+                Email <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -426,6 +468,21 @@ export default function AdminUsersPage() {
                 onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Leave blank to keep current password"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                Leave blank to keep current password
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -462,10 +519,11 @@ export default function AdminUsersPage() {
                 Plan
               </label>
               <select
-                value={editForm.plan}
-                onChange={(e) => setEditForm(prev => ({ ...prev, plan: e.target.value }))}
+                value={editForm.plan || ""}
+                onChange={(e) => setEditForm(prev => ({ ...prev, plan: e.target.value || null }))}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
+                <option value="">Select Plan</option>
                 <option value="FREE">Free</option>
                 <option value="BASIC">Basic</option>
                 <option value="STANDARD">Standard</option>
@@ -478,10 +536,11 @@ export default function AdminUsersPage() {
                 Subscription Type
               </label>
               <select
-                value={editForm.subscription_type}
-                onChange={(e) => setEditForm(prev => ({ ...prev, subscription_type: e.target.value }))}
+                value={editForm.subscription_type || ""}
+                onChange={(e) => setEditForm(prev => ({ ...prev, subscription_type: e.target.value || null }))}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
+                <option value="">Select Subscription Type</option>
                 <option value="TRIAL">Trial</option>
                 <option value="MONTHLY">Monthly</option>
                 <option value="YEARLY">Yearly</option>
@@ -533,6 +592,9 @@ export default function AdminUsersPage() {
               Email Verified
             </label>
           </div>
+          <div className="text-xs text-gray-400">
+            <span className="text-red-500">*</span> Required fields
+          </div>
         </div>
       </ModalDialog>
 
@@ -561,7 +623,7 @@ export default function AdminUsersPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
-                Name
+                Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -572,7 +634,7 @@ export default function AdminUsersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
-                Email
+                Email <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -580,6 +642,21 @@ export default function AdminUsersPage() {
                 onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter password"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                Password is required for new users
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -613,10 +690,11 @@ export default function AdminUsersPage() {
                 Plan
               </label>
               <select
-                value={editForm.plan}
-                onChange={(e) => setEditForm(prev => ({ ...prev, plan: e.target.value }))}
+                value={editForm.plan || ""}
+                onChange={(e) => setEditForm(prev => ({ ...prev, plan: e.target.value || null }))}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
+                <option value="">Select Plan</option>
                 <option value="FREE">Free</option>
                 <option value="BASIC">Basic</option>
                 <option value="STANDARD">Standard</option>
@@ -629,10 +707,11 @@ export default function AdminUsersPage() {
                 Subscription Type
               </label>
               <select
-                value={editForm.subscription_type}
-                onChange={(e) => setEditForm(prev => ({ ...prev, subscription_type: e.target.value }))}
+                value={editForm.subscription_type || ""}
+                onChange={(e) => setEditForm(prev => ({ ...prev, subscription_type: e.target.value || null }))}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
+                <option value="">Select Subscription Type</option>
                 <option value="TRIAL">Trial</option>
                 <option value="MONTHLY">Monthly</option>
                 <option value="YEARLY">Yearly</option>
@@ -684,6 +763,9 @@ export default function AdminUsersPage() {
               Email Verified
             </label>
           </div>
+          <div className="text-xs text-gray-400">
+            <span className="text-red-500">*</span> Required fields
+          </div>
         </div>
       </ModalDialog>
 
@@ -713,35 +795,37 @@ export default function AdminUsersPage() {
 
 // User Documents Modal Component
 function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const { data: session } = useSession();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUserDocuments = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosInstance.get(`/api/admin/users/${user.id}/documents`);
-        setDocuments(response.data.documents || []);
-      } catch (error) {
-        console.error("Error fetching user documents:", error);
-        showToast.error("Failed to fetch user documents");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Check if current user is admin
+  const isCurrentUserAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN';
+  
+  // Check if current user is viewing their own documents
+  const isViewingOwnDocuments = session?.user?.id === user.id;
+  
+  // Only use admin routes if current user is admin AND viewing someone else's documents
+  const shouldUseAdminRoutes = isCurrentUserAdmin && !isViewingOwnDocuments;
 
-    if (user.id) {
-      fetchUserDocuments();
+  const fetchUserDocuments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(`/api/admin/users/${user.id}/documents`);
+      setDocuments(response.data.documents || []);
+    } catch (error) {
+      console.error("Error fetching user documents:", error);
+      showToast.error("Failed to fetch user documents");
+    } finally {
+      setLoading(false);
     }
   }, [user.id]);
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  useEffect(() => {
+    if (user.id) {
+      fetchUserDocuments();
+    }
+  }, [user.id, fetchUserDocuments]);
 
   if (loading) {
     return (
@@ -755,6 +839,12 @@ function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void
     <div className="space-y-4">
       <div className="text-sm text-gray-600 dark:text-gray-400">
         Showing {documents.length} document(s) for {user.name} ({user.email})
+        {isViewingOwnDocuments && (
+          <span className="ml-2 text-blue-600">(Your documents)</span>
+        )}
+        {shouldUseAdminRoutes && (
+          <span className="ml-2 text-green-600">(Admin view)</span>
+        )}
       </div>
       
       {documents.length === 0 ? (
@@ -762,51 +852,42 @@ function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void
           No documents found for this user.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-2 font-medium">Document Name</th>
-                <th className="text-left py-2 font-medium">Type</th>
-                <th className="text-left py-2 font-medium">Size</th>
-                <th className="text-left py-2 font-medium">Uploaded</th>
-                <th className="text-left py-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((doc) => (
-                <tr key={doc.id} className="border-b border-gray-100 dark:border-gray-800">
-                  <td className="py-2">
-                    <div className="font-medium">{doc.originalName}</div>
-                    {doc.description && (
-                      <div className="text-xs text-gray-500 truncate max-w-xs">
-                        {doc.description}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 text-gray-600 dark:text-gray-400">
-                    {doc.fileType.toUpperCase()}
-                  </td>
-                  <td className="py-2 text-gray-600 dark:text-gray-400">
-                    {formatFileSize(doc.fileSize)}
-                  </td>
-                  <td className="py-2 text-gray-600 dark:text-gray-400">
-                    {formatDate(doc.uploadedAt)}
-                  </td>
-                  <td className="py-2">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      doc.isProcessed 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                    }`}>
-                      {doc.isProcessed ? 'Processed' : 'Pending'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DocumentsList
+          documents={documents}
+          onRefresh={fetchUserDocuments}
+          onDelete={shouldUseAdminRoutes ? async (documentId: string) => {
+            try {
+              // Use the unified delete API - admin can delete any document
+              await axiosInstance.delete(`/api/documents/${documentId}`);
+              fetchUserDocuments();
+              showToast.success('Document deleted successfully');
+            } catch (error) {
+              console.error("Error deleting document:", error);
+              showToast.error("Failed to delete document");
+            }
+          } : undefined}
+          onDownload={async (documentId: string) => {
+            try {
+              const response = await axiosInstance.get(`/api/admin/users/${user.id}/documents/${documentId}/download`, {
+                responseType: 'blob'
+              });
+              const blob = new Blob([response.data]);
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'document';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+              showToast.success('Download started');
+            } catch (error) {
+              console.error("Error downloading document:", error);
+              showToast.error("Failed to download document");
+            }
+          }}
+          canDelete={shouldUseAdminRoutes}
+        />
       )}
     </div>
   );

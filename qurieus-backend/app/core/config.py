@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # Backend API Key for authentication
     BACKEND_API_KEY: str = os.getenv("BACKEND_API_KEY", "")
 
+    # AI Service API Key for internal service communication
+    AI_SERVICE_API_KEY: str = os.getenv("AI_SERVICE_API_KEY", "")
+
     # OCR Settings
     OCR_ENABLED: bool = os.getenv("OCR_ENABLED").lower() == "true"
     OCR_LANGUAGE: str = os.getenv("OCR_LANGUAGE")

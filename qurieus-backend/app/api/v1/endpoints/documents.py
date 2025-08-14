@@ -4,7 +4,6 @@ import io
 import json
 import os
 import re
-import sys
 import threading
 import traceback
 import uuid
@@ -27,16 +26,7 @@ from PIL import Image
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
-# Add the root directory to Python path
-backend_dir = os.path.dirname(
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    )
-)
-if backend_dir not in sys.path:
-    sys.path.append(backend_dir)
-
-# Now we can import from absolute paths
+# Import settings directly since we're already in the app structure
 from app.core.config import settings
 
 # OCR Configuration
@@ -1239,6 +1229,7 @@ async def upload_files(
     userId: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
+    documentIds: Optional[List[str]] = Form(None),
     api_key: str = Header(..., alias="X-API-Key"),
 ):
     """Upload one or more documents (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX) for processing."""
@@ -1261,9 +1252,16 @@ async def upload_files(
 
         # Handle both single file and list of files
         file_list = files if isinstance(files, list) else [files]
+        document_id_list = (
+            documentIds
+            if isinstance(documentIds, list)
+            else [documentIds]
+            if documentIds
+            else []
+        )
         uploaded_documents = []
 
-        for file in file_list:
+        for i, file in enumerate(file_list):
             log_to_backend("info", f"Starting upload for file: {file.filename}")
 
             # Read file content
@@ -1312,8 +1310,15 @@ async def upload_files(
                         detail=f"File '{file.filename}' appears to be too small to be a valid PDF file",
                     )
 
-            # Generate document ID for tracking
-            document_id = str(uuid.uuid4())
+            # Use provided document ID or generate new one
+            document_id = (
+                document_id_list[i]
+                if i < len(document_id_list) and document_id_list[i]
+                else str(uuid.uuid4())
+            )
+            log_to_backend(
+                "info", f"Using document ID: {document_id} for file: {file.filename}"
+            )
 
             # Initialize processing status
             update_processing_status(
@@ -1379,8 +1384,17 @@ async def get_document_status(
             raise HTTPException(status_code=401, detail="Invalid API key")
 
         status = get_processing_status(document_id)
-        # print(f"Status request for {document_id}: {status}")
-        return {"document_id": document_id, "status": status}
+
+        # Return status in the format expected by the frontend
+        return {
+            "document_id": document_id,
+            "status": status,
+            "processing_status": status.get("status", "UNKNOWN"),
+            "progress": status.get("progress", 0),
+            "details": status.get("details", ""),
+            "error": status.get("error"),
+            "timestamp": status.get("timestamp"),
+        }
 
     except HTTPException:
         raise

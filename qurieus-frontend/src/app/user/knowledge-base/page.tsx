@@ -1,23 +1,68 @@
 "use client";
 
 import { showToast } from "@/components/Common/Toast";
-import DocumentList from "@/components/DocumentList";
+import DocumentsList from "@/components/DocumentsList";
 import UploadDialog from "@/components/UploadDialog";
 import { formatFileSize } from "@/lib/utils";
-import { Document } from "@prisma/client";
+interface Document {
+  id: string;
+  title: string;
+  description?: string;
+  fileName: string;
+  originalName: string;
+  fileType: string;
+  fileSize: number;
+  category?: string;
+  fileUrl?: string;
+  aiDocumentId?: string;
+  status?: string;
+  qdrantDocumentId?: string;
+  chunkCount: number;
+  isProcessed: boolean;
+  processedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
 import { useEffect, useState } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Upload } from "lucide-react";
+import axiosInstance from "@/lib/axios";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { subscriptionPlan } = useSubscription();
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
   const [totalFiles, setTotalFiles] = useState(0);
   const [remainingFiles, setRemainingFiles] = useState(0);
   const [totalSize, setTotalSize] = useState(0);
   const [remainingSize, setRemainingSize] = useState(0);
+
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get("/api/documents");
+      setDocuments(response.data.documents || []);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      showToast.error("Failed to fetch documents");
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
 
   useEffect(() => {
     if (subscriptionPlan) {
@@ -40,6 +85,10 @@ export default function KnowledgeBase() {
       );
     }
   }, [documents, subscriptionPlan]);
+
+  const handleUploadSuccess = () => {
+    fetchDocuments(); // Refresh the document list
+  };
 
   return (
     <div className="mx-auto">
@@ -68,14 +117,54 @@ export default function KnowledgeBase() {
         <p>Remaining Size: {formatFileSize(remainingSize)}</p>
       </div>
 
-      <DocumentList key={refreshKey} onFetchDocuments={setDocuments} />
+      {/* Documents List */}
+      <div className="relative">
+        <LoadingOverlay loading={loading} htmlText="Loading documents..." position="absolute" />
+        <DocumentsList
+          documents={documents}
+          onRefresh={fetchDocuments}
+          onDownload={async (documentId: string) => {
+            try {
+              const response = await axiosInstance.get(`/api/documents/${documentId}/download`, {
+                responseType: 'blob'
+              });
+              const blob = new Blob([response.data]);
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'document';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+              showToast.success('Download started');
+            } catch (error) {
+              console.error("Error downloading document:", error);
+              showToast.error("Failed to download document");
+            }
+          }}
+          onDelete={async (documentId: string) => {
+            console.log('🗑️ KnowledgeBase: onDelete called for document:', documentId);
+            try {
+              console.log('📡 KnowledgeBase: Making DELETE request to API');
+              await axiosInstance.delete(`/api/documents/${documentId}`);
+              console.log('✅ KnowledgeBase: DELETE request successful');
+              showToast.success('Document deleted successfully');
+              fetchDocuments(); // Refresh the list
+            } catch (error) {
+              console.error("❌ KnowledgeBase: Error deleting document:", error);
+              showToast.error("Failed to delete document");
+            }
+          }}
+          canDelete={true}
+        />
+      </div>
 
       <UploadDialog
         isOpen={isUploadDialogOpen}
         onClose={() => setIsUploadDialogOpen(false)}
-        onUploadSuccess={() => {
-          setRefreshKey((prev) => prev + 1);
-        }}
+        onUploadSuccess={handleUploadSuccess}
+        customUploadEndpoint="/api/documents/upload"
       />
     </div>
   );

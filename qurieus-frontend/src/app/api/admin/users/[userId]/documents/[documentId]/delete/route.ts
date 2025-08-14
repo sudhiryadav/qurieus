@@ -5,45 +5,34 @@ import { prisma } from "@/utils/prismaDB";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 import { logger } from "@/lib/logger";
-// @ts-ignore: No type declarations for @qdrant/js-client-rest
-import { QdrantClient } from "@qdrant/js-client-rest";
-
-const QDRANT_URL = process.env.QDRANT_URL;
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
-const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
-
-// Initialize Qdrant client with API key if available
-const qdrant = new QdrantClient({ 
-  url: QDRANT_URL, 
-  checkCompatibility: false,
-  ...(QDRANT_API_KEY && { apiKey: QDRANT_API_KEY })
-});
+import qdrant, { getQdrantConfig } from "@/lib/qdrant";
 
 async function deleteVectorsFromQdrant(userId: string, docId: string) {
   try {
+    const config = getQdrantConfig();
     logger.info(`Admin Delete API: Attempting to delete vectors for document ${docId} from Qdrant`);
     
     // Check if collection exists first
     try {
-      if (!QDRANT_COLLECTION) {
+      if (!config.QDRANT_COLLECTION) {
         throw new Error("QDRANT_COLLECTION is not set");
       }
-      if (!QDRANT_URL) {
+      if (!config.QDRANT_URL) {
         throw new Error("QDRANT_URL is not set");
       }
-      if (!QDRANT_API_KEY) {
+      if (!config.QDRANT_API_KEY) {
         throw new Error("QDRANT_API_KEY is not set");
       }
 
-      const collectionInfo = await qdrant.getCollection(QDRANT_COLLECTION);
+      const collectionInfo = await qdrant.getCollection(config.QDRANT_COLLECTION);
       logger.info(`Admin Delete API: Collection exists with ${collectionInfo.points_count} points`);
     } catch (collectionError) {
-      logger.info(`Admin Delete API: Collection ${QDRANT_COLLECTION} does not exist or is not accessible`);
+      logger.info(`Admin Delete API: Collection ${config.QDRANT_COLLECTION} does not exist or is not accessible`);
       // If collection doesn't exist, there's nothing to delete
       return;
     }
     
-    await qdrant.delete(QDRANT_COLLECTION, {
+    await qdrant.delete(config.QDRANT_COLLECTION, {
       filter: {
         must: [
           { key: "user_id", match: { value: userId } },

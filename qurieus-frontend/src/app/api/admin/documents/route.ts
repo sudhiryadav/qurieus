@@ -1,42 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/utils/auth";
 import axiosInstance from "@/lib/axios";
-import { getToken } from "next-auth/jwt";
-import { prisma } from "@/utils/prismaDB";
 import { logger } from "@/lib/logger";
+import prisma from "@/lib/prisma";
+import { authOptions } from "@/utils/auth";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
-// @ts-ignore: No type declarations for @qdrant/js-client-rest
-import { QdrantClient } from "@qdrant/js-client-rest";
-
-// Qdrant config
-const QDRANT_URL = process.env.QDRANT_URL;
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
-const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
-
-const qdrant = new QdrantClient({ url: QDRANT_URL, checkCompatibility: false ,
-  ...(QDRANT_API_KEY && { apiKey: QDRANT_API_KEY })
-});
-
-// Utility to upsert embeddings to Qdrant
-async function upsertEmbeddingsToQdrant(
-  userId: string,
-  docId: string,
-  chunks: string[],
-  embeddings: number[][]
-) {
-  const points = chunks.map((chunk: string, i: number) => ({
-    id: `${docId}_${i}`,
-    vector: embeddings[i],
-    payload: {
-      user_id: userId,
-      doc_id: docId,
-      chunk,
-    },
-  }));
-  await qdrant.upsert(QDRANT_COLLECTION as string, { points });
-}
+import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 
 // Maximum file size (10MB)
 // Convert MB to bytes (1MB = 1024 * 1024 bytes)
@@ -417,6 +386,7 @@ async function processWithBackend(files: File[], description: string, category: 
   return NextResponse.json({
     message: data.message,
     files: processedFiles,
+    processed_files: processedFiles, // Add this for compatibility
     totalChunks: data.total_chunks,
     user: {
       id: user.id,

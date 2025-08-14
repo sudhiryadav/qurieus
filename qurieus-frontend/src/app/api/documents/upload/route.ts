@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
+import { prisma } from "@/utils/prismaDB";
 import { logger } from "@/lib/logger";
-import axios from "axios";
+import s3Service from "@/lib/s3";
 
-// File validation constants
-const MAX_FILE_SIZE = parseInt(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || "50") * 1024 * 1024;
-const ALLOWED_FILE_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-  "text/csv",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-];
-
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  
+  // Debug: Log all environment variables at the start
+  console.log("🔍 Document Upload API: Environment check", {
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? 'SET' : 'NOT_SET',
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? 'SET' : 'NOT_SET',
+    NODE_ENV: process.env.NODE_ENV
+  });
+  
+  logger.info("Document Upload API: Environment check", {
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? 'SET' : 'NOT_SET',
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? 'SET' : 'NOT_SET',
+    NODE_ENV: process.env.NODE_ENV
+  });
   
   try {
     const session = await getServerSession(authOptions);
@@ -30,125 +36,341 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    logger.info("Document Upload API: Processing file upload for user", { 
-      userId: session.user.id
-    });
+    const userId = session.user.id;
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    const category = formData.get('category') as string;
 
-    const formData = await req.formData();
-    const files = formData.getAll("files") as File[];
-    const description = formData.get("description") as string;
-    const category = formData.get("category") as string;
-
-    logger.info("Document Upload API: File upload validation", { 
-      userId: session.user.id,
-      fileCount: files.length,
-      fileNames: files.map(f => f.name),
-      totalSize: files.reduce((sum, f) => sum + f.size, 0)
-    });
-
-    if (!files || files.length === 0) {
-      logger.warn("Document Upload API: No files provided", { userId: session.user.id });
-      return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    if (!file) {
+      logger.warn("Document Upload API: No file provided", { userId });
+      return NextResponse.json(
+        { error: "No file provided" },
+        { status: 400 }
+      );
     }
 
-    // File validation
-    for (const file of files) {
-      if (file.size > MAX_FILE_SIZE) {
-        logger.warn("Document Upload API: File size exceeded limit", { 
-          userId: session.user.id, 
-          fileName: file.name, 
-          fileSize: file.size, 
-          maxSize: MAX_FILE_SIZE 
-        });
-        return NextResponse.json(
-          {
-            error: `File ${file.name} exceeds the ${process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB}MB size limit`,
-          },
-          { status: 400 },
-        );
-      }
+    // Validate file type
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+    ];
 
-      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-        logger.warn("Document Upload API: Unsupported file type", { 
-          userId: session.user.id, 
-          fileName: file.name, 
-          fileType: file.type 
-        });
-        return NextResponse.json(
-          { error: `File type ${file.type} is not supported` },
-          { status: 400 },
-        );
-      }
+    if (!allowedMimes.includes(file.type)) {
+      logger.warn("Document Upload API: Invalid file type", { 
+        userId, 
+        fileType: file.type,
+        fileName: file.name 
+      });
+      return NextResponse.json(
+        { error: "Invalid file type" },
+        { status: 400 }
+      );
     }
 
-    logger.info("Document Upload API: Processing files with FastAPI backend", { 
-      userId: session.user.id,
-      fileCount: files.length
-    });
+    // Validate file size (20MB max)
+    const maxSize = 20 * 1024 * 1024; // 20MB
+    if (file.size > maxSize) {
+      logger.warn("Document Upload API: File too large", { 
+        userId, 
+        fileSize: file.size,
+        maxSize 
+      });
+      return NextResponse.json(
+        { error: "File size exceeds 20MB limit" },
+        { status: 400 }
+      );
+    }
 
-    // Create a new FormData for the FastAPI backend request
-    const backendFormData = new FormData();
-    files.forEach(file => backendFormData.append("files", file));
-    if (description) backendFormData.append("description", description);
-    if (category) backendFormData.append("category", category);
-    backendFormData.append("userId", session.user.id);
-
-    // Process with FastAPI backend
-    logger.info("Document Upload API: Making FastAPI backend request", {
-      backendUrl: `${process.env.BACKEND_URL}/api/v1/documents/upload`,
-      apiKeySet: !!process.env.BACKEND_API_KEY,
-      formDataEntries: Array.from(backendFormData.entries()).map(([key, value]) => ({
-        key,
-        type: typeof value,
-        isFile: value instanceof File,
-        fileName: value instanceof File ? value.name : undefined
-      }))
-    });
-
-    const backendResponse = await axios.post(
-      `${process.env.BACKEND_URL}/api/v1/documents/upload`,
-      backendFormData,
-      {
-        headers: {
-          "X-API-Key": process.env.BACKEND_API_KEY!,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    logger.info("Document Upload API: FastAPI backend response received", {
-      status: backendResponse.status,
-      data: backendResponse.data
-    });
-
-    const responseTime = Date.now() - startTime;
-    logger.info("Document Upload API: FastAPI backend processing completed successfully", { 
-      userId: session.user.id,
-      fileCount: files.length,
-      responseTime 
+    console.log("🚀 Document Upload API: Starting upload", { 
+      userId, 
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type 
     });
     
-    return NextResponse.json(backendResponse.data);
+    logger.info("Document Upload API: Starting upload", { 
+      userId, 
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type 
+    });
+
+    // Log S3 configuration for debugging
+    console.log("⚙️ Document Upload API: S3 Configuration", {
+      region: process.env.AWS_REGION,
+      bucket: process.env.AWS_S3_BUCKET,
+      hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY
+    });
+    
+    logger.info("Document Upload API: S3 Configuration", {
+      region: process.env.AWS_REGION,
+      bucket: process.env.AWS_S3_BUCKET,
+      hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY
+    });
+
+    let uploadedFileUrl: string | null = null;
+    let createdDocument: any = null;
+
+    try {
+      // Generate unique filename using S3 service
+      const fileName = s3Service.generateFileName(file.name, userId);
+      
+      // Convert file to buffer
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Upload to S3 using the s3Service
+      console.log("📤 Document Upload API: Attempting S3 upload", { 
+        userId, 
+        fileName,
+        bufferSize: buffer.length 
+      });
+      
+      logger.info("Document Upload API: Attempting S3 upload", { 
+        userId, 
+        fileName,
+        bufferSize: buffer.length 
+      });
+      
+      try {
+        console.log("🔄 Document Upload API: Calling s3Service.uploadDocument...");
+        uploadedFileUrl = await s3Service.uploadDocument(buffer, fileName, file.type);
+        console.log("✅ Document Upload API: S3 upload completed", { 
+          userId, 
+          fileName,
+          uploadedFileUrl 
+        });
+        logger.info("Document Upload API: S3 upload completed", { 
+          userId, 
+          fileName,
+          uploadedFileUrl 
+        });
+      } catch (s3Error) {
+        console.error("❌ Document Upload API: S3 upload failed", { 
+          userId, 
+          fileName,
+          error: s3Error instanceof Error ? s3Error.message : String(s3Error),
+          stack: s3Error instanceof Error ? s3Error.stack : undefined
+        });
+        logger.error("Document Upload API: S3 upload failed", { 
+          userId, 
+          fileName,
+          error: s3Error instanceof Error ? s3Error.message : String(s3Error),
+          stack: s3Error instanceof Error ? s3Error.stack : undefined
+        });
+        throw s3Error;
+      }
+
+      logger.info("Document Upload API: File uploaded to S3", { 
+        userId, 
+        fileName,
+        s3Key: uploadedFileUrl 
+      });
+
+      // Create document record in database
+      createdDocument = await prisma.document.create({
+        data: {
+          title: title || file.name,
+          description: description || '',
+          fileName: fileName,
+          originalName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          category: category || 'General',
+          fileUrl: uploadedFileUrl,
+          userId: userId,
+          status: 'PROCESSING',
+        },
+      });
+
+      logger.info("Document Upload API: Document record created", { 
+        userId, 
+        documentId: createdDocument.id,
+        title: createdDocument.title 
+      });
+
+      // Process document using AI service (FastAPI)
+      try {
+        const aiFormData = new FormData();
+        const fileBlob = new Blob([buffer], { type: file.type });
+        aiFormData.append('files', fileBlob, file.name);
+        aiFormData.append('userId', userId);
+        if (description) {
+          aiFormData.append('description', description);
+        }
+
+        const aiServiceUrl = process.env.BACKEND_URL;
+        const aiApiKey = process.env.BACKEND_API_KEY;
+
+        if (!aiServiceUrl || !aiApiKey) {
+          logger.warn("Document Upload API: AI service not configured", { userId });
+          throw new Error("AI service not configured");
+        }
+
+        const response = await fetch(
+          `${aiServiceUrl}/api/v1/admin/documents/upload`,
+          {
+            method: 'POST',
+            headers: {
+              'X-API-Key': aiApiKey,
+            },
+            body: aiFormData,
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          logger.error("Document Upload API: AI service error", { 
+            userId, 
+            status: response.status, 
+            error: errorText 
+          });
+          throw new Error(`AI service error: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json() as {
+          processing_status: string;
+          documents: Array<{
+            document_id: string;
+            status: string;
+            chunks?: number;
+            content?: string;
+          }>;
+        };
+
+        // Check if processing is in background
+        if (result.processing_status === 'BACKGROUND') {
+          const documentInfo = result.documents[0];
+
+          logger.info("Document Upload API: Processing started in background", {
+            userId,
+            documentId: createdDocument.id,
+            aiDocumentId: documentInfo.document_id,
+            status: documentInfo.status,
+          });
+
+          // Update the document with processing status
+          await prisma.document.update({
+            where: { id: createdDocument.id },
+            data: {
+              aiDocumentId: documentInfo.document_id,
+              status: 'PROCESSING',
+            },
+          });
+
+          logger.info("Document Upload API: Document processing started", {
+            userId,
+            documentId: createdDocument.id,
+            aiDocumentId: documentInfo.document_id,
+          });
+        } else {
+          // Handle synchronous processing
+          const documentInfo = result.documents[0];
+
+          logger.info("Document Upload API: Document processed synchronously", {
+            userId,
+            documentId: documentInfo.document_id,
+            chunks: documentInfo.chunks,
+            contentLength: documentInfo.content?.length || 0,
+          });
+
+          // Update the document with processing information
+          await prisma.document.update({
+            where: { id: createdDocument.id },
+            data: {
+              aiDocumentId: documentInfo.document_id,
+              content: documentInfo.content,
+              status: 'PROCESSED',
+              isProcessed: true,
+              processedAt: new Date(),
+            },
+          });
+
+          logger.info("Document Upload API: Document processing completed", {
+            userId,
+            documentId: createdDocument.id,
+            chunks: documentInfo.chunks,
+            contentLength: documentInfo.content?.length || 0,
+          });
+        }
+      } catch (error) {
+        logger.error("Document Upload API: Error processing document with AI service", { 
+          userId, 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+        // Don't fail the upload if processing fails, but log it
+        // The document will still be available for download
+      }
+
+      const responseTime = Date.now() - startTime;
+      logger.info("Document Upload API: Upload completed successfully", { 
+        userId, 
+        documentId: createdDocument.id,
+        responseTime 
+      });
+
+      return NextResponse.json({ 
+        success: true,
+        document: createdDocument,
+        message: "Document uploaded successfully" 
+      });
+
+    } catch (error) {
+      logger.error("Document Upload API: Error during upload", { 
+        userId, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+
+      // Rollback: Clean up any created resources
+      if (createdDocument) {
+        try {
+          logger.info("Document Upload API: Rolling back document record", { userId });
+          await prisma.document.delete({
+            where: { id: createdDocument.id },
+          });
+        } catch (rollbackError) {
+          logger.error("Document Upload API: Failed to rollback document record", { 
+            userId, 
+            error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError) 
+          });
+        }
+      }
+
+      if (uploadedFileUrl) {
+        try {
+          logger.info("Document Upload API: Rolling back S3 file", { userId });
+          await s3Service.deleteDocument(uploadedFileUrl);
+        } catch (rollbackError) {
+          logger.error("Document Upload API: Failed to rollback S3 file", { 
+            userId, 
+            error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError) 
+          });
+        }
+      }
+
+      throw error;
+    }
+
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
-    logger.error("Document Upload API: Error uploading files", { 
+    logger.error("Document Upload API: Upload failed", { 
       error: error.message, 
       responseTime,
       stack: error.stack 
     });
     
-    console.error("Error uploading files:", {
-      error: error.message,
-      stack: error.stack,
-      cause: error.cause,
-    });
-
     return NextResponse.json(
-      {
-        error: "Failed to upload files",
-        details: error.message,
-      },
-      { status: 500 },
+      { error: "Failed to upload document" },
+      { status: 500 }
     );
   }
 }

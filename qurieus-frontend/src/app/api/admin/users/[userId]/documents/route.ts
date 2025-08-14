@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/utils/auth";
-import { prisma } from "@/utils/prismaDB";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 import { logger } from "@/lib/logger";
+import { fetchUserDocuments } from "@/lib/documentService";
 
 export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   request: NextRequest,
@@ -21,47 +21,10 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
       targetUserId: userId 
     });
 
-    // Verify the target user exists
-    const targetUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, email: true }
-    });
-
-    if (!targetUser) {
-      logger.warn("User Documents API: Target user not found", { targetUserId: userId });
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // Fetch documents for the target user
-    const documents = await prisma.document.findMany({
-      where: {
-        userId: userId,
-      },
-      select: {
-        id: true,
-        title: true,
-        fileName: true,
-        originalName: true,
-        fileType: true,
-        fileSize: true,
-        category: true,
-        description: true,
-        keywords: true,
-        uploadedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        qdrantDocumentId: true,
-        chunkCount: true,
-        isProcessed: true,
-        processedAt: true,
-        metadata: true,
-      },
-      orderBy: {
-        uploadedAt: 'desc',
-      },
+    // Fetch documents for the target user with user info
+    const { documents, user } = await fetchUserDocuments({ 
+      userId, 
+      includeUserInfo: true 
     });
 
     const responseTime = Date.now() - startTime;
@@ -74,7 +37,7 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
 
     return NextResponse.json({ 
       documents,
-      user: targetUser
+      user
     });
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
@@ -85,6 +48,15 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
     });
     
     console.error("Error fetching user documents:", error);
+    
+    // Handle specific error for user not found
+    if (error.message === "User not found") {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Failed to fetch documents" },
       { status: 500 },

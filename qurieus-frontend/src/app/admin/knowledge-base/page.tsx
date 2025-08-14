@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect, useCallback } from 'react';
+import { User, Upload, Download, Trash2, Search, FileText } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { showToast } from '@/components/Common/Toast';
+import axiosInstance from '@/lib/axios';
+import UploadDialog from '@/components/UploadDialog';
+import ConfirmDelete from '@/components/ConfirmDelete';
 import { format } from "date-fns";
-import { Search, Upload, FileText, User as UserIcon, Download, Trash2 } from "lucide-react";
-import { showToast } from "@/components/Common/Toast";
-import Loader from "@/components/Common/Loader";
-import LoadingOverlay from "@/components/Common/LoadingOverlay";
-import axiosInstance from "@/lib/axios";
 import AsyncSelect from "react-select/async";
-import UploadDialog from "@/components/UploadDialog";
 import { useTheme } from "next-themes";
+import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import { Button } from "@/components/ui/button";
 
 interface User {
   id: string;
@@ -72,6 +72,8 @@ export default function AdminKnowledgeBasePage() {
   const [loading, setLoading] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
 
   // Load current user (super admin) as default selection
   useEffect(() => {
@@ -173,14 +175,23 @@ export default function AdminKnowledgeBasePage() {
   const handleDelete = async (documentId: string) => {
     if (!selectedUser) return;
     
-    if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-      return;
-    }
+    // Find the document to delete
+    const docToDelete = documents.find(doc => doc.id === documentId);
+    if (!docToDelete) return;
+    
+    setDocumentToDelete(docToDelete);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    setDeleteConfirmOpen(false);
+    setDocumentToDelete(null);
+
+    if (!selectedUser || !documentToDelete) return;
     
     try {
-      await axiosInstance.delete(
-        `/api/admin/users/${selectedUser.user.id}/documents/${documentId}/delete`
-      );
+      // Use the unified delete API - admin can delete any document
+      await axiosInstance.delete(`/api/documents/${documentToDelete.id}`);
       
       showToast.success("Document deleted successfully");
       // Refresh the documents list
@@ -406,6 +417,16 @@ export default function AdminKnowledgeBasePage() {
           customUploadEndpoint={`/api/admin/users/${selectedUser.user.id}/documents/upload`}
         />
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDelete
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Document"
+        message={`Are you sure you want to delete "${documentToDelete?.originalName}"? This action cannot be undone.`}
+        isLoading={loading}
+      />
     </div>
   );
 } 

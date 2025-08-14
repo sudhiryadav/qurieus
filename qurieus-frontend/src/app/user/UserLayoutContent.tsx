@@ -15,12 +15,17 @@ export default function UserLayoutContent({
   children: React.ReactNode;
   isAdmin?: boolean;
 }) {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
+  const [isSubscriptionChecked, setIsSubscriptionChecked] = useState(false);
 
   useEffect(() => {
     const checkSubscription = async () => {
-      if (!session?.user || session?.user?.role === "AGENT") return;
+      if (!session?.user || session?.user?.role === "AGENT") {
+        setIsSubscriptionChecked(true);
+        return;
+      }
+      
       try {
         const response = await axiosInstance.get("/api/user/subscription");
         setSubscriptionPlan(response.data?.plan ?? null);
@@ -75,13 +80,42 @@ export default function UserLayoutContent({
       } catch (error) {
         console.error("Error checking subscription:", error);
         showToast.error("Error checking subscription status.");
+      } finally {
+        setIsSubscriptionChecked(true);
       }
     };
+    
+    // Don't check while session is loading or if already checked
+    if (sessionStatus === "loading" || isSubscriptionChecked) return;
+    
     checkSubscription();
-  }, [session, setSubscriptionPlan]);
+  }, [session, sessionStatus, setSubscriptionPlan, isSubscriptionChecked]);
 
   // Skip subscription check for admins and agents
   const isAgent = session?.user?.role === "AGENT";
+  
+  // Show loading state while checking subscription
+  if (sessionStatus === "loading" || !isSubscriptionChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+  
+  // Handle unauthenticated users
+  if (sessionStatus === "unauthenticated") {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+          <p className="text-gray-600">Please sign in to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Only show subscription page if we've confirmed the user needs it
   if (!subscriptionPlan && !isAdmin && !isAgent) {
     return <SubscriptionPage />;
   }
