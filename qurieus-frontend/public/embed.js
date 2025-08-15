@@ -1396,52 +1396,37 @@
       // Create character bubble
       const characterBubble = document.createElement('div');
       characterBubble.style.cssText = `
-        background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 8px 12px;
+        background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#ffffff'};
+        border: 1px solid ${widgetConfig.theme === 'dark' ? '#374151' : '#e5e7eb'};
+        border-radius: 16px;
+        padding: 10px 16px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        gap: 10px;
+        box-shadow: 0 4px 12px ${widgetConfig.theme === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'};
         position: relative;
       `;
 
-      // Add character icon (robot/assistant emoji)
+      // Add character icon (minimalistic loader)
       const characterIcon = document.createElement('div');
-      characterIcon.innerHTML = '🤖';
+      characterIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><style>.loader{animation:rotate 1.5s linear infinite;transform-origin:center}.loader-circle{stroke-dasharray:60;stroke-dashoffset:60;animation:dash 1.5s ease-in-out infinite}@keyframes rotate{100%{transform:rotate(360deg)}}@keyframes dash{0%{stroke-dashoffset:60}50%{stroke-dashoffset:15}100%{stroke-dashoffset:60}}</style><circle class="loader" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/><circle class="loader-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/></svg>';
       characterIcon.style.cssText = `
-        font-size: 16px;
-        animation: bounce 1s infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
       `;
 
       // Add typing text
       const typingText = document.createElement('span');
-      typingText.textContent = 'Typing';
+      typingText.textContent = 'Thinking';
       typingText.style.cssText = `
         color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 500;
       `;
 
-      // Add typing dots
-      const dots = document.createElement('div');
-      dots.innerHTML = '<span>●</span><span>●</span><span>●</span>';
-      dots.style.cssText = `
-        display: flex;
-        gap: 2px;
-      `;
-
-      const dotSpans = dots.querySelectorAll('span');
-      dotSpans.forEach((dot, index) => {
-        dot.style.cssText = `
-          animation: typing 1.4s infinite;
-          animation-delay: ${index * 0.2}s;
-          opacity: 0.3;
-          font-size: 8px;
-          color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-        `;
-      });
+      // No dots for minimalistic design
 
       // Add tail/pointer to the bubble
       const tail = document.createElement('div');
@@ -1453,12 +1438,11 @@
         height: 0;
         border-left: 6px solid transparent;
         border-right: 6px solid transparent;
-        border-top: 6px solid ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
+        border-top: 6px solid ${widgetConfig.theme === 'dark' ? '#1f2937' : '#ffffff'};
       `;
 
       characterBubble.appendChild(characterIcon);
       characterBubble.appendChild(typingText);
-      characterBubble.appendChild(dots);
       characterBubble.appendChild(tail);
       peekingContainer.appendChild(characterBubble);
 
@@ -1466,13 +1450,9 @@
       chatWindow.appendChild(peekingContainer);
     }
 
-    // Add typing animation CSS
+    // Add minimalistic animation CSS
     const typingStyle = document.createElement('style');
     typingStyle.textContent = `
-      @keyframes typing {
-        0%, 60%, 100% { opacity: 0.3; }
-        30% { opacity: 1; }
-      }
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
@@ -1480,11 +1460,6 @@
       @keyframes peekIn {
         from { opacity: 0; transform: translateY(20px) scale(0.8); }
         to { opacity: 1; transform: translateY(0) scale(1); }
-      }
-      @keyframes bounce {
-        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-        40% { transform: translateY(-3px); }
-        60% { transform: translateY(-2px); }
       }
     `;
     document.head.appendChild(typingStyle);
@@ -1656,49 +1631,35 @@
 
       const characterBubble = document.createElement('div');
       characterBubble.style.cssText = `
-        background-color: ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 8px 12px;
+        background-color: ${widgetConfig.theme === 'dark' ? '#1f2937' : '#ffffff'};
+        border: 1px solid ${widgetConfig.theme === 'dark' ? '#374151' : '#e5e7eb'};
+        border-radius: 16px;
+        padding: 10px 16px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        gap: 10px;
+        box-shadow: 0 4px 12px ${widgetConfig.theme === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'};
         position: relative;
       `;
 
       const characterIcon = document.createElement('div');
-      characterIcon.innerHTML = '🤖';
+      characterIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><style>.loader{animation:rotate 1.5s linear infinite;transform-origin:center}.loader-circle{stroke-dasharray:60;stroke-dashoffset:60;animation:dash 1.5s ease-in-out infinite}@keyframes rotate{100%{transform:rotate(360deg)}}@keyframes dash{0%{stroke-dashoffset:60}50%{stroke-dashoffset:15}100%{stroke-dashoffset:60}}</style><circle class="loader" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/><circle class="loader-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/></svg>';
       characterIcon.style.cssText = `
-        font-size: 16px;
-        animation: bounce 1s infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
       `;
 
       const typingText = document.createElement('span');
-      typingText.textContent = 'Typing';
+      typingText.textContent = 'Thinking';
       typingText.style.cssText = `
         color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 500;
       `;
 
-      const dots = document.createElement('div');
-      dots.innerHTML = '<span>●</span><span>●</span><span>●</span>';
-      dots.style.cssText = `
-        display: flex;
-        gap: 2px;
-      `;
-
-      const dotSpans = dots.querySelectorAll('span');
-      dotSpans.forEach((dot, index) => {
-        dot.style.cssText = `
-          animation: typing 1.4s infinite;
-          animation-delay: ${index * 0.2}s;
-          opacity: 0.3;
-          font-size: 8px;
-          color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-        `;
-      });
+      // No dots for minimalistic design
 
       const tail = document.createElement('div');
       tail.style.cssText = `
@@ -1709,12 +1670,11 @@
         height: 0;
         border-left: 6px solid transparent;
         border-right: 6px solid transparent;
-        border-top: 6px solid ${widgetConfig.theme === 'dark' ? '#374151' : '#f3f4f6'};
+        border-top: 6px solid ${widgetConfig.theme === 'dark' ? '#1f2937' : '#ffffff'};
       `;
 
       characterBubble.appendChild(characterIcon);
       characterBubble.appendChild(typingText);
-      characterBubble.appendChild(dots);
       characterBubble.appendChild(tail);
       peekingContainer.appendChild(characterBubble);
 

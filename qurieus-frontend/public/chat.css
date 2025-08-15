@@ -272,4 +272,18 @@
 [data-theme="dark"] .qurieus-chat-message-content a:hover,
 [data-theme="dark"] .qurieus-chat-wrapper a:hover {
   color: #93c5fd;
+}
+
+/* Minimalistic Thinking Indicator Styles */
+.qurieus-chat-thinking {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .qurieus-chat-thinking {
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 } 
