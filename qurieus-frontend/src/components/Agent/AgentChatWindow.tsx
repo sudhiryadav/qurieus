@@ -23,6 +23,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import axiosInstance from '@/lib/axios';
+import { FormattedMessage } from '@/utils/formatMessage';
 
 interface AgentChat {
   id: string;
@@ -325,7 +326,7 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
                     : 'bg-blue-100 text-blue-900'
                 }`}
               >
-                <div className="text-sm">{msg.content}</div>
+                <FormattedMessage text={msg.content} />
                 <div className="text-xs opacity-70 mt-1 flex items-center justify-between">
                   <span>{format(new Date(msg.createdAt), 'HH:mm')}</span>
                   {msg.role === 'assistant' && (
