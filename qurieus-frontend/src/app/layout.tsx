@@ -161,7 +161,7 @@ export default function RootLayout({
           )}
         </SessionProvider>
         {shouldShowFooter && <Script
-          src="https://qurieus.com/embed.js"
+          src={`${process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")}/embed.js`}
           data-api-key="cmd06jsu00000kuhtleyyd5ff"
           data-initial-message="Hello! How can I help you today?"
           data-position="bottom-right"

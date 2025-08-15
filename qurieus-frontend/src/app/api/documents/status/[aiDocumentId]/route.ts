@@ -67,7 +67,7 @@ export async function GET(
       }
 
       const response = await fetch(
-        `${aiServiceUrl}/api/v1/admin/documents/status/${aiDocumentId}`,
+        `${aiServiceUrl}/api/v1/documents/status/${aiDocumentId}`,
         {
           method: 'GET',
           headers: {
