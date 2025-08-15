@@ -45,11 +45,8 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION")
     QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
 
-    # Backend API Key for authentication
-    BACKEND_API_KEY: str = os.getenv("BACKEND_API_KEY", "")
-
     # AI Service API Key for internal service communication
-    AI_SERVICE_API_KEY: str = os.getenv("AI_SERVICE_API_KEY", "")
+    AI_SERVICE_API_KEY: str = os.getenv("AI_SERVICE_API_KEY")
 
     # OCR Settings
     OCR_ENABLED: bool = os.getenv("OCR_ENABLED").lower() == "true"
