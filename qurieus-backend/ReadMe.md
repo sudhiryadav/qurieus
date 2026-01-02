@@ -85,9 +85,29 @@ This is the backend service for Qurieus, a document querying and chat applicatio
    Edit `.env` with your configuration:
 
    ```
+   # FastAPI Configuration
+   FAST_API_HOST=0.0.0.0
+   FAST_API_PORT=8001
+   FRONTEND_URL=http://localhost:8000
+   NEXTAUTH_SECRET=your-secret-key
+
+   # Ollama Configuration (optional - only if using local Ollama)
    OLLAMA_API_URL=http://localhost:11434
    OLLAMA_MODEL=mistral
-   NEXTAUTH_SECRET=your-secret-key
+
+   # Qdrant Configuration
+   QDRANT_URL=http://localhost:6333
+   QDRANT_COLLECTION=qurieus-documents
+   QDRANT_API_KEY=your-qdrant-api-key  # Optional
+
+   # AI Service Configuration
+   AI_SERVICE_API_KEY=your-ai-service-api-key
+
+   # OCR Configuration
+   OCR_ENABLED=true
+   OCR_LANGUAGE=eng
+   OCR_DPI=300
+   OCR_CONFIG=--oem 3 --psm 6
    ```
 
 4. Run database migrations:
@@ -97,8 +117,15 @@ This is the backend service for Qurieus, a document querying and chat applicatio
    ```
 
 5. Start the backend server:
+
    ```bash
-   uvicorn app.main:app --reload
+   uvicorn main:app --reload
+   ```
+
+   Or run directly:
+
+   ```bash
+   python main.py
    ```
 
 ## API Documentation
@@ -114,6 +141,111 @@ Once the server is running, you can access:
 - API endpoints are prefixed with `/api/v1`
 - Debug mode is enabled by default in development
 
+## Modal Service Deployment
+
+The backend uses Modal.com for GPU-accelerated LLM inference. The Modal service handles document querying with GPU support.
+
+### Prerequisites for Modal Deployment
+
+1. **Install Modal CLI:**
+
+   ```bash
+   pip install modal
+   ```
+
+2. **Authenticate with Modal:**
+
+   ```bash
+   modal token new
+   ```
+
+   Follow the prompts to authenticate with your Modal account.
+
+3. **Set up Modal Secret:**
+   Create a Modal secret named `QURIEUS_KEY` with the following environment variables:
+
+   - `API_KEY`: API key for authenticating requests to Modal endpoints
+   - `QDRANT_URL`: Qdrant vector database URL
+   - `QDRANT_COLLECTION`: Qdrant collection name
+   - `QDRANT_API_KEY`: Optional Qdrant API key
+
+   You can create the secret via Modal dashboard or CLI:
+
+   ```bash
+   modal secret create QURIEUS_KEY API_KEY=your-api-key QDRANT_URL=your-qdrant-url QDRANT_COLLECTION=your-collection QDRANT_API_KEY=your-qdrant-key
+   ```
+
+### Deploy Modal Service
+
+Deploy the Modal service using the following command:
+
+```bash
+modal deploy modal_service_persistent.py
+```
+
+This will:
+
+- Build the custom Docker image with CUDA 12.1 support
+- Install all required dependencies (sentence-transformers, llama-cpp-python, etc.)
+- Deploy the FastAPI endpoints to Modal
+- Create persistent volumes for model storage
+
+### Modal Service Endpoints
+
+After deployment, Modal will provide URLs for the following endpoints:
+
+1. **Query Documents** (`query-documents`): POST endpoint for querying documents with GPU-accelerated LLM
+
+   - Uses L40S GPU for inference
+   - Supports streaming responses
+   - Requires `x-api-key` header
+
+2. **Health Check** (`health-check`): GET endpoint to check service health
+
+   - Verifies CUDA availability
+   - Checks model loading status
+   - Requires `x-api-key` header
+
+3. **Download Model** (`download-model`): POST endpoint to download the LLM model
+   - Downloads Mistral-7B-Instruct GGUF model to persistent storage
+   - Uses CPU (no GPU required)
+   - Requires `x-api-key` header
+
+### Modal Service Configuration
+
+The Modal service (`modal_service_persistent.py`) is configured with:
+
+- **GPU**: L40S for query endpoint, T4 for health check
+- **Memory**: 4096 MB
+- **Timeout**: 300 seconds (600 for model download)
+- **Model**: Mistral-7B-Instruct-v0.2 (GGUF format, Q4_K_M quantization)
+- **Embedding Model**: BAAI/bge-small-en-v1.5
+- **Persistent Volume**: `qurieus-documents` for model storage
+
+### Updating Modal Deployment
+
+To update the Modal service after code changes:
+
+1. Increment the app version in `modal_service_persistent.py`:
+
+   ```python
+   app = modal.App("qurieus-app-v59")  # Increment version number
+   ```
+
+2. Redeploy:
+   ```bash
+   modal deploy modal_service_persistent.py
+   ```
+
+### Modal Service URLs
+
+After deployment, copy the Modal endpoint URLs and configure them in your frontend `.env`:
+
+```
+MODAL_QUERY_DOCUMENTS_URL=https://your-workspace--query-documents.modal.run
+MODAL_DOT_COM_X_API_KEY=your-api-key
+```
+
 ## Environment Variables
 
 Key environment variables:
@@ -122,6 +254,16 @@ Key environment variables:
 - `OLLAMA_MODEL`: Ollama model to use (default: mistral, options: mistral, llama2, neural-chat, etc.)
 - `NEXTAUTH_SECRET`: Secret key for NextAuth.js token verification
 - `FRONTEND_URL`: Frontend application URL for CORS
+- `FAST_API_HOST`: FastAPI server host (default: 0.0.0.0 for production, localhost for development)
+- `FAST_API_PORT`: FastAPI server port (default: 8001)
+- `QDRANT_URL`: Qdrant vector database URL
+- `QDRANT_COLLECTION`: Qdrant collection name for storing document embeddings
+- `QDRANT_API_KEY`: Optional Qdrant API key for authenticated access
+- `AI_SERVICE_API_KEY`: API key for internal AI service communication (used by Modal service)
+- `OCR_ENABLED`: Enable/disable OCR processing (true/false)
+- `OCR_LANGUAGE`: OCR language code (default: eng)
+- `OCR_DPI`: DPI for OCR page rendering (default: 300)
+- `OCR_CONFIG`: Tesseract OCR configuration options
 
 ## Troubleshooting
 
@@ -137,9 +279,23 @@ Key environment variables:
    - Verify the model is downloaded (`ollama list`)
    - Check Ollama API URL in settings
 
-3. For authentication issues:
+3. If Qdrant connection fails:
+
+   - Verify Qdrant is running and accessible
+   - Check `QDRANT_URL` and `QDRANT_API_KEY` in settings
+   - Ensure the collection exists or can be created automatically
+
+4. For authentication issues:
+
    - Ensure NEXTAUTH_SECRET matches between frontend and backend
    - Check token format in requests
+
+5. If Modal service queries fail:
+
+   - Verify Modal service is deployed (`modal deploy modal_service_persistent.py`)
+   - Check Modal secret `QURIEUS_KEY` is configured correctly
+   - Verify `MODAL_QUERY_DOCUMENTS_URL` and `MODAL_DOT_COM_X_API_KEY` are set in frontend
+   - Check Modal service logs: `modal app logs qurieus-app-v58`
 
 ## License
 
