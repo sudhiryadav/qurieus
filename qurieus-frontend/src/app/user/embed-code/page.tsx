@@ -18,6 +18,8 @@ export default function EmbedCode() {
     position: 'bottom-right',
     initialMessage: 'Hello! How can I help you today?'
   });
+  const [isDefaultForSite, setIsDefaultForSite] = useState<boolean | null>(null);
+  const [settingDefault, setSettingDefault] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -35,7 +37,31 @@ export default function EmbedCode() {
     };
 
     fetchDocuments();
-  }, [status, session?.user?.id,router]);
+  }, [status, session?.user?.id, router]);
+
+  // Check if current user is set as default embed for this website (super admin only)
+  useEffect(() => {
+    if (session?.user?.role !== "SUPER_ADMIN" && session?.user?.role !== "ADMIN") return;
+    fetch("/api/site-config/embed")
+      .then((res) => res.json())
+      .then((data) => setIsDefaultForSite(data.embedUserId === session?.user?.id))
+      .catch(() => setIsDefaultForSite(false));
+  }, [session?.user?.id, session?.user?.role]);
+
+  const setAsDefaultForWebsite = async () => {
+    if (!session?.user?.id) return;
+    setSettingDefault(true);
+    try {
+      const res = await fetch("/api/admin/site-config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "embed_user_id", value: session.user.id }),
+      });
+      if (res.ok) setIsDefaultForSite(true);
+    } finally {
+      setSettingDefault(false);
+    }
+  };
 
   // Load and initialize the embed script for preview
   useEffect(() => {
@@ -252,6 +278,21 @@ export default function EmbedCode() {
               <li>Customize the appearance using the configuration options</li>
             </ul>
           </div>
+          {(session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "ADMIN") && (
+            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-3 dark:bg-dark-3">
+              <h3 className="mb-2 font-semibold text-gray-800 dark:text-white">Website default</h3>
+              <p className="mb-2 text-sm text-gray-600 dark:text-gray-400">
+                Use your account as the default embed for this website (Qurieus homepage). The widget on the main site will use your knowledge base.
+              </p>
+              <button
+                onClick={setAsDefaultForWebsite}
+                disabled={settingDefault || isDefaultForSite === true}
+                className="rounded-lg bg-primary px-4 py-2 text-sm text-white hover:bg-primary/90 disabled:opacity-50"
+              >
+                {settingDefault ? "Saving…" : isDefaultForSite ? "Already default" : "Set as default for this website"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

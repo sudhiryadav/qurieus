@@ -1,0 +1,202 @@
+# Roommate Matcher (MyFlatmate) - App 3
+# Ports: Frontend 8003, API 8004
+# Domain: myflatmate.in
+# Let's Encrypt (run once: sudo certbot --nginx -d myflatmate.in -d www.myflatmate.in)
+
+# Route /properties to frontend when browser requests HTML (page load), else to backend (API fetch)
+map $http_accept $properties_to_frontend {
+    default 0;
+    ~*text/html 1;
+}
+
+# Route /admin to frontend when browser requests HTML (page load), else to backend (API fetch)
+map $http_accept $admin_to_frontend {
+    default 0;
+    ~*text/html 1;
+}
+
+# Route /auth to frontend when browser requests HTML (login/register pages), else to backend (API)
+# Note: /auth/google and /auth/google/callback always go to backend (OAuth flow)
+map $http_accept $auth_to_frontend {
+    default 0;
+    ~*text/html 1;
+}
+
+server {
+    listen 80;
+    server_name myflatmate.in www.myflatmate.in;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name myflatmate.in www.myflatmate.in;
+    ssl_certificate /etc/letsencrypt/live/myflatmate.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/myflatmate.in/privkey.pem;
+
+    # Socket.io (chat, notifications)
+    location /socket.io/ {
+        proxy_pass http://localhost:8004;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Frontend pages that conflict with API routes (must come before API block)
+    location ^~ /properties/search {
+        proxy_pass http://localhost:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # /properties/user/* - backend API (my-properties, etc.)
+    location ^~ /properties/user/ {
+        proxy_pass http://localhost:8004;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        client_max_body_size 20M;
+    }
+
+    # /properties - route by Accept header: text/html -> frontend (page), else -> backend (API)
+    location /properties {
+        set $props_backend http://localhost:8004;
+        if ($properties_to_frontend = 1) {
+            set $props_backend http://localhost:8003;
+        }
+        proxy_pass $props_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        client_max_body_size 20M;
+    }
+
+    # /admin - route by Accept header: text/html -> frontend (pages), else -> backend (API)
+    location /admin {
+        set $admin_backend http://localhost:8004;
+        if ($admin_to_frontend = 1) {
+            set $admin_backend http://localhost:8003;
+        }
+        proxy_pass $admin_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        client_max_body_size 20M;
+    }
+
+    # /auth/google and /auth/google/callback - always backend (OAuth flow, browser navigates with Accept: text/html)
+    location ^~ /auth/google {
+        proxy_pass http://localhost:8004;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        client_max_body_size 20M;
+    }
+
+    # /auth - route by Accept header: text/html -> frontend (login/register pages), else -> backend (API)
+    location /auth {
+        set $auth_backend http://localhost:8004;
+        if ($auth_to_frontend = 1) {
+            set $auth_backend http://localhost:8003;
+        }
+        proxy_pass $auth_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        client_max_body_size 20M;
+    }
+
+    # Backend API + WebSocket namespaces - proxy to NestJS (auth handled above)
+    location ~ ^/(health|users|images|messages|matches|payments|verification|notifications|stats|contact-requests|reports|favorites|utilities|chat)(/|$) {
+        proxy_pass http://localhost:8004;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        client_max_body_size 20M;
+    }
+
+    location /api/docs {
+        proxy_pass http://localhost:8004;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Frontend - Next.js
+    location / {
+        proxy_pass http://localhost:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    error_log /var/log/nginx/roommate_matcher_error.log;
+    access_log /var/log/nginx/roommate_matcher_access.log;
+    client_max_body_size 20M;
+}

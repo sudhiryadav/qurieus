@@ -121,7 +121,7 @@ def ensure_qdrant_collection_exists():
                 collection_name=qdrant_collection,
                 vectors_config=VectorParams(
                     size=384, distance=Distance.COSINE
-                ),  # all-MiniLM-L6-v2 has 384 dimensions
+                ),  # BAAI/bge-small-en-v1.5 has 384 dimensions
             )
             print(f"✅ Successfully created collection '{qdrant_collection}'")
 

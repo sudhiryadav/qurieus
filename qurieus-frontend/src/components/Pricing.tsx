@@ -100,9 +100,8 @@ export default function Pricing({
         .then((res) => res.data);
     };
 
-    //Get the plans
+    // Get the plans (always fetch so "View Plans" / "Change Plan" shows plans for all roles including SUPER_ADMIN)
     const fetchPlans = async () => {
-      if(session?.user?.role === "AGENT" || session?.user?.role === "SUPER_ADMIN") return Promise.resolve([]);
       return axios
         .get<SubscriptionPlanWithPaddle[]>(
           "/api/subscription/plans",

@@ -6,7 +6,7 @@ import { ensureSingleActiveSubscription } from "@/utils/subscription";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
-export const POST = RequireRoles([UserRole.USER])(async (req: NextRequest) => {
+export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
 
@@ -112,7 +112,7 @@ export const POST = RequireRoles([UserRole.USER])(async (req: NextRequest) => {
   }
 });
 
-export const GET = RequireRoles([UserRole.USER])(async (req: NextRequest) => {
+export const GET = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
   try {
     const session = await getServerSession(authOptions);
 

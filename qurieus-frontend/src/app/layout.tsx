@@ -22,10 +22,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [loading, setLoading] = useState<boolean>(true);
+  const [embedUserId, setEmbedUserId] = useState<string | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
+  }, []);
+
+  // Fetch default embed user id from DB (set by super admin) so widget works for dev and prod
+  useEffect(() => {
+    fetch("/api/site-config/embed")
+      .then((res) => res.json())
+      .then((data) => data.embedUserId && setEmbedUserId(data.embedUserId))
+      .catch(() => {});
   }, []);
 
   // Don't show footer on user layout pages
@@ -160,14 +169,16 @@ export default function RootLayout({
             </ThemeProvider>
           )}
         </SessionProvider>
-        {shouldShowFooter && <Script
-          src={`${process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")}/embed.js`}
-          data-api-key="cmd06jsu00000kuhtleyyd5ff"
-          data-initial-message="Hello! How can I help you today?"
-          data-position="bottom-right"
-          data-theme="light"
-          async
-        ></Script>}
+        {shouldShowFooter && embedUserId && (
+          <Script
+            src={`${process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")}/embed.js`}
+            data-api-key={embedUserId}
+            data-initial-message="Hello! How can I help you today?"
+            data-position="bottom-right"
+            data-theme="light"
+            async
+          />
+        )}
       </body>
     </html>
   );

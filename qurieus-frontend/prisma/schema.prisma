@@ -398,6 +398,14 @@ model PendingSubscription {
   // Optionally, add more fields as needed (e.g., planId, status)
 }
 
+// Site-wide config (e.g. default embed user for this website) - set by super admin
+model SiteConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g. "embed_user_id"
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
 // Agent Management System
 model Agent {
   id              String   @id @default(cuid())

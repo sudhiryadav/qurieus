@@ -61,7 +61,22 @@ This is the backend service for Qurieus, a document querying and chat applicatio
    ollama serve
    ```
 
-### 3. Backend Setup
+### 3. Qdrant (Vector DB) Setup
+
+The app uses **Qdrant Cloud** for document embeddings. The same cluster is used for dev and prod; collections are separate (`qurieus_dev` for development, `qurieus` for production).
+
+1. **Cluster URL** (already set in `.env` / `.env.prod`):
+   - `https://e530d574-0a13-497f-88e3-9c9ca52a8e20.sa-east-1-0.aws.cloud.qdrant.io:6333`
+
+2. **API key:** Set `QDRANT_API_KEY` in each `.env` file (get from [Qdrant Cloud](https://cloud.qdrant.io) → your cluster → API Keys).
+
+3. Collections are created automatically by the app on first use:
+   - **Development** (`.env`): `QDRANT_COLLECTION=qurieus_dev`
+   - **Production** (`.env.prod`): `QDRANT_COLLECTION=qurieus`
+
+4. **Optional – local Qdrant:** To run Qdrant locally instead, use `docker compose up -d` in `qurieus-backend` and set `QDRANT_URL=http://localhost:6333` and `QDRANT_API_KEY=` in your `.env`.
+
+### 4. Backend Setup
 
 1. Create and activate a virtual environment:
 
@@ -95,10 +110,10 @@ This is the backend service for Qurieus, a document querying and chat applicatio
    OLLAMA_API_URL=http://localhost:11434
    OLLAMA_MODEL=mistral
 
-   # Qdrant Configuration
-   QDRANT_URL=http://localhost:6333
-   QDRANT_COLLECTION=qurieus-documents
-   QDRANT_API_KEY=your-qdrant-api-key  # Optional
+   # Qdrant Configuration (same cluster for dev and prod)
+   QDRANT_URL=https://e530d574-0a13-497f-88e3-9c9ca52a8e20.sa-east-1-0.aws.cloud.qdrant.io:6333
+   QDRANT_COLLECTION=qurieus_dev
+   QDRANT_API_KEY=<your-api-key-from-cloud.qdrant.io>
 
    # AI Service Configuration
    AI_SERVICE_API_KEY=your-ai-service-api-key
@@ -174,6 +189,8 @@ The backend uses Modal.com for GPU-accelerated LLM inference. The Modal service 
    ```bash
    modal secret create QURIEUS_KEY API_KEY=your-api-key QDRANT_URL=your-qdrant-url QDRANT_COLLECTION=your-collection QDRANT_API_KEY=your-qdrant-key
    ```
+
+   **Note:** Modal runs in the cloud, so `QDRANT_URL` in the secret must be reachable from the internet (e.g. a new [Qdrant Cloud](https://cloud.qdrant.io) cluster or your server’s public URL). For local development, the backend uses the local Qdrant from the Docker Compose above.
 
 ### Deploy Modal Service
 
