@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies and build the application
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -28,7 +28,7 @@ RUN yarn prisma generate
 RUN yarn build
 
 # Stage 2: Create the production image
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
