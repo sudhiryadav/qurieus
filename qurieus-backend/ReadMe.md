@@ -192,6 +192,13 @@ The backend uses Modal.com for GPU-accelerated LLM inference. The Modal service 
 
    **Note:** Modal runs in the cloud, so `QDRANT_URL` in the secret must be reachable from the internet (e.g. a new [Qdrant Cloud](https://cloud.qdrant.io) cluster or your server’s public URL). For local development, the backend uses the local Qdrant from the Docker Compose above.
 
+**If you see "404 (Not Found)" or "Failed to search Qdrant"** from the Modal query endpoint, the Modal secret is still using an old/removed Qdrant cluster. Update the secret with your current Qdrant URL and API key (same as in backend `.env`), then redeploy:
+
+```bash
+modal secret create QURIEUS_KEY API_KEY=<your-modal-api-key> QDRANT_URL=https://e530d574-0a13-497f-88e3-9c9ca52a8e20.sa-east-1-0.aws.cloud.qdrant.io:6333 QDRANT_COLLECTION=qurieus_dev QDRANT_API_KEY=<your-qdrant-api-key>
+modal deploy modal_service_persistent.py
+```
+
 ### Deploy Modal Service
 
 Deploy the Modal service using the following command:

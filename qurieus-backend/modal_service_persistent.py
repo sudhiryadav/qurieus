@@ -273,6 +273,7 @@ async def query_documents_endpoint(
         # Initialize Qdrant client
         try:
             from qdrant_client import QdrantClient
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
 
             if qdrant_api_key:
                 qdrant_client = QdrantClient(
@@ -322,36 +323,37 @@ async def query_documents_endpoint(
                 },
             )
 
-        # Search Qdrant for similar vectors with optimized parameters
+        # Search Qdrant for similar vectors (query_points replaces deprecated search)
         search_start = time.time()
+        query_filter = Filter(
+            must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
+        )
         try:
             # First search with higher threshold for quality results
-            search_results = qdrant_client.search(
+            response = qdrant_client.query_points(
                 collection_name=qdrant_collection,
-                query_vector=query_embedding,
-                query_filter={
-                    "must": [{"key": "user_id", "match": {"value": user_id}}]
-                },
-                limit=12,  # Increased for better coverage
+                query=query_embedding,
+                query_filter=query_filter,
+                limit=12,
                 with_payload=True,
-                score_threshold=0.3,  # Higher threshold for better quality
+                score_threshold=0.3,
             )
+            search_results = response.points if hasattr(response, "points") else []
 
             # If we don't get enough results, try with lower threshold
             if len(search_results) < 3:
                 print(
                     f"Only {len(search_results)} results with high threshold, trying lower threshold..."
                 )
-                search_results = qdrant_client.search(
+                response = qdrant_client.query_points(
                     collection_name=qdrant_collection,
-                    query_vector=query_embedding,
-                    query_filter={
-                        "must": [{"key": "user_id", "match": {"value": user_id}}]
-                    },
+                    query=query_embedding,
+                    query_filter=query_filter,
                     limit=8,
                     with_payload=True,
-                    score_threshold=0.2,  # Lower threshold as fallback
+                    score_threshold=0.2,
                 )
+                search_results = response.points if hasattr(response, "points") else []
 
             print(
                 f"PERFLOG: Qdrant search completed in {time.time() - search_start:.2f}s"
