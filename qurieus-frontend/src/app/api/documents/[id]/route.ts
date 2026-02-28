@@ -147,8 +147,10 @@ export async function DELETE(
       select: { qdrantPointId: true }
     });
 
-    const hasQdrantVectors = document.qdrantDocumentId || 
-                             document.isProcessed || 
+    // Delete from Qdrant if we have any document id used for vectors (processed docs or processing/stuck)
+    const qdrantIdToDelete = document.qdrantDocumentId ?? document.aiDocumentId ?? null;
+    const hasQdrantVectors = qdrantIdToDelete ||
+                             document.isProcessed ||
                              document.status === 'PROCESSED' ||
                              documentChunks.some(chunk => chunk.qdrantPointId);
 
@@ -158,44 +160,45 @@ export async function DELETE(
       isAdmin,
       userRole: session.user.role,
       qdrantDocumentId: document.qdrantDocumentId,
+      aiDocumentId: document.aiDocumentId,
       isProcessed: document.isProcessed,
       status: document.status,
       documentChunksCount: documentChunks.length,
       hasQdrantPointIds: documentChunks.some(chunk => chunk.qdrantPointId),
-      shouldDeleteFromQdrant: hasQdrantVectors
+      shouldDeleteFromQdrant: hasQdrantVectors,
+      qdrantIdToDelete,
     });
-    
-    if (hasQdrantVectors && document.qdrantDocumentId) {
+
+    if (hasQdrantVectors && qdrantIdToDelete) {
       try {
-        // Delete vectors directly from Qdrant using the Qdrant document ID
-        await deleteVectorsForDocument(document.userId, document.qdrantDocumentId);
-        
+        await deleteVectorsForDocument(document.userId, qdrantIdToDelete);
         logger.info("Document Delete API: Document deleted from Qdrant", {
           userId: session.user.id,
           documentId: id,
-          qdrantDocumentId: document.qdrantDocumentId,
+          qdrantIdToDelete,
           isProcessed: document.isProcessed,
           status: document.status,
-          chunksDeleted: documentChunks.length
+          chunksDeleted: documentChunks.length,
         });
-      } catch (qdrantError: any) {
+      } catch (qdrantError: unknown) {
         const errorMessage = qdrantError instanceof Error ? qdrantError.message : String(qdrantError);
         logger.warn("Document Delete API: Failed to delete from Qdrant", {
           userId: session.user.id,
           documentId: id,
-          qdrantDocumentId: document.qdrantDocumentId,
-          error: errorMessage
+          qdrantIdToDelete,
+          error: errorMessage,
         });
         // Continue with deletion even if Qdrant deletion fails
       }
     } else {
-      logger.info("Document Delete API: Skipping Qdrant deletion - no vectors found", {
+      logger.info("Document Delete API: Skipping Qdrant deletion - no document id for vectors", {
         userId: session.user.id,
         documentId: id,
         qdrantDocumentId: document.qdrantDocumentId,
+        aiDocumentId: document.aiDocumentId,
         isProcessed: document.isProcessed,
         status: document.status,
-        chunksCount: documentChunks.length
+        chunksCount: documentChunks.length,
       });
     }
 

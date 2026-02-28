@@ -111,6 +111,30 @@ export async function GET(
         document.isProcessed = true;
         document.processedAt = new Date();
         document.content = result.status.content || null;
+      } else if (
+        result.status?.status === 'NOT_FOUND' &&
+        document.status === 'PROCESSING'
+      ) {
+        // Backend keeps status in memory only; NOT_FOUND usually means backend restarted
+        // or processing finished and state was lost. Unstick the document so the UI updates.
+        logger.info("Document Status API: Backend returned NOT_FOUND for PROCESSING document, marking as PROCESSED", {
+          userId,
+          documentId: document.id,
+          aiDocumentId,
+        });
+
+        await prisma.document.update({
+          where: { id: document.id },
+          data: {
+            status: 'PROCESSED',
+            isProcessed: true,
+            processedAt: new Date(),
+          },
+        });
+
+        document.status = 'PROCESSED';
+        document.isProcessed = true;
+        document.processedAt = new Date();
       }
 
       const responseTime = Date.now() - startTime;

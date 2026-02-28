@@ -97,6 +97,36 @@ export default function DocumentsList({
     });
   }, [documents]);
 
+  // Poll status for any documents stuck in PROCESSING (e.g. after backend restart)
+  // so the status API can unstick them (NOT_FOUND → mark PROCESSED) and we refresh
+  useEffect(() => {
+    const processingDocs = documents.filter(
+      (doc) => doc.status === 'PROCESSING' && doc.aiDocumentId
+    );
+    if (processingDocs.length === 0) return;
+
+    const poll = async () => {
+      for (const doc of processingDocs) {
+        try {
+          const res = await fetch(`/api/documents/status/${doc.aiDocumentId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.document?.status === 'PROCESSED' || data?.document?.status === 'FAILED') {
+              onRefresh();
+              return;
+            }
+          }
+        } catch {
+          // ignore; will retry on next interval
+        }
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => clearInterval(interval);
+  }, [documents, onRefresh]);
+
   const handleComplete = useCallback((aiDocumentId: string) => {
     setProcessingDocuments(prev => {
       const newSet = new Set(prev);
@@ -328,14 +358,15 @@ export default function DocumentsList({
                   </Button>
                 )}
                 
-                {/* Only show delete button if document is not processing */}
-                {canDelete && onDelete && doc.status !== 'PROCESSING' && (
+                {/* Delete: allowed for all documents; for PROCESSING this reverts upload and removes Qdrant refs */}
+                {canDelete && onDelete && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteClick(doc)}
                     disabled={deletingDocuments.has(doc.id)}
                     className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                    title={doc.status === 'PROCESSING' ? 'Cancel and remove this document (reverts upload and removes any vectors)' : 'Delete document'}
                   >
                     {deletingDocuments.has(doc.id) ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -363,9 +394,11 @@ export default function DocumentsList({
         isOpen={deleteDialogOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        title="Delete Document"
-        message={`Are you sure you want to delete "${documentToDelete?.title}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title={documentToDelete?.status === 'PROCESSING' ? 'Cancel & remove document' : 'Delete Document'}
+        message={documentToDelete?.status === 'PROCESSING'
+          ? `This will revert the upload and remove "${documentToDelete?.title}" and any related data (including vectors in the knowledge base). This cannot be undone.`
+          : `Are you sure you want to delete "${documentToDelete?.title}"? This action cannot be undone.`}
+        confirmText={documentToDelete?.status === 'PROCESSING' ? 'Remove' : 'Delete'}
         cancelText="Cancel"
       />
     </div>
