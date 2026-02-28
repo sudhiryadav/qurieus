@@ -105,11 +105,13 @@ build_backend:
   before_script:
     - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
   script:
-    - cd qurieus-backend
+    - pwd
+    - ls -la qurieus-backend/ || true
     - docker context create ci || echo "context exists"
     - docker buildx create ci --use
     - docker buildx inspect --bootstrap
-    - docker buildx build --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG --push .
+    # Build from repo root with explicit Dockerfile path and context (avoids cd issues)
+    - docker buildx build -f qurieus-backend/Dockerfile --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG --push qurieus-backend
   rules:
     - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
