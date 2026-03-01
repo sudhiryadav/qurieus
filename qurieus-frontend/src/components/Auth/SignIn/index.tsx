@@ -28,10 +28,24 @@ export default function SignIn({
   const callbackUrl = rawCallback.startsWith("http")
     ? new URL(rawCallback).pathname
     : rawCallback;
+  const urlError = searchParams.get("error");
   const [isPassword, setIsPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [loginData, setLoginData] = useState({ email: "", password: "" });
+
+  // Show error from URL when redirect: true fails (e.g. /signin?error=CredentialsSignin)
+  useEffect(() => {
+    if (urlError) {
+      const msg =
+        urlError === "CredentialsSignin"
+          ? "Invalid email or password."
+          : urlError === "OAuthAccountNotLinked"
+          ? "Email already used with another provider."
+          : "Sign in failed. Please try again.";
+      showToast.error(msg);
+    }
+  }, [urlError]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -50,21 +64,27 @@ export default function SignIn({
     setLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        email: loginData.email,
-        password: loginData.password,
-      });
-
-      if (result?.error) {
-        showToast.error(result.error);
-      } else {
-        if (onSuccess) {
-          onSuccess();
+      // Use redirect: true so NextAuth sets the session cookie in the redirect response.
+      // With redirect: false, the cookie may not persist before client-side router.push (prod/nginx).
+      if (onSuccess) {
+        const result = await signIn("credentials", {
+          redirect: false,
+          email: loginData.email,
+          password: loginData.password,
+        });
+        if (result?.error) {
+          showToast.error(result.error);
         } else {
-          // Use callbackUrl so user lands where they intended (e.g. /user/dashboard)
-          router.push(callbackUrl);
+          onSuccess();
         }
+      } else {
+        await signIn("credentials", {
+          redirect: true,
+          callbackUrl,
+          email: loginData.email,
+          password: loginData.password,
+        });
+        // On error, NextAuth redirects to /signin?error=... - we show it via URL
       }
     } catch (error: any) {
       showToast.error(error.message || "Sign in failed. Please try again.");
