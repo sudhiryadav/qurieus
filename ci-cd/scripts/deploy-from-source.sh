@@ -12,6 +12,9 @@
 
 set -e
 
+# Load nvm if present (needed for node/yarn in non-interactive SSH)
+[ -f "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+
 ENV=${1:-staging}
 BRANCH=${2:-dev}
 FRONTEND_CHANGED=${3:-true}
@@ -119,4 +122,13 @@ else
 fi
 
 pm2 save 2>/dev/null || true
+
+# Deploy nginx site config if present
+NGINX_SITE="$REPO_DIR/qurieus-backend/nginx/sites-available/qurieus"
+if [ -f "$NGINX_SITE" ]; then
+  echo "📋 Updating nginx config..."
+  sudo cp "$NGINX_SITE" /etc/nginx/sites-available/qurieus
+  sudo nginx -t 2>/dev/null && sudo systemctl reload nginx 2>/dev/null && echo "   nginx reloaded" || echo "   ⚠️ nginx reload skipped (check config)"
+fi
+
 echo "✅ Deployment completed!"
