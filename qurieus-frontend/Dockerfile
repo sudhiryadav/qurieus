@@ -41,6 +41,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/yarn.lock ./yarn.lock
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server.js ./server.js
 
 # The Next.js app will run on port 8000 as configured in your ecosystem.config.js
 EXPOSE 8000
