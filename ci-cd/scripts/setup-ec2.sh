@@ -1,72 +1,55 @@
 #!/bin/bash
-
-# EC2 Setup Script for Qurieus Monorepo CI/CD Pipeline
-# This script should be run on your EC2 instances to prepare them for deployment
+# EC2 Setup - NO Docker. Installs Node, Python, PM2. Run once on new server.
 
 set -e
 
-echo "🚀 Setting up EC2 instance for Qurieus monorepo deployment..."
+REPO_URL=${1:-$GITHUB_REPO_URL}
+REPO_DIR="/home/ubuntu/qurieus"
+DEPLOY_BASE="/home/ubuntu"
 
-# Update system
-echo "📦 Updating system packages..."
-sudo apt update && sudo apt upgrade -y
+echo "🚀 Setting up EC2 for Qurieus (no Docker)..."
 
-# Install Docker
-echo "🐳 Installing Docker..."
-if ! command -v docker &> /dev/null; then
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    sudo usermod -aG docker ubuntu
-    echo "✅ Docker installed successfully"
-else
-    echo "✅ Docker already installed"
+sudo apt update && sudo apt install -y curl
+
+# Node.js 20
+if ! command -v node &>/dev/null; then
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  sudo apt install -y nodejs
 fi
 
-# Install Docker Compose
-echo "📦 Installing Docker Compose..."
-if ! command -v docker-compose &> /dev/null; then
-    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-    echo "✅ Docker Compose installed successfully"
-else
-    echo "✅ Docker Compose already installed"
+# Yarn
+if ! command -v yarn &>/dev/null; then
+  npm install -g yarn
 fi
 
-# Install curl for health checks
-echo "📦 Installing curl..."
-sudo apt install -y curl
+# Python 3.11
+if ! python3 --version 2>/dev/null | grep -q "3.1[1-9]"; then
+  sudo apt install -y python3.11 python3.11-venv python3-pip
+fi
 
-# Create deployment directories for all applications
-echo "📁 Creating deployment directories..."
-mkdir -p /home/ubuntu/staging/qurieus-frontend
-mkdir -p /home/ubuntu/staging/qurieus-backend
-mkdir -p /home/ubuntu/staging/qurieus-bot-teams
-mkdir -p /home/ubuntu/prod/qurieus-frontend
-mkdir -p /home/ubuntu/prod/qurieus-backend
-mkdir -p /home/ubuntu/prod/qurieus-bot-teams
+# PM2
+if ! command -v pm2 &>/dev/null; then
+  npm install -g pm2
+  pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
+fi
 
-# Set proper permissions
-sudo chown -R ubuntu:ubuntu /home/ubuntu/staging
-sudo chown -R ubuntu:ubuntu /home/ubuntu/prod
+# Create deploy dirs
+mkdir -p $DEPLOY_BASE/{staging,prod}/{qurieus-frontend,qurieus-backend,qurieus-bot-teams}
+sudo chown -R ubuntu:ubuntu $DEPLOY_BASE/staging $DEPLOY_BASE/prod
 
-echo "✅ EC2 setup completed successfully!"
+# Clone repo
+if [ ! -d "$REPO_DIR" ]; then
+  if [ -z "$REPO_URL" ]; then
+    echo "❌ Usage: $0 https://github.com/org/qurieus.git"
+    exit 1
+  fi
+  git clone "$REPO_URL" "$REPO_DIR"
+fi
+
+chmod +x "$REPO_DIR/ci-cd/scripts/deploy-from-source.sh" 2>/dev/null || true
+
 echo ""
-echo "📋 Next steps:"
-echo "1. Copy docker-compose.yml files to the deployment directories:"
-echo "   - Frontend: /home/ubuntu/{staging,prod}/qurieus-frontend/"
-echo "   - Backend: /home/ubuntu/{staging,prod}/qurieus-backend/"
-echo "   - MSTeamsBot: /home/ubuntu/{staging,prod}/qurieus-bot-teams/"
-echo "2. Create .env files with your environment variables"
-echo "3. Configure GitHub Actions secrets"
-echo "4. Test the deployment pipeline"
-echo ""
-echo "🔧 Useful commands:"
-echo "  - Check Docker status: sudo systemctl status docker"
-echo "  - View running containers: docker ps"
-echo "  - View container logs: docker logs <container-name>"
-echo "  - Restart Docker: sudo systemctl restart docker"
-echo ""
-echo "🌐 Application ports:"
-echo "  - Frontend: 8000"
-echo "  - Backend: 8001"
-echo "  - MSTeamsBot: 3978" 
+echo "✅ Setup complete!"
+echo "1. Add .env in $DEPLOY_BASE/prod/{qurieus-frontend,qurieus-backend,qurieus-bot-teams}/"
+echo "2. Push to prod → CI/CD deploys automatically"
+echo "3. Or: cd $REPO_DIR && ./ci-cd/scripts/deploy-from-source.sh prod prod true true true"

@@ -1,68 +1,26 @@
-# GitLab CI/CD Pipeline for Qurieus Monorepo
-# This pipeline builds and deploys only the applications that have changed
+# GitLab CI/CD - No Docker. Push to prod/dev → SSH → git pull, build, PM2 restart.
 
-# Define variables available to all jobs
 variables:
-  # Container registry variables
-  DOCKERHUB_USERNAME: $DOCKERHUB_USERNAME
-  CI_REGISTRY_IMAGE_FRONTEND: $DOCKERHUB_USERNAME/qurieus-frontend
-  CI_REGISTRY_IMAGE_BACKEND: $DOCKERHUB_USERNAME/qurieus-backend
-  CI_REGISTRY_IMAGE_BOT: $DOCKERHUB_USERNAME/qurieus-msteams-bot
   RUN_PIPELINE: "false"
-  # Force variables for individual applications
   FORCE_FRONTEND: "false"
   FORCE_BACKEND: "false"
   FORCE_BOT: "false"
 
-# Define the stages of the pipeline
 stages:
   - check_changes
-  - build
   - deploy_staging
   - deploy_production
 
-# Job to check which applications have changed
 check_changes:
   stage: check_changes
   image: alpine:latest
   script:
     - apk add --no-cache git
-    # Check if frontend has changed
+    - touch changes.env
     - |
-      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "^qurieus-frontend/"; then
-        echo "FRONTEND_CHANGED=true" >> changes.env
-        echo "Frontend changes detected"
-      else
-        echo "FRONTEND_CHANGED=false" >> changes.env
-        echo "No frontend changes"
-      fi
-    # Check if backend has changed
-    - |
-      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "^qurieus-backend/"; then
-        echo "BACKEND_CHANGED=true" >> changes.env
-        echo "Backend changes detected"
-      else
-        echo "BACKEND_CHANGED=false" >> changes.env
-        echo "No backend changes"
-      fi
-    # Check if MSTeamsBot has changed
-    - |
-      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "^qurieus-bot-teams/"; then
-        echo "BOT_CHANGED=true" >> changes.env
-        echo "MSTeamsBot changes detected"
-      else
-        echo "BOT_CHANGED=false" >> changes.env
-        echo "No MSTeamsBot changes"
-      fi
-    # Check if CI/CD configuration has changed
-    - |
-      if git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep -q "\.gitlab-ci\.yml\|scripts/"; then
-        echo "CI_CHANGED=true" >> changes.env
-        echo "CI/CD configuration changes detected"
-      else
-        echo "CI_CHANGED=false" >> changes.env
-        echo "No CI/CD configuration changes"
-      fi
+      echo "FRONTEND_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -q '^qurieus-frontend/' && echo true || echo false)" >> changes.env
+      echo "BACKEND_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -q '^qurieus-backend/' && echo true || echo false)" >> changes.env
+      echo "BOT_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -q '^qurieus-bot-teams/' && echo true || echo false)" >> changes.env
     - cat changes.env
   artifacts:
     reports:
@@ -71,231 +29,48 @@ check_changes:
     - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
 
-# Job to build the frontend Docker image (only if changed or forced)
-# Use linux/amd64 for CI (GitLab runners are amd64); use arm64 only if your prod server is ARM.
-build_frontend:
-  stage: build
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
-  variables:
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_BUILDKIT: "1"
-  before_script:
-    - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
-  script:
-    - cd qurieus-frontend
-    - docker context create ci || echo "context exists"
-    - docker buildx create ci --use
-    - docker buildx inspect --bootstrap
-    # amd64 = native on GitLab runners (faster). Use arm64 if your EC2/prod is ARM.
-    - docker buildx build --platform linux/amd64 -t $DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG --push .
-  rules:
-    - if: '$RUN_PIPELINE == "true"'
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
-      variables:
-        FRONTEND_CHANGED: "true"
-    - if: '$FORCE_FRONTEND == "true"'
-
-# Job to build the backend Docker image (only if changed or forced)
-build_backend:
-  stage: build
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
-  variables:
-    DOCKER_TLS_CERTDIR: "/certs"
-  before_script:
-    - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
-  script:
-    - pwd
-    - ls -la qurieus-backend/ || true
-    - docker context create ci || echo "context exists"
-    - docker buildx create ci --use
-    - docker buildx inspect --bootstrap
-    # Build from repo root with explicit Dockerfile path and context (avoids cd issues)
-    - docker buildx build -f qurieus-backend/Dockerfile --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG --push qurieus-backend
-  rules:
-    - if: '$RUN_PIPELINE == "true"'
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
-      variables:
-        BACKEND_CHANGED: "true"
-    - if: '$FORCE_BACKEND == "true"'
-
-# Job to build the MSTeamsBot Docker image (only if changed or forced)
-build_msteams_bot:
-  stage: build
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
-  variables:
-    DOCKER_TLS_CERTDIR: "/certs"
-  before_script:
-    - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
-  script:
-    - cd qurieus-bot-teams
-    - docker context create ci || echo "context exists"
-    - docker buildx create ci --use
-    - docker buildx inspect --bootstrap
-    - docker buildx build --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG --push .
-  rules:
-    - if: '$RUN_PIPELINE == "true"'
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
-      variables:
-        BOT_CHANGED: "true"
-    - if: '$FORCE_BOT == "true"'
-
-# Base configuration for deployment jobs to avoid repetition
-.deploy_configuration: &deploy_configuration
+.deploy_base:
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client bash curl
-    - eval $(ssh-agent -s)
-    # Create SSH directory and set permissions
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
 
-# Job to deploy to the staging environment
 deploy_staging:
   stage: deploy_staging
-  extends: .deploy_configuration
+  needs: [check_changes]
+  extends: .deploy_base
   variables:
     SSH_PRIVATE_KEY: $STAGING_SSH_PRIVATE_KEY
     SSH_USER: $STAGING_SSH_USER
     SERVER_IP: $STAGING_SERVER_IP
   script:
-    - echo "🚀 Deploying to staging server..."
-    # Setup SSH key
     - |
-      if [ -n "$SSH_PRIVATE_KEY" ]; then
-        echo "Using SSH_PRIVATE_KEY variable..."
-        echo "Decoding SSH key..."
-        echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        head -1 ~/.ssh/id_rsa
-        ssh-add ~/.ssh/id_rsa
-        ssh-add -l
-      else
-        echo "Error: SSH_PRIVATE_KEY is not set"
-        exit 1
-      fi
-    - |
-      ssh ${SSH_USER}@${SERVER_IP} "
-        set -e &&
-        echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-        
-        # Deploy Frontend if changed or forced
-        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_FRONTEND\" = \"true\" ]; then
-          echo 'Deploying Frontend...' &&
-          cd /home/ubuntu/staging/qurieus-frontend &&
-          export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
-          docker-compose pull &&
-          docker-compose run --rm frontend yarn prisma migrate deploy &&
-          docker-compose up -d --remove-orphans &&
-          echo '✅ Frontend deployed successfully!'
-        else
-          echo '⏭️ Skipping Frontend deployment (no changes and not forced)'
-        fi &&
-
-        # Deploy Backend if changed or forced
-        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BACKEND\" = \"true\" ]; then
-          echo 'Deploying Backend...' &&
-          cd /home/ubuntu/staging/qurieus-backend &&
-          export BACKEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG &&
-          docker-compose pull &&
-          docker-compose up -d --remove-orphans &&
-          echo '✅ Backend deployed successfully!'
-        else
-          echo '⏭️ Skipping Backend deployment (no changes and not forced)'
-        fi &&
-        
-        # Deploy MSTeamsBot if changed or forced
-        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BOT\" = \"true\" ]; then
-          echo 'Deploying MSTeamsBot...' &&
-          cd /home/ubuntu/staging/qurieus-bot-teams &&
-          export BOT_IMAGE=$DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG &&
-          docker-compose pull &&
-          docker-compose up -d --remove-orphans &&
-          echo '✅ MSTeamsBot deployed successfully!'
-        else
-          echo '⏭️ Skipping MSTeamsBot deployment (no changes and not forced)'
-        fi &&
-        
-        echo '✅ Staging deployment completed!'"
+      F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
+      B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
+      O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+      ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
+        "cd /home/ubuntu/qurieus && ./ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
   rules:
-    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev"'
-      when: on_success
+    - if: '$RUN_PIPELINE == "true"'
 
-# Job to deploy to the production environment
 deploy_production:
   stage: deploy_production
-  extends: .deploy_configuration
+  needs: [check_changes]
+  extends: .deploy_base
   variables:
     SSH_PRIVATE_KEY: $PROD_SSH_PRIVATE_KEY
     SSH_USER: $PROD_SSH_USER
     SERVER_IP: $PROD_SERVER_IP
   script:
-    - echo "🚀 Deploying to production server..."
-    # Setup SSH key
     - |
-      if [ -n "$SSH_PRIVATE_KEY" ]; then
-        echo "Using SSH_PRIVATE_KEY variable..."
-        echo "Decoding SSH key..."
-        echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        head -1 ~/.ssh/id_rsa
-        ssh-add ~/.ssh/id_rsa
-        ssh-add -l
-      else
-        echo "Error: SSH_PRIVATE_KEY is not set"
-        exit 1
-      fi
-    - |
-      ssh ${SSH_USER}@${SERVER_IP} "
-        set -e &&
-        echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-        
-        # Deploy Frontend if changed or forced
-        if [ \"$FRONTEND_CHANGED\" = \"true\" ] || [ \"$FORCE_FRONTEND\" = \"true\" ]; then
-          echo 'Deploying Frontend...' &&
-          cd /home/ubuntu/prod/qurieus-frontend &&
-          export FRONTEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG &&
-          docker-compose pull &&
-          docker-compose run --rm frontend yarn prisma migrate deploy &&
-          docker-compose up -d --remove-orphans &&
-          echo '✅ Frontend deployed successfully!'
-        else
-          echo '⏭️ Skipping Frontend deployment (no changes and not forced)'
-        fi &&
-
-        # Deploy Backend if changed or forced
-        if [ \"$BACKEND_CHANGED\" = \"true\" ] || [ \"$FORCE_BACKEND\" = \"true\" ]; then
-          echo 'Deploying Backend...' &&
-          cd /home/ubuntu/prod/qurieus-backend &&
-          export BACKEND_IMAGE=$DOCKERHUB_USERNAME/qurieus-backend:$CI_COMMIT_REF_SLUG &&
-          docker-compose pull &&
-          docker-compose up -d --remove-orphans &&
-          echo '✅ Backend deployed successfully!'
-        else
-          echo '⏭️ Skipping Backend deployment (no changes and not forced)'
-        fi &&
-        
-        # Deploy MSTeamsBot if changed or forced
-        if [ \"$BOT_CHANGED\" = \"true\" ] || [ \"$FORCE_BOT\" = \"true\" ]; then
-          echo 'Deploying MSTeamsBot...' &&
-          cd /home/ubuntu/prod/qurieus-bot-teams &&
-          export BOT_IMAGE=$DOCKERHUB_USERNAME/qurieus-msteams-bot:$CI_COMMIT_REF_SLUG &&
-          docker-compose pull &&
-          docker-compose up -d --remove-orphans &&
-          echo '✅ MSTeamsBot deployed successfully!'
-        else
-          echo '⏭️ Skipping MSTeamsBot deployment (no changes and not forced)'
-        fi &&
-        
-        echo '✅ Production deployment completed!'"
+      F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
+      B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
+      O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+      ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
+        "cd /home/ubuntu/qurieus && ./ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
-    - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "prod"'
-      when: on_success
+    - if: '$RUN_PIPELINE == "true"'

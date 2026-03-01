@@ -1,4 +1,7 @@
-name: CI/CD Pipeline
+# CI/CD - Push to prod/dev triggers deploy. No Docker - server pulls, builds, PM2 restart.
+# Requires: repo cloned, PM2, .env in /home/ubuntu/{staging,prod}/
+
+name: CI/CD
 
 on:
   workflow_dispatch:
@@ -8,15 +11,15 @@ on:
         required: false
         default: 'false'
       force_frontend:
-        description: 'Force build and deploy frontend (ignore changes)'
+        description: 'Force deploy frontend'
         required: false
         default: 'false'
       force_backend:
-        description: 'Force build and deploy backend (ignore changes)'
+        description: 'Force deploy backend'
         required: false
         default: 'false'
       force_bot:
-        description: 'Force build and deploy bot (ignore changes)'
+        description: 'Force deploy bot'
         required: false
         default: 'false'
   push:
@@ -25,7 +28,6 @@ on:
       - prod
 
 env:
-  REGISTRY: ghcr.io/${{ github.repository }}
   FRONTEND_PATH: qurieus-frontend
   BACKEND_PATH: qurieus-backend
   BOT_PATH: qurieus-bot-teams
@@ -50,94 +52,17 @@ jobs:
             bot:
               - ${{ env.BOT_PATH }}/**
 
-  build_and_push:
+  deploy_staging:
     needs: check_changes
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        app: [frontend, backend, bot]
+    if: github.ref_name == 'dev' && (github.event_name == 'push' || (github.event.inputs.run_pipeline == 'true'))
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Debug build conditions
-        run: |
-          echo "matrix.app: ${{ matrix.app }}"
-          echo "frontend_changed: ${{ needs.check_changes.outputs.frontend_changed }}"
-          echo "backend_changed: ${{ needs.check_changes.outputs.backend_changed }}"
-          echo "bot_changed: ${{ needs.check_changes.outputs.bot_changed }}"
-          echo "force_frontend: ${{ github.event.inputs.force_frontend }}"
-          echo "force_backend: ${{ github.event.inputs.force_backend }}"
-          echo "force_bot: ${{ github.event.inputs.force_bot }}"
-      - name: Debug build context
-        run: |
-          if [ "${{ matrix.app }}" = "frontend" ]; then
-            APP_PATH="${{ env.FRONTEND_PATH }}"
-          elif [ "${{ matrix.app }}" = "backend" ]; then
-            APP_PATH="${{ env.BACKEND_PATH }}"
-          else
-            APP_PATH="${{ env.BOT_PATH }}"
-          fi
-          echo "Listing files in $APP_PATH"
-          ls -al "$APP_PATH"
-      - name: Build and push ${{ matrix.app }} image
-        if: |
-          (matrix.app == 'frontend' && (needs.check_changes.outputs.frontend_changed == 'true' || github.event.inputs.force_frontend == 'true')) ||
-          (matrix.app == 'backend' && (needs.check_changes.outputs.backend_changed == 'true' || github.event.inputs.force_backend == 'true')) ||
-          (matrix.app == 'bot' && (needs.check_changes.outputs.bot_changed == 'true' || github.event.inputs.force_bot == 'true'))
-        run: |
-          if [ "${{ matrix.app }}" = "frontend" ]; then
-            APP_PATH="${{ env.FRONTEND_PATH }}"
-            DOCKERFILE="$APP_PATH/Dockerfile"
-            IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}"
-          elif [ "${{ matrix.app }}" = "backend" ]; then
-            APP_PATH="${{ env.BACKEND_PATH }}"
-            DOCKERFILE="$APP_PATH/Dockerfile"
-            IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}"
-          else
-            APP_PATH="${{ env.BOT_PATH }}"
-            DOCKERFILE="$APP_PATH/Dockerfile"
-            IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}"
-          fi
-          echo "Building for app: ${{ matrix.app }}"
-          echo "APP_PATH: $APP_PATH"
-          echo "DOCKERFILE: $DOCKERFILE"
-          echo "IMAGE_NAME: $IMAGE_NAME"
-          ls -al "$APP_PATH"
-          docker context create ci || echo "context exists"
-          docker buildx create ci --use
-          docker buildx inspect --bootstrap
-          docker buildx build --platform linux/arm64 -f "$DOCKERFILE" -t $IMAGE_NAME "$APP_PATH" --push
-
-  deploy_staging:
-    needs: [check_changes, build_and_push]
-    runs-on: ubuntu-latest
-    if: github.ref_name == 'dev' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
-    steps:
-      - name: Set Docker Compose image variables
-        run: |
-          export FRONTEND_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
-          export BACKEND_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
-          export BOT_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
-          echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> $GITHUB_ENV
-          echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> $GITHUB_ENV
-          echo "BOT_IMAGE=$BOT_IMAGE" >> $GITHUB_ENV
       - name: Set up SSH key
         run: |
           echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
           chmod 600 id_rsa
-      - name: Deploy to Staging via SSH
+      - name: Deploy to Staging
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
-          BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
-          BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
           FRONTEND_CHANGED: ${{ needs.check_changes.outputs.frontend_changed }}
           BACKEND_CHANGED: ${{ needs.check_changes.outputs.backend_changed }}
           BOT_CHANGED: ${{ needs.check_changes.outputs.bot_changed }}
@@ -145,72 +70,23 @@ jobs:
           FORCE_BACKEND: ${{ github.event.inputs.force_backend }}
           FORCE_BOT: ${{ github.event.inputs.force_bot }}
         run: |
-          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_IP }} "
-            export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
-            export DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN &&
-            export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
-            export BACKEND_IMAGE=$BACKEND_IMAGE &&
-            export BOT_IMAGE=$BOT_IMAGE &&
-            export FRONTEND_CHANGED=$FRONTEND_CHANGED &&
-            export BACKEND_CHANGED=$BACKEND_CHANGED &&
-            export BOT_CHANGED=$BOT_CHANGED &&
-            export FORCE_FRONTEND=$FORCE_FRONTEND &&
-            export FORCE_BACKEND=$FORCE_BACKEND &&
-            export FORCE_BOT=$FORCE_BOT &&
-            echo 'Logging into Docker Hub...' &&
-            echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-            if [ \"\$FRONTEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_FRONTEND\" = \"true\" ]; then
-              echo 'Pulling and deploying Frontend...' &&
-              cd /home/ubuntu/staging/qurieus-frontend &&
-              docker-compose pull &&
-              docker-compose run --rm frontend yarn prisma migrate deploy &&
-              docker-compose up -d --remove-orphans
-            else
-              echo 'Skipping Frontend deployment (no changes)'
-            fi &&
-            if [ \"\$BACKEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_BACKEND\" = \"true\" ]; then
-              echo 'Pulling and deploying Backend...' &&
-              cd /home/ubuntu/staging/qurieus-backend &&
-              docker-compose pull &&
-              docker-compose up -d --remove-orphans
-            else
-              echo 'Skipping Backend deployment (no changes)'
-            fi &&
-            if [ \"\$BOT_CHANGED\" = \"true\" ] || [ \"\$FORCE_BOT\" = \"true\" ]; then
-              echo 'Pulling and deploying Bot...' &&
-              cd /home/ubuntu/staging/qurieus-bot-teams &&
-              docker-compose pull &&
-              docker-compose up -d --remove-orphans
-            else
-              echo 'Skipping Bot deployment (no changes)'
-            fi &&
-            echo 'Deployment completed successfully!'
-          "
+          F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
+          B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
+          O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_IP }} \
+            "cd /home/ubuntu/qurieus && ./ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
 
   deploy_production:
-    needs: [check_changes, build_and_push]
+    needs: check_changes
     runs-on: ubuntu-latest
-    if: github.ref_name == 'prod' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
+    if: github.ref_name == 'prod' && (github.event_name == 'push' || (github.event.inputs.run_pipeline == 'true'))
     steps:
-      - name: Set Docker Compose image variables
-        run: |
-          export FRONTEND_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
-          export BACKEND_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
-          export BOT_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
-          echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> $GITHUB_ENV
-          echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> $GITHUB_ENV
-          echo "BOT_IMAGE=$BOT_IMAGE" >> $GITHUB_ENV
       - name: Set up SSH key
         run: |
           echo "${{ secrets.PROD_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
           chmod 600 id_rsa
-      - name: Deploy to Production via SSH
+      - name: Deploy to Production
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-frontend:${{ github.ref_name }}
-          BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-backend:${{ github.ref_name }}
-          BOT_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/qurieus-msteams-bot:${{ github.ref_name }}
           FRONTEND_CHANGED: ${{ needs.check_changes.outputs.frontend_changed }}
           BACKEND_CHANGED: ${{ needs.check_changes.outputs.backend_changed }}
           BOT_CHANGED: ${{ needs.check_changes.outputs.bot_changed }}
@@ -218,44 +94,8 @@ jobs:
           FORCE_BACKEND: ${{ github.event.inputs.force_backend }}
           FORCE_BOT: ${{ github.event.inputs.force_bot }}
         run: |
-          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SERVER_IP }} "
-            export DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME &&
-            export DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN &&
-            export FRONTEND_IMAGE=$FRONTEND_IMAGE &&
-            export BACKEND_IMAGE=$BACKEND_IMAGE &&
-            export BOT_IMAGE=$BOT_IMAGE &&
-            export FRONTEND_CHANGED=$FRONTEND_CHANGED &&
-            export BACKEND_CHANGED=$BACKEND_CHANGED &&
-            export BOT_CHANGED=$BOT_CHANGED &&
-            export FORCE_FRONTEND=$FORCE_FRONTEND &&
-            export FORCE_BACKEND=$FORCE_BACKEND &&
-            export FORCE_BOT=$FORCE_BOT &&
-            echo 'Logging into Docker Hub...' &&
-            echo \$DOCKERHUB_TOKEN | docker login -u \$DOCKERHUB_USERNAME --password-stdin &&
-            if [ \"\$FRONTEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_FRONTEND\" = \"true\" ]; then
-              echo 'Pulling and deploying Frontend...' &&
-              cd /home/ubuntu/prod/qurieus-frontend &&
-              docker-compose pull &&
-              docker-compose run --rm frontend yarn prisma migrate deploy &&
-              docker-compose up -d --remove-orphans
-            else
-              echo 'Skipping Frontend deployment (no changes)'
-            fi &&
-            if [ \"\$BACKEND_CHANGED\" = \"true\" ] || [ \"\$FORCE_BACKEND\" = \"true\" ]; then
-              echo 'Pulling and deploying Backend...' &&
-              cd /home/ubuntu/prod/qurieus-backend &&
-              docker-compose pull &&
-              docker-compose up -d --remove-orphans
-            else
-              echo 'Skipping Backend deployment (no changes)'
-            fi &&
-            if [ \"\$BOT_CHANGED\" = \"true\" ] || [ \"\$FORCE_BOT\" = \"true\" ]; then
-              echo 'Pulling and deploying Bot...' &&
-              cd /home/ubuntu/prod/qurieus-bot-teams &&
-              docker-compose pull &&
-              docker-compose up -d --remove-orphans
-            else
-              echo 'Skipping Bot deployment (no changes)'
-            fi &&
-            echo 'Deployment completed successfully!'
-          "
+          F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
+          B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
+          O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SERVER_IP }} \
+            "cd /home/ubuntu/qurieus && ./ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
