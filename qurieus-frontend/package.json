@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 node server.js",
+    "dev": "PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 NEXT_PUBLIC_BUILD_TIME=dev node server.js",
     "build": "next build",
     "start": "NODE_ENV=production PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 NEXTAUTH_SECRET='r0ykrYJHo9NRYFQBx2qcPBGXuPphJBO/0lY7ega2z8E=' node server.js",
     "start:dev": "NODE_ENV=development PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 node server.js",

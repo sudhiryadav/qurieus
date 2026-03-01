@@ -78,13 +78,22 @@ export default function SignIn({
           onSuccess();
         }
       } else {
-        await signIn("credentials", {
-          redirect: true,
+        const result = await signIn("credentials", {
+          redirect: false,
           callbackUrl,
           email: loginData.email,
           password: loginData.password,
         });
-        // On error, NextAuth redirects to /signin?error=... - we show it via URL
+        if (result?.error) {
+          showToast.error(result.error);
+        } else {
+          // Full page navigation ensures cookie is sent (fixes prod/nginx session persistence)
+          if (typeof window !== "undefined") {
+            window.location.href = window.location.origin + callbackUrl;
+          } else {
+            router.push(callbackUrl);
+          }
+        }
       }
     } catch (error: any) {
       showToast.error(error.message || "Sign in failed. Please try again.");
