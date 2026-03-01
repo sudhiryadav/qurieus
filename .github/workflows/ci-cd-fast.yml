@@ -1,0 +1,107 @@
+# Fast CI/CD - No build in CI. Server pulls code, builds locally (with Docker cache), deploys.
+# Use this for faster pipelines. Requires server setup: clone repo + deploy compose files.
+# See ci-cd/GIT_DEPLOY_SETUP.md for setup instructions.
+#
+# Benefits:
+# - CI completes in ~1-2 min (vs 10+ min with Docker builds)
+# - yarn install runs only when package.json/yarn.lock change (Docker layer cache)
+# - pip install runs only when requirements.txt changes (Docker layer cache)
+
+name: CI/CD Fast (Git Deploy)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_pipeline:
+        description: 'Run the pipeline?'
+        required: false
+        default: 'false'
+      force_frontend:
+        description: 'Force deploy frontend (ignore changes)'
+        required: false
+        default: 'false'
+      force_backend:
+        description: 'Force deploy backend (ignore changes)'
+        required: false
+        default: 'false'
+      force_bot:
+        description: 'Force deploy bot (ignore changes)'
+        required: false
+        default: 'false'
+  push:
+    branches:
+      - dev
+      - prod
+
+env:
+  FRONTEND_PATH: qurieus-frontend
+  BACKEND_PATH: qurieus-backend
+  BOT_PATH: qurieus-bot-teams
+
+jobs:
+  check_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend_changed: ${{ steps.filter.outputs.frontend }}
+      backend_changed: ${{ steps.filter.outputs.backend }}
+      bot_changed: ${{ steps.filter.outputs.bot }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - ${{ env.FRONTEND_PATH }}/**
+            backend:
+              - ${{ env.BACKEND_PATH }}/**
+            bot:
+              - ${{ env.BOT_PATH }}/**
+
+  deploy_staging:
+    needs: check_changes
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'dev' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
+    steps:
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
+          chmod 600 id_rsa
+      - name: Deploy to Staging (git pull + build on server)
+        env:
+          FRONTEND_CHANGED: ${{ needs.check_changes.outputs.frontend_changed }}
+          BACKEND_CHANGED: ${{ needs.check_changes.outputs.backend_changed }}
+          BOT_CHANGED: ${{ needs.check_changes.outputs.bot_changed }}
+          FORCE_FRONTEND: ${{ github.event.inputs.force_frontend }}
+          FORCE_BACKEND: ${{ github.event.inputs.force_backend }}
+          FORCE_BOT: ${{ github.event.inputs.force_bot }}
+        run: |
+          FRONTEND=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
+          BACKEND=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
+          BOT=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SERVER_IP }} \
+            "cd /home/ubuntu/qurieus && chmod +x ci-cd/scripts/deploy-from-source.sh && ./ci-cd/scripts/deploy-from-source.sh staging dev $FRONTEND $BACKEND $BOT"
+
+  deploy_production:
+    needs: check_changes
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'prod' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_pipeline == 'true'))
+    steps:
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.PROD_SSH_PRIVATE_KEY }}" | base64 -d > id_rsa
+          chmod 600 id_rsa
+      - name: Deploy to Production (git pull + build on server)
+        env:
+          FRONTEND_CHANGED: ${{ needs.check_changes.outputs.frontend_changed }}
+          BACKEND_CHANGED: ${{ needs.check_changes.outputs.backend_changed }}
+          BOT_CHANGED: ${{ needs.check_changes.outputs.bot_changed }}
+          FORCE_FRONTEND: ${{ github.event.inputs.force_frontend }}
+          FORCE_BACKEND: ${{ github.event.inputs.force_backend }}
+          FORCE_BOT: ${{ github.event.inputs.force_bot }}
+        run: |
+          FRONTEND=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
+          BACKEND=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
+          BOT=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+          ssh -i id_rsa -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SERVER_IP }} \
+            "cd /home/ubuntu/qurieus && chmod +x ci-cd/scripts/deploy-from-source.sh && ./ci-cd/scripts/deploy-from-source.sh prod prod $FRONTEND $BACKEND $BOT"
