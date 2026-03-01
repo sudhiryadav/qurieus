@@ -38,7 +38,6 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  trustHost: true, // Required when behind nginx/proxy so session persists after login
   pages: {
     signIn: "/signin",
     error: "/error",

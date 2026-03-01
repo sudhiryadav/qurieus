@@ -79,6 +79,9 @@ copy_app_env "qurieus-frontend" "frontend"
 copy_app_env "qurieus-backend" "backend"
 copy_app_env "qurieus-bot-teams" "bot"
 
+# Ensure AUTH_TRUST_HOST for NextAuth behind nginx (session persistence after login)
+grep -q '^AUTH_TRUST_HOST=' "$REPO_DIR/qurieus-frontend/.env" 2>/dev/null || echo "AUTH_TRUST_HOST=true" >> "$REPO_DIR/qurieus-frontend/.env"
+
 # Deploy Frontend
 if [ "$FRONTEND_CHANGED" = "true" ]; then
   echo "📦 Deploying Frontend..."
