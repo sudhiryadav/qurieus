@@ -5,7 +5,8 @@
 #   env: staging | prod
 #   branch: dev | prod
 #
-# Prerequisites: Node, Python 3.11+, PM2, repo at $REPO_DIR, .env in /home/ubuntu/$env/
+# Prerequisites: Node, Python 3.11+, PM2, repo at $REPO_DIR.
+# On server: app-specific env files (prod.qurieus.frontend.env, etc.)
 
 set -e
 
@@ -16,7 +17,6 @@ BACKEND_CHANGED=${4:-true}
 BOT_CHANGED=${5:-true}
 
 REPO_DIR=${REPO_DIR:-/home/ubuntu/qurieus}
-DEPLOY_BASE="/home/ubuntu/$ENV"
 
 if [ ! -d "$REPO_DIR" ]; then
   echo "❌ Repo not found at $REPO_DIR. Set REPO_DIR or run setup-ec2.sh first."
@@ -51,22 +51,32 @@ requirements_changed() {
   git diff --name-only $PREV_HEAD HEAD -- "qurieus-backend/requirements.txt" 2>/dev/null | grep -q . && echo "yes" || echo "no"
 }
 
-# Copy .env from deploy dir to app (for build + runtime)
-copy_env() {
-  local app=$1
-  local src="$DEPLOY_BASE/$app/.env"
-  local dest="$REPO_DIR/$app/.env"
+# Copy app-specific env files from server (prod.qurieus.{app}.env or staging.qurieus.{app}.env)
+ENV_DIR="${ENV_DIR:-/home/ubuntu}"
+ENV_PREFIX="$([ "$ENV" = "prod" ] && echo "prod" || echo "staging").qurieus"
+
+copy_app_env() {
+  local app_dir=$1
+  local app_name=$2
+  local src="$ENV_DIR/${ENV_PREFIX}.${app_name}.env"
+  local dest="$REPO_DIR/$app_dir/.env"
   if [ -f "$src" ]; then
     cp "$src" "$dest"
+    echo "   $app_dir: ${ENV_PREFIX}.${app_name}.env -> .env"
   else
-    echo "⚠️  No .env at $src - create it for $app"
+    echo "⚠️  No $src on server - create it for $ENV deployment"
+    exit 1
   fi
 }
+
+echo "📋 Copying env files for $ENV..."
+copy_app_env "qurieus-frontend" "frontend"
+copy_app_env "qurieus-backend" "backend"
+copy_app_env "qurieus-bot-teams" "bot"
 
 # Deploy Frontend
 if [ "$FRONTEND_CHANGED" = "true" ]; then
   echo "📦 Deploying Frontend..."
-  copy_env "qurieus-frontend"
   cd "$REPO_DIR/qurieus-frontend"
   PKG_CHANGED=$(packages_changed "qurieus-frontend")
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile
@@ -82,7 +92,6 @@ fi
 # Deploy Backend
 if [ "$BACKEND_CHANGED" = "true" ]; then
   echo "📦 Deploying Backend..."
-  copy_env "qurieus-backend"
   cd "$REPO_DIR/qurieus-backend"
   REQ_CHANGED=$(requirements_changed)
   if [ "$REQ_CHANGED" = "yes" ] || [ ! -d ".venv" ]; then
@@ -98,7 +107,6 @@ fi
 # Deploy Bot
 if [ "$BOT_CHANGED" = "true" ]; then
   echo "📦 Deploying MSTeams Bot..."
-  copy_env "qurieus-bot-teams"
   cd "$REPO_DIR/qurieus-bot-teams"
   PKG_CHANGED=$(packages_changed "qurieus-bot-teams")
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile

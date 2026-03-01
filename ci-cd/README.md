@@ -17,13 +17,33 @@ curl -fsSL https://raw.githubusercontent.com/ORG/qurieus/main/ci-cd/scripts/setu
 
 Or: `./ci-cd/scripts/setup-ec2.sh https://github.com/ORG/qurieus.git`
 
-## Add .env files
+## Env files (on server)
 
-Create `.env` in each deploy dir with your secrets:
+**App-specific env files** in `/home/ubuntu/` (or `ENV_DIR`):
 
-- `/home/ubuntu/prod/qurieus-frontend/.env`
-- `/home/ubuntu/prod/qurieus-backend/.env`
-- `/home/ubuntu/prod/qurieus-bot-teams/.env`
+| File | App |
+|------|-----|
+| `prod.qurieus.frontend.env` | qurieus-frontend (prod) |
+| `prod.qurieus.backend.env` | qurieus-backend (prod) |
+| `prod.qurieus.bot.env` | qurieus-bot-teams (prod) |
+| `staging.qurieus.frontend.env` | qurieus-frontend (staging) |
+| `staging.qurieus.backend.env` | qurieus-backend (staging) |
+| `staging.qurieus.bot.env` | qurieus-bot-teams (staging) |
+
+The deploy script copies each app's env file to its `.env` before build/run.
+
+**Setup on server:**
+```bash
+# SSH to server, create the files
+nano /home/ubuntu/prod.qurieus.frontend.env
+nano /home/ubuntu/prod.qurieus.backend.env
+nano /home/ubuntu/prod.qurieus.bot.env
+nano /home/ubuntu/staging.qurieus.frontend.env
+nano /home/ubuntu/staging.qurieus.backend.env
+nano /home/ubuntu/staging.qurieus.bot.env
+```
+
+See `ci-cd/env.template` for required vars (no secrets).
 
 ## GitLab CI/CD variables
 
