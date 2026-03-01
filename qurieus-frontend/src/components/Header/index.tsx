@@ -300,6 +300,16 @@ const Header: React.FC = () => {
           )}
 
           <div className="flex items-center space-x-1 sm:space-x-2">
+            {/* Deployment time - visible in prod to verify latest version */}
+            {typeof process.env.NEXT_PUBLIC_BUILD_TIME === "string" &&
+              process.env.NEXT_PUBLIC_BUILD_TIME && (
+              <span
+                className="hidden sm:inline text-[10px] text-muted-foreground/70"
+                title="Last deployment"
+              >
+                {process.env.NEXT_PUBLIC_BUILD_TIME}
+              </span>
+            )}
             {/* Mobile/Shared Controls */}
             {/* theme toggler */}
             <button

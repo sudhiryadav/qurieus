@@ -90,6 +90,8 @@ if [ "$FRONTEND_CHANGED" = "true" ]; then
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile
   yarn prisma generate
   yarn prisma migrate deploy 2>/dev/null || true
+  # Inject build time for header display (user can verify latest deploy)
+  export NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M UTC")
   yarn build
   pm2 restart qurieus-frontend --update-env 2>/dev/null || (cd "$REPO_DIR" && REPO_DIR="$REPO_DIR" pm2 start ecosystem.config.cjs --only qurieus-frontend)
   echo "✅ Frontend deployed"
