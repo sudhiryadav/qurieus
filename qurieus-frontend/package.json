@@ -9,7 +9,8 @@
     "start:dev": "NODE_ENV=development PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 node server.js",
     "lint": "next lint",
     "tunnel": "ngrok http 8000",
-    "reset-db": "ts-node --project prisma/tsconfig.json scripts/reset-db.ts"
+    "reset-db": "ts-node --project prisma/tsconfig.json scripts/reset-db.ts",
+    "keep-qdrant-active": "ts-node scripts/keepQdrantActive.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
