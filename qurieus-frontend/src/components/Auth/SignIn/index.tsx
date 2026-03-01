@@ -87,12 +87,9 @@ export default function SignIn({
         if (result?.error) {
           showToast.error(result.error);
         } else {
-          // Full page navigation ensures cookie is sent (fixes prod/nginx session persistence)
-          if (typeof window !== "undefined") {
-            window.location.href = window.location.origin + callbackUrl;
-          } else {
-            router.push(callbackUrl);
-          }
+          // router.refresh() forces Next.js to re-fetch with the new session cookie
+          router.refresh();
+          router.push(callbackUrl);
         }
       }
     } catch (error: any) {
