@@ -8,9 +8,10 @@
 #   frontend_changed, backend_changed, bot_changed: true | false (default: true if not specified)
 #
 # Prerequisites:
-#   - Repo cloned at $REPO_DIR (default: /home/ubuntu/repo)
+#   - Repo cloned at $REPO_DIR (default: /home/ubuntu/qurieus)
 #   - Deployment dirs at /home/ubuntu/$env/qurieus-{frontend,backend,bot-teams}
 #   - docker-compose.deploy.yml files in each deployment dir (build from source)
+#   - If repo missing, run: ./ci-cd/scripts/setup-git-deploy.sh <REPO_URL>
 
 set -e
 
