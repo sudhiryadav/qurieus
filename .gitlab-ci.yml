@@ -33,7 +33,7 @@ check_changes:
 .deploy_base:
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client
+    - apk add --no-cache openssh-client git rsync
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - echo "$SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
@@ -49,13 +49,14 @@ deploy_staging:
   script:
     - |
       REPO_DIR="${STAGING_REPO_DIR:-/home/ubuntu/qurieus}"
+      BRANCH="dev"
       F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
-      printf 'export GITLAB_DEPLOY_TOKEN_USER="%s"\nexport GITLAB_DEPLOY_TOKEN="%s"\n' "$STAGING_DEPLOY_TOKEN_USER" "$STAGING_DEPLOY_TOKEN" > /tmp/deploy_env
-      scp -o StrictHostKeyChecking=no /tmp/deploy_env ${SSH_USER}@${SERVER_IP}:/tmp/deploy_env
+      git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
+      rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "source /tmp/deploy_env && rm -f /tmp/deploy_env && export REPO_DIR='${REPO_DIR}' && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$RUN_PIPELINE == "true"'
@@ -71,13 +72,14 @@ deploy_production:
   script:
     - |
       REPO_DIR="${PROD_REPO_DIR:-/home/ubuntu/qurieus}"
+      BRANCH="prod"
       F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
-      printf 'export GITLAB_DEPLOY_TOKEN_USER="%s"\nexport GITLAB_DEPLOY_TOKEN="%s"\n' "$PROD_DEPLOY_TOKEN_USER" "$PROD_DEPLOY_TOKEN" > /tmp/deploy_env
-      scp -o StrictHostKeyChecking=no /tmp/deploy_env ${SSH_USER}@${SERVER_IP}:/tmp/deploy_env
+      git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
+      rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "source /tmp/deploy_env && rm -f /tmp/deploy_env && export REPO_DIR='${REPO_DIR}' && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "prod"'
     - if: '$RUN_PIPELINE == "true"'

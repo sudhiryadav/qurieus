@@ -26,19 +26,21 @@ fi
 echo "🚀 Deploying to $ENV (branch: $BRANCH) - no Docker"
 echo "   Frontend: $FRONTEND_CHANGED | Backend: $BACKEND_CHANGED | Bot: $BOT_CHANGED"
 
-# Pull latest code (use HTTPS deploy token - required for CI)
+# Sync or pull code
 cd "$REPO_DIR"
-if [ -n "$GITLAB_DEPLOY_TOKEN" ] && [ -n "$GITLAB_DEPLOY_TOKEN_USER" ]; then
-  echo "Using HTTPS deploy token for git"
-  GIT_URL="https://${GITLAB_DEPLOY_TOKEN_USER}:${GITLAB_DEPLOY_TOKEN}@gitlab.com/frontslash/apps/qurieus.git"
-  git remote set-url origin "$GIT_URL" 2>/dev/null || git remote add origin "$GIT_URL"
+if [ "$SKIP_GIT_PULL" = "1" ]; then
+  echo "Code was rsynced from CI - skipping git pull"
+  PREV_HEAD=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD")
 else
-  echo "⚠️ GITLAB_DEPLOY_TOKEN not set - git pull will use SSH (may fail)"
+  if [ -n "$GITLAB_DEPLOY_TOKEN" ] && [ -n "$GITLAB_DEPLOY_TOKEN_USER" ]; then
+    GIT_URL="https://${GITLAB_DEPLOY_TOKEN_USER}:${GITLAB_DEPLOY_TOKEN}@gitlab.com/frontslash/apps/qurieus.git"
+    git remote set-url origin "$GIT_URL" 2>/dev/null || git remote add origin "$GIT_URL"
+  fi
+  git fetch origin
+  git checkout "$BRANCH"
+  git pull origin "$BRANCH"
+  PREV_HEAD=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD")
 fi
-git fetch origin
-git checkout "$BRANCH"
-git pull origin "$BRANCH"
-PREV_HEAD=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD")
 
 packages_changed() {
   local app_path=$1
