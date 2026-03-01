@@ -24,7 +24,10 @@ export default function SignIn({
   const router = useRouter();
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/user/dashboard";
+  const rawCallback = searchParams.get("callbackUrl") || "/user/dashboard";
+  const callbackUrl = rawCallback.startsWith("http")
+    ? new URL(rawCallback).pathname
+    : rawCallback;
   const [isPassword, setIsPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -59,12 +62,8 @@ export default function SignIn({
         if (onSuccess) {
           onSuccess();
         } else {
-          // Redirect based on user role
-          if (session?.user?.role === "AGENT") {
-            router.push("/agent/dashboard");
-          } else {
-            router.push("/user/knowledge-base");
-          }
+          // Use callbackUrl so user lands where they intended (e.g. /user/dashboard)
+          router.push(callbackUrl);
         }
       }
     } catch (error: any) {
