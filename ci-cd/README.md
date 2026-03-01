@@ -25,14 +25,12 @@ Create `.env` in each deploy dir with your secrets:
 - `/home/ubuntu/prod/qurieus-backend/.env`
 - `/home/ubuntu/prod/qurieus-bot-teams/.env`
 
-## GitHub secrets
+## GitLab CI/CD variables
 
-- `STAGING_SSH_PRIVATE_KEY` (base64)
-- `STAGING_SSH_USER` = ubuntu
-- `STAGING_SERVER_IP`
-- `PROD_SSH_PRIVATE_KEY` (base64)
-- `PROD_SSH_USER` = ubuntu
-- `PROD_SERVER_IP`
+- `STAGING_SSH_PRIVATE_KEY`, `STAGING_SSH_USER`, `STAGING_SERVER_IP`
+- `PROD_SSH_PRIVATE_KEY`, `PROD_SSH_USER`, `PROD_SERVER_IP`
+- `PROD_REPO_DIR` (optional) – if repo is not at `/home/ubuntu/qurieus`
+- `STAGING_REPO_DIR` (optional) – if repo is not at `/home/ubuntu/qurieus`
 
 ## Remove Docker (after migration)
 

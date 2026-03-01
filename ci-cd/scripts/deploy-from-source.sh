@@ -18,6 +18,11 @@ BOT_CHANGED=${5:-true}
 REPO_DIR=${REPO_DIR:-/home/ubuntu/qurieus}
 DEPLOY_BASE="/home/ubuntu/$ENV"
 
+if [ ! -d "$REPO_DIR" ]; then
+  echo "❌ Repo not found at $REPO_DIR. Set REPO_DIR or run setup-ec2.sh first."
+  exit 1
+fi
+
 echo "🚀 Deploying to $ENV (branch: $BRANCH) - no Docker"
 echo "   Frontend: $FRONTEND_CHANGED | Backend: $BACKEND_CHANGED | Bot: $BOT_CHANGED"
 
@@ -59,7 +64,7 @@ if [ "$FRONTEND_CHANGED" = "true" ]; then
   yarn prisma generate
   yarn prisma migrate deploy 2>/dev/null || true
   yarn build
-  pm2 restart qurieus-frontend --update-env 2>/dev/null || (cd "$REPO_DIR" && pm2 start ecosystem.config.cjs --only qurieus-frontend)
+  pm2 restart qurieus-frontend --update-env 2>/dev/null || (cd "$REPO_DIR" && REPO_DIR="$REPO_DIR" pm2 start ecosystem.config.cjs --only qurieus-frontend)
   echo "✅ Frontend deployed"
 else
   echo "⏭️ Skipping Frontend"
@@ -75,7 +80,7 @@ if [ "$BACKEND_CHANGED" = "true" ]; then
     python3 -m venv .venv 2>/dev/null || true
     .venv/bin/pip install -r requirements.txt -q
   fi
-  pm2 restart qurieus-backend --update-env 2>/dev/null || (cd "$REPO_DIR" && pm2 start ecosystem.config.cjs --only qurieus-backend)
+  pm2 restart qurieus-backend --update-env 2>/dev/null || (cd "$REPO_DIR" && REPO_DIR="$REPO_DIR" pm2 start ecosystem.config.cjs --only qurieus-backend)
   echo "✅ Backend deployed"
 else
   echo "⏭️ Skipping Backend"
@@ -88,7 +93,7 @@ if [ "$BOT_CHANGED" = "true" ]; then
   cd "$REPO_DIR/qurieus-bot-teams"
   PKG_CHANGED=$(packages_changed "qurieus-bot-teams")
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile
-  pm2 restart qurieus-bot-teams --update-env 2>/dev/null || (cd "$REPO_DIR" && pm2 start ecosystem.config.cjs --only qurieus-bot-teams)
+  pm2 restart qurieus-bot-teams --update-env 2>/dev/null || (cd "$REPO_DIR" && REPO_DIR="$REPO_DIR" pm2 start ecosystem.config.cjs --only qurieus-bot-teams)
   echo "✅ Bot deployed"
 else
   echo "⏭️ Skipping Bot"

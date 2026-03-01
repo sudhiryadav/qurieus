@@ -47,11 +47,12 @@ deploy_staging:
     SERVER_IP: $STAGING_SERVER_IP
   script:
     - |
+      REPO_DIR="${STAGING_REPO_DIR:-/home/ubuntu/qurieus}"
       F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "cd /home/ubuntu/qurieus && ./ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' && cd \"\$REPO_DIR\" && ./ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$RUN_PIPELINE == "true"'
@@ -66,11 +67,12 @@ deploy_production:
     SERVER_IP: $PROD_SERVER_IP
   script:
     - |
+      REPO_DIR="${PROD_REPO_DIR:-/home/ubuntu/qurieus}"
       F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "cd /home/ubuntu/qurieus && ./ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' && cd \"\$REPO_DIR\" && ./ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "prod"'
     - if: '$RUN_PIPELINE == "true"'

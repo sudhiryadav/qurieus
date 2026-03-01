@@ -1,7 +1,7 @@
-// PM2 config for Qurieus - run from repo root: pm2 start ecosystem.config.cjs
+// PM2 config for Qurieus - run from repo root: REPO_DIR=/path pm2 start ecosystem.config.cjs
 // .env is copied from /home/ubuntu/{staging|prod}/ to each app dir before deploy
 
-const REPO = "/home/ubuntu/qurieus";
+const REPO = process.env.REPO_DIR || "/home/ubuntu/qurieus";
 
 module.exports = {
   apps: [
