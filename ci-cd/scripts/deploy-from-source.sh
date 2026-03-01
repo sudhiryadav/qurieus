@@ -6,7 +6,9 @@
 #   branch: dev | prod
 #
 # Prerequisites: Node, Python 3.11+, PM2, repo at $REPO_DIR.
-# On server: app-specific env files (prod.qurieus.frontend.env, etc.)
+# On server: app-specific env files in ENV_DIR (default /home/ubuntu):
+#   prod.qurieus.frontend.env, prod.qurieus.backend.env, prod.qurieus.bot.env
+#   staging.qurieus.frontend.env, staging.qurieus.backend.env, staging.qurieus.bot.env
 
 set -e
 
@@ -57,7 +59,7 @@ ENV_PREFIX="$([ "$ENV" = "prod" ] && echo "prod" || echo "staging").qurieus"
 
 copy_app_env() {
   local app_dir=$1
-  local app_name=$2
+  local app_name=$2   # frontend | backend | bot
   local src="$ENV_DIR/${ENV_PREFIX}.${app_name}.env"
   local dest="$REPO_DIR/$app_dir/.env"
   if [ -f "$src" ]; then
