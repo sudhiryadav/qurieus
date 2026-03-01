@@ -1,4 +1,5 @@
 # GitLab CI/CD - No Docker. Push to prod/dev → SSH → git pull, build, PM2 restart.
+# PROD_SERVER_IP must be the server with /home/ubuntu/qurieus (may be same as STAGING_SERVER_IP).
 
 variables:
   RUN_PIPELINE: "false"

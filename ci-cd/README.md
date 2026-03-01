@@ -32,6 +32,8 @@ Create `.env` in each deploy dir with your secrets:
 - `PROD_REPO_DIR` (optional) – if repo is not at `/home/ubuntu/qurieus`
 - `STAGING_REPO_DIR` (optional) – if repo is not at `/home/ubuntu/qurieus`
 
+**Important:** `PROD_SERVER_IP` must point to the server that has `/home/ubuntu/qurieus` cloned. If staging and prod share the same server, use the same IP for both.
+
 ## Remove Docker (after migration)
 
 ```bash
