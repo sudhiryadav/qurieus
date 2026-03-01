@@ -27,12 +27,18 @@ Create `.env` in each deploy dir with your secrets:
 
 ## GitLab CI/CD variables
 
+**Required:**
 - `STAGING_SSH_PRIVATE_KEY`, `STAGING_SSH_USER`, `STAGING_SERVER_IP`
 - `PROD_SSH_PRIVATE_KEY`, `PROD_SSH_USER`, `PROD_SERVER_IP`
-- `PROD_REPO_DIR` (optional) – if repo is not at `/home/ubuntu/qurieus`
-- `STAGING_REPO_DIR` (optional) – if repo is not at `/home/ubuntu/qurieus`
+- `PROD_DEPLOY_TOKEN_USER`, `PROD_DEPLOY_TOKEN` – for `git pull` on server (HTTPS)
+- `STAGING_DEPLOY_TOKEN_USER`, `STAGING_DEPLOY_TOKEN` – same for staging (can reuse prod values if same server)
 
-**Important:** `PROD_SERVER_IP` must point to the server that has `/home/ubuntu/qurieus` cloned. If staging and prod share the same server, use the same IP for both.
+**Optional:**
+- `PROD_REPO_DIR`, `STAGING_REPO_DIR` – if repo is not at `/home/ubuntu/qurieus`
+
+**Deploy token:** Create at Settings → Repository → Deploy tokens. Name: `qurieus-deploy`, scope: `read_repository`. Use the username and token for `*_DEPLOY_TOKEN_USER` and `*_DEPLOY_TOKEN`. Mark as **masked**.
+
+**Important:** `PROD_SERVER_IP` must point to the server that has `/home/ubuntu/qurieus` cloned. If staging and prod share the same server, use the same IP and deploy token for both.
 
 ## Remove Docker (after migration)
 

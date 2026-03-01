@@ -53,7 +53,7 @@ deploy_staging:
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "export REPO_DIR='${REPO_DIR}' && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' GITLAB_DEPLOY_TOKEN_USER='${STAGING_DEPLOY_TOKEN_USER}' GITLAB_DEPLOY_TOKEN='${STAGING_DEPLOY_TOKEN}' && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$RUN_PIPELINE == "true"'
@@ -73,7 +73,7 @@ deploy_production:
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "export REPO_DIR='${REPO_DIR}' && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' GITLAB_DEPLOY_TOKEN_USER='${PROD_DEPLOY_TOKEN_USER}' GITLAB_DEPLOY_TOKEN='${PROD_DEPLOY_TOKEN}' && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "prod"'
     - if: '$RUN_PIPELINE == "true"'

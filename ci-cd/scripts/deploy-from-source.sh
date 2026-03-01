@@ -26,8 +26,12 @@ fi
 echo "🚀 Deploying to $ENV (branch: $BRANCH) - no Docker"
 echo "   Frontend: $FRONTEND_CHANGED | Backend: $BACKEND_CHANGED | Bot: $BOT_CHANGED"
 
-# Pull latest code
+# Pull latest code (use HTTPS deploy token if SSH fails / not configured)
 cd "$REPO_DIR"
+if [ -n "$GITLAB_DEPLOY_TOKEN" ] && [ -n "$GITLAB_DEPLOY_TOKEN_USER" ]; then
+  GIT_URL="https://${GITLAB_DEPLOY_TOKEN_USER}:${GITLAB_DEPLOY_TOKEN}@gitlab.com/frontslash/apps/qurieus.git"
+  git remote set-url origin "$GIT_URL" 2>/dev/null || git remote add origin "$GIT_URL"
+fi
 git fetch origin
 git checkout "$BRANCH"
 git pull origin "$BRANCH"
