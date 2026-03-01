@@ -16,11 +16,11 @@ To ensure all pending Paddle transactions are synced to subscriptions, schedule 
 
 Qdrant Cloud free tier clusters are **suspended after 1 week of inactivity** and **deleted after 4 weeks** if not reactivated. See [Qdrant Cloud docs](https://qdrant.tech/documentation/cloud/create-cluster).
 
-To prevent suspension, run the keep-alive script every 3 days (or use the API endpoint with an external cron service):
+To prevent suspension, run the keep-alive script every 3 days (or rely on the in-app cron which runs automatically):
 
 ```
 0 6 */3 * * cd /path/to/qurieus-frontend && yarn ts-node scripts/keepQdrantActive.ts >> scripts/cron.log 2>&1
 ```
 
 - Requires `QDRANT_URL`, `QDRANT_COLLECTION`, and `QDRANT_API_KEY` in `.env`.
-- Alternatively, call `GET /api/cron/keep-qdrant-active` with `Authorization: Bearer <CRON_SECRET>` (set `CRON_SECRET` in env). Use [cron-job.org](https://cron-job.org) or similar to hit this endpoint every 3–5 days. 
+- The app also runs this automatically via instrumentation (every 3 days at 6 AM). 
