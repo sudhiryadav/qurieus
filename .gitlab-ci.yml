@@ -72,6 +72,7 @@ check_changes:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
 
 # Job to build the frontend Docker image (only if changed or forced)
+# Use linux/amd64 for CI (GitLab runners are amd64); use arm64 only if your prod server is ARM.
 build_frontend:
   stage: build
   image: docker:20.10.16
@@ -79,6 +80,7 @@ build_frontend:
     - docker:20.10.16-dind
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_BUILDKIT: "1"
   before_script:
     - echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
   script:
@@ -86,7 +88,8 @@ build_frontend:
     - docker context create ci || echo "context exists"
     - docker buildx create ci --use
     - docker buildx inspect --bootstrap
-    - docker buildx build --platform linux/arm64 -t $DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG --push .
+    # amd64 = native on GitLab runners (faster). Use arm64 if your EC2/prod is ARM.
+    - docker buildx build --platform linux/amd64 -t $DOCKERHUB_USERNAME/qurieus-frontend:$CI_COMMIT_REF_SLUG --push .
   rules:
     - if: '$RUN_PIPELINE == "true"'
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
