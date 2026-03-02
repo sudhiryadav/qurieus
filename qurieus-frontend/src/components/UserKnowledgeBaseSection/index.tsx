@@ -41,6 +41,8 @@ interface UserKnowledgeBaseSectionProps {
   onDocumentsChange?: () => void;
   /** Compact mode for embedding in modals */
   compact?: boolean;
+  /** When true (e.g. for super admin), allow download even for PROCESSING documents */
+  allowDownloadWhenProcessing?: boolean;
 }
 
 export default function UserKnowledgeBaseSection({
@@ -49,6 +51,7 @@ export default function UserKnowledgeBaseSection({
   isAdminView = false,
   onDocumentsChange,
   compact = false,
+  allowDownloadWhenProcessing = false,
 }: UserKnowledgeBaseSectionProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,6 +120,7 @@ export default function UserKnowledgeBaseSection({
         <DocumentsList
           documents={documents}
           onRefresh={handleUploadComplete}
+          allowDownloadWhenProcessing={allowDownloadWhenProcessing}
           onDelete={
             isAdminView
               ? async (documentId: string) => {

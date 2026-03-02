@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { Search, Plus, Filter, User as UserIcon, FileText, Trash2 } from "lucide-react";
+import { Search, Plus, User as UserIcon, FileText, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
@@ -95,6 +95,7 @@ const formatDate = (dateString: string | null | undefined) => {
 };
 
 export default function AdminUsersPage() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -103,8 +104,10 @@ export default function AdminUsersPage() {
   const [selectedUserForDocuments, setSelectedUserForDocuments] = useState<User | null>(null);
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [deleteType, setDeleteType] = useState<"soft" | "permanent" | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [restoringUserId, setRestoringUserId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"name" | "email" | "created_at" | "role" | "deleted">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState({
     role: "",
     plan: "",
@@ -152,33 +155,17 @@ export default function AdminUsersPage() {
     }
   }, [filters.show_deleted]);
 
-  const handleSoftDelete = async (user: User) => {
+  const handleDelete = (user: User) => {
     setUserToDelete(user);
-    setDeleteType("soft");
-  };
-
-  const handlePermanentDelete = async (user: User) => {
-    setUserToDelete(user);
-    setDeleteType("permanent");
   };
 
   const confirmDelete = async () => {
-    if (!userToDelete || !deleteType) return;
+    if (!userToDelete) return;
     setIsDeleting(true);
     try {
-      if (deleteType === "soft") {
-        await axiosInstance.delete(`/api/admin/users/${userToDelete.id}`, {
-          params: { soft: "true" },
-        });
-        showToast.success("User soft deleted successfully");
-      } else {
-        await axiosInstance.delete(`/api/admin/users/${userToDelete.id}`, {
-          params: { permanent: "true" },
-        });
-        showToast.success("User permanently deleted with all data");
-      }
+      await axiosInstance.delete(`/api/admin/users/${userToDelete.id}`);
+      showToast.success("User deleted successfully");
       setUserToDelete(null);
-      setDeleteType(null);
       fetchUsers();
     } catch (error: any) {
       console.error("Error deleting user:", error);
@@ -186,6 +173,73 @@ export default function AdminUsersPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleRestoreUser = async (user: User) => {
+    setRestoringUserId(user.id);
+    try {
+      await axiosInstance.patch("/api/admin/users", {
+        id: user.id,
+        deleted_at: null,
+        is_active: true,
+      });
+      showToast.success("User restored successfully");
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error restoring user:", error);
+      showToast.error(error.response?.data?.error || "Failed to restore user");
+    } finally {
+      setRestoringUserId(null);
+    }
+  };
+
+  const handleSort = (column: "name" | "email" | "created_at" | "role" | "deleted") => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  };
+
+  const sortUsers = (usersToSort: User[]) => {
+    return [...usersToSort].sort((a, b) => {
+      let aVal: string | number | boolean;
+      let bVal: string | number | boolean;
+      switch (sortBy) {
+        case "name":
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case "email":
+          aVal = a.email.toLowerCase();
+          bVal = b.email.toLowerCase();
+          break;
+        case "created_at":
+          aVal = new Date(a.created_at).getTime();
+          bVal = new Date(b.created_at).getTime();
+          break;
+        case "role":
+          aVal = a.role;
+          bVal = b.role;
+          break;
+        case "deleted":
+          aVal = a.deleted_at ? 1 : 0;
+          bVal = b.deleted_at ? 1 : 0;
+          break;
+        default:
+          return 0;
+      }
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return sortOrder === "asc"
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      return 0;
+    });
   };
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
@@ -328,9 +382,20 @@ export default function AdminUsersPage() {
     return matchesSearch && matchesRole && matchesPlan && matchesSubscription && matchesStatus && matchesDeleted;
   });
 
+  const sortedUsers = sortUsers(filteredUsers);
+
+  const SortIcon = ({ column }: { column: typeof sortBy }) => {
+    if (sortBy !== column) return <ArrowUpDown className="h-3.5 w-3.5 ml-1 opacity-50" />;
+    return sortOrder === "asc" ? (
+      <ArrowUp className="h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 ml-1" />
+    );
+  };
+
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   return (
     <div>
@@ -403,11 +468,11 @@ export default function AdminUsersPage() {
             <select
               value={filters.show_deleted}
               onChange={(e) => setFilters(prev => ({ ...prev, show_deleted: e.target.value }))}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[120px]"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[140px]"
             >
-              <option value="">Active Only</option>
-              <option value="true">Deleted Only</option>
-              <option value="all">All Users</option>
+              <option value="">Active users only</option>
+              <option value="true">Deleted users only</option>
+              <option value="all">All users</option>
             </select>
 
             {/* Add User Button */}
@@ -428,30 +493,49 @@ export default function AdminUsersPage() {
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-800 border-b dark:border-dark-3">
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Name</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Email</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Role</th>
+              <th
+                className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                onClick={() => handleSort("name")}
+              >
+                <span className="inline-flex items-center">Name <SortIcon column="name" /></span>
+              </th>
+              <th
+                className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                onClick={() => handleSort("email")}
+              >
+                <span className="inline-flex items-center">Email <SortIcon column="email" /></span>
+              </th>
+              <th
+                className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                onClick={() => handleSort("role")}
+              >
+                <span className="inline-flex items-center">Role <SortIcon column="role" /></span>
+              </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Plan</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Created</th>
+              <th
+                className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                onClick={() => handleSort("created_at")}
+              >
+                <span className="inline-flex items-center">Created <SortIcon column="created_at" /></span>
+              </th>
+              <th
+                className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                onClick={() => handleSort("deleted")}
+              >
+                <span className="inline-flex items-center">Status <SortIcon column="deleted" /></span>
+              </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Documents</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user) => (
+            {sortedUsers.map((user) => (
               <tr
                 key={user.id}
                 className={`border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800 ${user.deleted_at ? "opacity-60 bg-gray-100 dark:bg-gray-800/50" : ""}`}
               >
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-dark dark:text-white">{user.name}</span>
-                    {user.deleted_at && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                        Deleted
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-sm font-medium text-dark dark:text-white">{user.name}</span>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                   {user.email}
@@ -464,6 +548,17 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(user.created_at)}
+                </td>
+                <td className="px-4 py-3">
+                  {user.deleted_at ? (
+                    <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 font-medium">
+                      Deleted
+                    </span>
+                  ) : (
+                    <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 font-medium">
+                      Active
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   {user._count?.documents && user._count.documents > 0 ? (
@@ -483,7 +578,7 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
-                    {!user.deleted_at && (
+                    {!user.deleted_at ? (
                       <>
                         <Button
                           variant="outline"
@@ -502,21 +597,24 @@ export default function AdminUsersPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSoftDelete(user)}
+                          onClick={() => handleDelete(user)}
                           className="text-amber-600 hover:text-amber-700 hover:border-amber-500"
                         >
-                          Soft Delete
+                          Delete
                         </Button>
                       </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRestoreUser(user)}
+                        disabled={restoringUserId === user.id}
+                        className="text-green-600 hover:text-green-700 hover:border-green-500"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        {restoringUserId === user.id ? "Restoring..." : "Restore"}
+                      </Button>
                     )}
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handlePermanentDelete(user)}
-                      title="Permanently delete user and all documents"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </td>
               </tr>
@@ -703,6 +801,7 @@ export default function AdminUsersPage() {
                 isAdminView={true}
                 onDocumentsChange={() => fetchUsers(editingUser)}
                 compact={true}
+                allowDownloadWhenProcessing={session?.user?.role === 'SUPER_ADMIN'}
               />
             </div>
           )}
@@ -716,23 +815,12 @@ export default function AdminUsersPage() {
       {/* Confirm Delete Modal */}
       <ConfirmDelete
         isOpen={!!userToDelete}
-        onClose={() => {
-          setUserToDelete(null);
-          setDeleteType(null);
-        }}
+        onClose={() => setUserToDelete(null)}
         onConfirm={confirmDelete}
-        title={
-          deleteType === "soft"
-            ? "Soft Delete User"
-            : "Permanently Delete User"
-        }
-        message={
-          deleteType === "soft"
-            ? `Are you sure you want to soft delete ${userToDelete?.name}? The user will be marked as deleted but data will be retained.`
-            : `Are you sure you want to PERMANENTLY delete ${userToDelete?.name}? This will permanently remove the user and ALL their documents, chat history, and any other data. This action cannot be undone.`
-        }
+        title="Delete User"
+        message={`Are you sure you want to delete ${userToDelete?.name}? The user will be marked as deleted but their data will be retained.`}
         isLoading={isDeleting}
-        confirmText={deleteType === "permanent" ? "Delete Permanently" : "Soft Delete"}
+        confirmText="Delete"
       />
 
       {/* Add User Modal */}
@@ -992,6 +1080,7 @@ function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void
         <DocumentsList
           documents={documents}
           onRefresh={fetchUserDocuments}
+          allowDownloadWhenProcessing={session?.user?.role === 'SUPER_ADMIN'}
           onDelete={shouldUseAdminRoutes ? async (documentId: string) => {
             try {
               // Use the unified delete API - admin can delete any document

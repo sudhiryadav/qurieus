@@ -53,6 +53,8 @@ interface DocumentsListProps {
   onDownload?: (documentId: string) => void;
   onView?: (documentId: string) => void;
   canDelete?: boolean;
+  /** When true (e.g. for super admin), show download button even for PROCESSING documents */
+  allowDownloadWhenProcessing?: boolean;
 }
 
 export default function DocumentsList({
@@ -61,7 +63,8 @@ export default function DocumentsList({
   onDelete,
   onDownload,
   onView,
-  canDelete = false
+  canDelete = false,
+  allowDownloadWhenProcessing = false
 }: DocumentsListProps) {
   const [processingDocuments, setProcessingDocuments] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -344,8 +347,8 @@ export default function DocumentsList({
                   </Button>
                 )}
                 
-                {/* Only show download button if document is not processing */}
-                {onDownload && doc.status !== 'PROCESSING' && (
+                {/* Show download: always when not processing; when processing, only if allowDownloadWhenProcessing (e.g. super admin) */}
+                {onDownload && (doc.status !== 'PROCESSING' || allowDownloadWhenProcessing) && (
                   <Button
                     variant="ghost"
                     size="sm"

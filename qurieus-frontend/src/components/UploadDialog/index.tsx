@@ -319,6 +319,9 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
             console.log('📤 UploadDialog: Showing upload success message for background processing');
             showToast.success(`${validFiles[0].file.name} uploaded successfully`);
             
+            // Refresh list immediately so the new document (PROCESSING) appears
+            onUploadSuccess();
+            
             // Start monitoring processing status
             monitorProcessingStatus(document.id, document.aiDocumentId, validFiles[0].file.name);
           } else {
