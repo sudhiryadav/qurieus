@@ -49,9 +49,15 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
     }
 
     const formData = await req.formData();
-    const files = formData.getAll("files") as File[];
+    // Support both "file" (UploadDialog, DocumentUpload) and "files" (multi-file)
+    let files = formData.getAll("files") as File[];
+    if (files.length === 0) {
+      const singleFile = formData.get("file") as File;
+      if (singleFile) files = [singleFile];
+    }
     const description = formData.get("description") as string;
     const category = formData.get("category") as string;
+    const title = formData.get("title") as string;
 
     logger.info("User Document Upload API: File upload validation", { 
       adminId: session!.user!.id, 
@@ -107,6 +113,7 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
     files.forEach(file => backendFormData.append("files", file));
     if (description) backendFormData.append("description", description);
     if (category) backendFormData.append("category", category);
+    if (title) backendFormData.append("title", title);
     backendFormData.append("userId", userId);
 
     // Process with backend

@@ -90,6 +90,7 @@ model User {
   locked_until          DateTime?
   created_at            DateTime  @default(now())
   updated_at            DateTime  @updatedAt
+  deleted_at            DateTime? // Soft delete - when set, user is considered deleted
   jobTitle              String?
   bio                   String?
   phone                 String?

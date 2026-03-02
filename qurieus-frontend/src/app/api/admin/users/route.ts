@@ -11,9 +11,16 @@ export const GET = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (r
   if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
+  const { searchParams } = new URL(request.url);
+  const showDeleted = searchParams.get('show_deleted'); // '', 'true', 'all'
   const users = await prisma.user.findMany({
     where: {
       role: { not: 'AGENT' },
+      ...(showDeleted === 'all'
+        ? {}
+        : showDeleted === 'true'
+          ? { deleted_at: { not: null } }
+          : { deleted_at: null }),
     },
     select: {
       id: true,
@@ -22,6 +29,7 @@ export const GET = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (r
       role: true,
       is_active: true,
       created_at: true,
+      deleted_at: true,
       company: true,
       plan: true,
       subscription_type: true,

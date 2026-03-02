@@ -89,7 +89,7 @@ if [ "$FRONTEND_CHANGED" = "true" ]; then
   PKG_CHANGED=$(packages_changed "qurieus-frontend")
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile
   yarn prisma generate
-  yarn prisma migrate deploy 2>/dev/null || true
+  yarn prisma migrate deploy
   # Inject build time for header display (user can verify latest deploy)
   export NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M UTC")
   yarn build

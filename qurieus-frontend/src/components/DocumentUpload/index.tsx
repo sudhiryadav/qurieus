@@ -26,6 +26,8 @@ interface DocumentUploadProps {
   accept?: Record<string, string[]>;
   disabled?: boolean;
   className?: string;
+  /** Custom upload endpoint (e.g. for admin uploading on behalf of a user) */
+  customUploadEndpoint?: string;
 }
 
 export default function DocumentUpload({
@@ -42,6 +44,7 @@ export default function DocumentUpload({
   },
   disabled = false,
   className = "",
+  customUploadEndpoint,
 }: DocumentUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -152,7 +155,8 @@ export default function DocumentUpload({
         );
 
         // Upload file
-        const response = await uploadAxiosInstance.post('/api/documents/upload', formData, {
+        const uploadUrl = customUploadEndpoint || '/api/documents/upload';
+        const response = await uploadAxiosInstance.post(uploadUrl, formData, {
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);

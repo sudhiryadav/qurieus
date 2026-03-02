@@ -4,12 +4,13 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { Search, Plus, Filter, User as UserIcon, FileText, Upload } from "lucide-react";
+import { Search, Plus, Filter, User as UserIcon, FileText, Trash2 } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import DocumentsList from "@/components/DocumentsList";
-import UploadDialog from "@/components/UploadDialog";
+import UserKnowledgeBaseSection from "@/components/UserKnowledgeBaseSection";
+import ConfirmDelete from "@/components/ConfirmDelete";
 import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
 
@@ -63,6 +64,7 @@ interface User {
   _count?: {
     documents: number;
   };
+  deleted_at?: string | null;
 }
 
 const ROLE_DESCRIPTIONS = {
@@ -100,12 +102,15 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUserForDocuments, setSelectedUserForDocuments] = useState<User | null>(null);
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleteType, setDeleteType] = useState<"soft" | "permanent" | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [filters, setFilters] = useState({
     role: "",
     plan: "",
     subscription_type: "",
     is_active: "",
+    show_deleted: "",
   });
   const [editForm, setEditForm] = useState({
     name: "",
@@ -124,7 +129,11 @@ export default function AdminUsersPage() {
   const fetchUsers = useCallback(async (preserveEditingUser?: User) => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get("/api/admin/users");
+      const params = new URLSearchParams();
+      if (filters.show_deleted) params.set("show_deleted", filters.show_deleted);
+      const response = await axiosInstance.get(
+        `/api/admin/users${params.toString() ? `?${params.toString()}` : ""}`
+      );
       const newUsers = response.data.users || [];
       setUsers(newUsers);
       // Update editingUser with fresh data (e.g. document count) if we're editing
@@ -141,7 +150,43 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters.show_deleted]);
+
+  const handleSoftDelete = async (user: User) => {
+    setUserToDelete(user);
+    setDeleteType("soft");
+  };
+
+  const handlePermanentDelete = async (user: User) => {
+    setUserToDelete(user);
+    setDeleteType("permanent");
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete || !deleteType) return;
+    setIsDeleting(true);
+    try {
+      if (deleteType === "soft") {
+        await axiosInstance.delete(`/api/admin/users/${userToDelete.id}`, {
+          params: { soft: "true" },
+        });
+        showToast.success("User soft deleted successfully");
+      } else {
+        await axiosInstance.delete(`/api/admin/users/${userToDelete.id}`, {
+          params: { permanent: "true" },
+        });
+        showToast.success("User permanently deleted with all data");
+      }
+      setUserToDelete(null);
+      setDeleteType(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      showToast.error(error.response?.data?.error || "Failed to delete user");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
@@ -271,8 +316,16 @@ export default function AdminUsersPage() {
     const matchesPlan = !filters.plan || user.plan === filters.plan;
     const matchesSubscription = !filters.subscription_type || user.subscription_type === filters.subscription_type;
     const matchesStatus = !filters.is_active || user.is_active === (filters.is_active === "true");
+    const matchesDeleted =
+      filters.show_deleted === ""
+        ? !user.deleted_at
+        : filters.show_deleted === "true"
+          ? !!user.deleted_at
+          : filters.show_deleted === "all"
+            ? true
+            : !user.deleted_at;
 
-    return matchesSearch && matchesRole && matchesPlan && matchesSubscription && matchesStatus;
+    return matchesSearch && matchesRole && matchesPlan && matchesSubscription && matchesStatus && matchesDeleted;
   });
 
   useEffect(() => {
@@ -347,6 +400,16 @@ export default function AdminUsersPage() {
               <option value="false">Inactive</option>
             </select>
 
+            <select
+              value={filters.show_deleted}
+              onChange={(e) => setFilters(prev => ({ ...prev, show_deleted: e.target.value }))}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[120px]"
+            >
+              <option value="">Active Only</option>
+              <option value="true">Deleted Only</option>
+              <option value="all">All Users</option>
+            </select>
+
             {/* Add User Button */}
             <Button
               onClick={() => setIsAddModalOpen(true)}
@@ -376,10 +439,18 @@ export default function AdminUsersPage() {
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
-              <tr key={user.id} className="border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <tr
+                key={user.id}
+                className={`border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800 ${user.deleted_at ? "opacity-60 bg-gray-100 dark:bg-gray-800/50" : ""}`}
+              >
                 <td className="px-4 py-3">
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-dark dark:text-white">{user.name}</span>
+                    {user.deleted_at && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        Deleted
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
@@ -411,20 +482,40 @@ export default function AdminUsersPage() {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex space-x-2">
+                  <div className="flex flex-wrap gap-2">
+                    {!user.deleted_at && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditClick(user)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant={user.is_active ? "destructive" : "default"}
+                          size="sm"
+                          onClick={() => toggleUserStatus(user.id, user.is_active)}
+                        >
+                          {user.is_active ? "Deactivate" : "Activate"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSoftDelete(user)}
+                          className="text-amber-600 hover:text-amber-700 hover:border-amber-500"
+                        >
+                          Soft Delete
+                        </Button>
+                      </>
+                    )}
                     <Button
-                      variant="outline"
+                      variant="destructive"
                       size="sm"
-                      onClick={() => handleEditClick(user)}
+                      onClick={() => handlePermanentDelete(user)}
+                      title="Permanently delete user and all documents"
                     >
-                      Edit
-                    </Button>
-                    <Button
-                      variant={user.is_active ? "destructive" : "default"}
-                      size="sm"
-                      onClick={() => toggleUserStatus(user.id, user.is_active)}
-                    >
-                      {user.is_active ? "Deactivate" : "Activate"}
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </td>
@@ -437,19 +528,13 @@ export default function AdminUsersPage() {
       {/* Edit User Modal */}
       <ModalDialog
         isOpen={!!editingUser}
-        onClose={() => {
-          setEditingUser(null);
-          setIsUploadDialogOpen(false);
-        }}
+        onClose={() => setEditingUser(null)}
         header="Edit User"
         footer={
           <div className="flex space-x-2">
             <Button
               variant="outline"
-              onClick={() => {
-                setEditingUser(null);
-                setIsUploadDialogOpen(false);
-              }}
+              onClick={() => setEditingUser(null)}
             >
               Cancel
             </Button>
@@ -609,40 +694,18 @@ export default function AdminUsersPage() {
             </label>
           </div>
 
-          {/* Add Documents Section - Knowledge Base */}
-          <div className="border-t border-gray-600 pt-4 mt-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Knowledge Base Documents
-            </label>
-            <p className="text-xs text-gray-400 mb-3">
-              Add documents for this user. They will be processed and available in their knowledge base for AI-powered search and chat.
-            </p>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsUploadDialogOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Add Documents
-              </Button>
-              {editingUser?._count?.documents && editingUser._count.documents > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingUser(null);
-                    setSelectedUserForDocuments(editingUser);
-                    setIsDocumentsModalOpen(true);
-                  }}
-                  className="flex items-center gap-2 text-blue-500 hover:text-blue-400 text-sm"
-                >
-                  <FileText className="h-4 w-4" />
-                  View {editingUser._count.documents} document(s)
-                </button>
-              )}
+          {/* Inline Knowledge Base Section */}
+          {editingUser && !editingUser.deleted_at && (
+            <div className="border-t border-gray-600 pt-4 mt-4">
+              <UserKnowledgeBaseSection
+                userId={editingUser.id}
+                userName={editingUser.name}
+                isAdminView={true}
+                onDocumentsChange={() => fetchUsers(editingUser)}
+                compact={true}
+              />
             </div>
-          </div>
+          )}
 
           <div className="text-xs text-gray-400">
             <span className="text-red-500">*</span> Required fields
@@ -650,18 +713,27 @@ export default function AdminUsersPage() {
         </div>
       </ModalDialog>
 
-      {/* Upload Documents Dialog (when editing user) */}
-      {editingUser && (
-        <UploadDialog
-          isOpen={isUploadDialogOpen}
-          onClose={() => setIsUploadDialogOpen(false)}
-          onUploadSuccess={() => {
-            fetchUsers(editingUser ?? undefined);
-            showToast.success("Document uploaded. Processing in progress.");
-          }}
-          customUploadEndpoint={`/api/admin/users/${editingUser.id}/documents/upload`}
-        />
-      )}
+      {/* Confirm Delete Modal */}
+      <ConfirmDelete
+        isOpen={!!userToDelete}
+        onClose={() => {
+          setUserToDelete(null);
+          setDeleteType(null);
+        }}
+        onConfirm={confirmDelete}
+        title={
+          deleteType === "soft"
+            ? "Soft Delete User"
+            : "Permanently Delete User"
+        }
+        message={
+          deleteType === "soft"
+            ? `Are you sure you want to soft delete ${userToDelete?.name}? The user will be marked as deleted but data will be retained.`
+            : `Are you sure you want to PERMANENTLY delete ${userToDelete?.name}? This will permanently remove the user and ALL their documents, chat history, and any other data. This action cannot be undone.`
+        }
+        isLoading={isDeleting}
+        confirmText={deleteType === "permanent" ? "Delete Permanently" : "Soft Delete"}
+      />
 
       {/* Add User Modal */}
       <ModalDialog

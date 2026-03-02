@@ -275,19 +275,17 @@ export default function DocumentsList({
       {documents.map((doc) => (
         <Card key={doc.id} className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg font-semibold line-clamp-2 mb-2">
-                  {doc.title}
-                </CardTitle>
-                <div className="flex items-center space-x-2 mb-2">
-                  {getCategoryBadge(doc.category || 'GENERAL')}
-                  {getStatusBadge(doc.status || 'DRAFT')}
-                </div>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center text-2xl ml-3">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 shrink-0 bg-blue-100 dark:bg-blue-900 rounded flex items-center justify-center text-base">
                 {getFileIcon(doc.fileType)}
               </div>
+              <CardTitle className="text-lg font-semibold line-clamp-2 flex-1 min-w-0">
+                {doc.title}
+              </CardTitle>
+            </div>
+            <div className="flex items-center space-x-2">
+              {getCategoryBadge(doc.category || 'GENERAL')}
+              {getStatusBadge(doc.status || 'DRAFT')}
             </div>
           </CardHeader>
           
