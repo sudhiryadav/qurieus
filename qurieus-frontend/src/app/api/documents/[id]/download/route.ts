@@ -23,6 +23,14 @@ export async function GET(
 
     const document = await prisma.document.findUnique({
       where: { id, userId: session.user.id },
+      select: {
+        id: true,
+        fileName: true,
+        fileUrl: true,
+        fileType: true,
+        originalName: true,
+        content: true,
+      },
     });
 
     if (!document) {
@@ -33,7 +41,33 @@ export async function GET(
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
-    const fileBuffer = await getDocumentDownloadBuffer(document);
+    let fileBuffer: Buffer;
+    try {
+      fileBuffer = await getDocumentDownloadBuffer(document);
+    } catch (s3Error: any) {
+      const isKeyNotFound =
+        s3Error?.message?.includes("does not exist") ||
+        s3Error?.name === "NoSuchKey" ||
+        s3Error?.Code === "NoSuchKey";
+
+      if (isKeyNotFound && document.content) {
+        fileBuffer = Buffer.from(document.content, "utf-8");
+        logger.info("Document Download API: Serving from DB content (S3 key not found)", {
+          userId: session.user.id,
+          documentId: id,
+        });
+      } else if (isKeyNotFound) {
+        return NextResponse.json(
+          {
+            error:
+              "Document file not found in storage. It may still be processing or the file may not have been stored.",
+          },
+          { status: 404 }
+        );
+      } else {
+        throw s3Error;
+      }
+    }
 
     logger.info("Document Download API: File retrieved successfully", {
       userId: session.user.id,
@@ -54,7 +88,11 @@ export async function GET(
       stack: error.stack,
     });
 
-    const status = error.message?.includes("not found") ? 404 : 500;
+    const isNotFound =
+      error.message?.includes("not found") ||
+      error.message?.includes("does not exist") ||
+      error.name === "NoSuchKey";
+    const status = isNotFound ? 404 : 500;
     return NextResponse.json(
       { error: error.message || "Internal server error" },
       { status }
