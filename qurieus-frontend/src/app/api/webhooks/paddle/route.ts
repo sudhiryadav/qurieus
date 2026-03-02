@@ -336,7 +336,7 @@ export async function POST(request: Request) {
             });
 
             await sendEmail({
-              to: process.env.ADMIN_EMAIL || "admin@qurieus.com",
+              to: process.env.ADMIN_EMAIL || "Hello@qurieus.com",
               subject: "New Subscription Created",
               template: "admin-subscription-notification",
               context: {
