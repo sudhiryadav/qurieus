@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import Logo from "@/components/Common/Logo";
 import Image from "next/image";
+import { useState } from "react";
+import VersionInfoModal from "@/components/Common/VersionInfoModal";
 
 const Footer = () => {
+  const [showVersionModal, setShowVersionModal] = useState(false);
   return (
     <footer
       className="wow fadeInUp relative z-10 bg-[#090E34] pt-20 lg:pt-[100px]"
@@ -286,14 +291,24 @@ const Footer = () => {
             </div>
             <div className="w-full px-4 md:w-1/3 lg:w-1/2">
               <div className="my-1 flex justify-center md:justify-end">
-                <p className="text-base text-gray-7">
+                <button
+                  type="button"
+                  onClick={() => setShowVersionModal(true)}
+                  className="text-base text-gray-7 hover:text-white cursor-pointer transition-colors"
+                  title="Click for version info"
+                >
                   © {new Date().getFullYear()} Qurieus. All rights reserved.
-                </p>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <VersionInfoModal
+        isOpen={showVersionModal}
+        onClose={() => setShowVersionModal(false)}
+      />
 
       <div>
         <span className="absolute left-0 top-0 z-[-1] aspect-[95/82] w-full max-w-[570px]">

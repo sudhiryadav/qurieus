@@ -8,7 +8,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Logo from "../Common/Logo";
-import BuildTime from "../Common/BuildTime";
 
 import { useSidebar } from "@/hooks/useSidebar";
 import menuData from "./menuData";
@@ -301,8 +300,6 @@ const Header: React.FC = () => {
           )}
 
           <div className="flex items-center space-x-1 sm:space-x-2">
-            {/* Deployment time - local timezone, "dev" when running locally */}
-            <BuildTime />
             {/* Mobile/Shared Controls */}
             {/* theme toggler */}
             <button
