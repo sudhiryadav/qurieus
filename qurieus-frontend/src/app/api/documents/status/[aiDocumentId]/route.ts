@@ -22,19 +22,21 @@ export async function GET(
     }
 
     const userId = session.user.id;
+    const userRole = (session.user as { role?: string })?.role;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
     const { aiDocumentId } = await context.params;
 
     logger.info("Document Status API: Checking status for AI document", { 
       userId, 
-      aiDocumentId 
+      aiDocumentId,
+      isAdmin 
     });
 
-    // Check if the document exists and belongs to the user
+    // Check if the document exists. Admins can check any document (e.g. when uploading for another user).
     const document = await prisma.document.findFirst({
-      where: {
-        aiDocumentId: aiDocumentId,
-        userId: userId,
-      },
+      where: isAdmin
+        ? { aiDocumentId }
+        : { aiDocumentId, userId },
       select: {
         id: true,
         title: true,
