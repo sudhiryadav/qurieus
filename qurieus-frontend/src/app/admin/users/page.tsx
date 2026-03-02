@@ -4,11 +4,12 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import ModalDialog from "@/components/ui/ModalDialog";
-import { Search, Plus, Filter, User as UserIcon, FileText } from "lucide-react";
+import { Search, Plus, Filter, User as UserIcon, FileText, Upload } from "lucide-react";
 import { showToast } from "@/components/Common/Toast";
 import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import DocumentsList from "@/components/DocumentsList";
+import UploadDialog from "@/components/UploadDialog";
 import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
 
@@ -99,6 +100,7 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUserForDocuments, setSelectedUserForDocuments] = useState<User | null>(null);
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
     role: "",
     plan: "",
@@ -119,11 +121,19 @@ export default function AdminUsersPage() {
     phone: "",
   });
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async (preserveEditingUser?: User) => {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/api/admin/users");
-      setUsers(response.data.users || []);
+      const newUsers = response.data.users || [];
+      setUsers(newUsers);
+      // Update editingUser with fresh data (e.g. document count) if we're editing
+      if (preserveEditingUser) {
+        const updatedUser = newUsers.find((u: User) => u.id === preserveEditingUser.id);
+        if (updatedUser) {
+          setEditingUser(updatedUser);
+        }
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
       showToast.error("Failed to fetch users");
@@ -131,7 +141,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
@@ -427,13 +437,19 @@ export default function AdminUsersPage() {
       {/* Edit User Modal */}
       <ModalDialog
         isOpen={!!editingUser}
-        onClose={() => setEditingUser(null)}
+        onClose={() => {
+          setEditingUser(null);
+          setIsUploadDialogOpen(false);
+        }}
         header="Edit User"
         footer={
           <div className="flex space-x-2">
             <Button
               variant="outline"
-              onClick={() => setEditingUser(null)}
+              onClick={() => {
+                setEditingUser(null);
+                setIsUploadDialogOpen(false);
+              }}
             >
               Cancel
             </Button>
@@ -592,11 +608,60 @@ export default function AdminUsersPage() {
               Email Verified
             </label>
           </div>
+
+          {/* Add Documents Section - Knowledge Base */}
+          <div className="border-t border-gray-600 pt-4 mt-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Knowledge Base Documents
+            </label>
+            <p className="text-xs text-gray-400 mb-3">
+              Add documents for this user. They will be processed and available in their knowledge base for AI-powered search and chat.
+            </p>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsUploadDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Add Documents
+              </Button>
+              {editingUser?._count?.documents && editingUser._count.documents > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingUser(null);
+                    setSelectedUserForDocuments(editingUser);
+                    setIsDocumentsModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 text-blue-500 hover:text-blue-400 text-sm"
+                >
+                  <FileText className="h-4 w-4" />
+                  View {editingUser._count.documents} document(s)
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="text-xs text-gray-400">
             <span className="text-red-500">*</span> Required fields
           </div>
         </div>
       </ModalDialog>
+
+      {/* Upload Documents Dialog (when editing user) */}
+      {editingUser && (
+        <UploadDialog
+          isOpen={isUploadDialogOpen}
+          onClose={() => setIsUploadDialogOpen(false)}
+          onUploadSuccess={() => {
+            fetchUsers(editingUser ?? undefined);
+            showToast.success("Document uploaded. Processing in progress.");
+          }}
+          customUploadEndpoint={`/api/admin/users/${editingUser.id}/documents/upload`}
+        />
+      )}
 
       {/* Add User Modal */}
       <ModalDialog
