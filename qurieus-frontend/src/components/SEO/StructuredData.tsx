@@ -48,7 +48,7 @@ export const OrganizationData = {
     "@type": "ContactPoint",
     "telephone": "+919953633888",
     "contactType": "customer service",
-    "email": "Hello@qurieus.com"
+    "email": "hello@qurieus.com"
   },
   sameAs: [
     "https://twitter.com/qurieus",

@@ -59,7 +59,7 @@ export default function DocumentUpload({
         if (response.data.success) {
           const document = response.data.document;
           
-          if (document.processingStatus === 'PROCESSED') {
+          if (document.status === 'PROCESSED' || document.isProcessed) {
             // Processing completed
             setUploadedFiles(prev => 
               prev.map(f => 
@@ -72,7 +72,7 @@ export default function DocumentUpload({
             // Don't show duplicate success message - the UploadDialog already shows it
             onUploadComplete?.(document);
             return true; // Stop monitoring
-          } else if (document.processingStatus === 'FAILED') {
+          } else if (document.status === 'FAILED') {
             // Processing failed
             setUploadedFiles(prev => 
               prev.map(f => 
@@ -175,7 +175,7 @@ export default function DocumentUpload({
           const document = response.data.document;
           
           // Update status to processing if background processing
-          if (document.processingStatus === 'PROCESSING') {
+          if (document.status === 'PROCESSING' && !document.isProcessed) {
             setUploadedFiles(prev => 
               prev.map(f => 
                 f.id === fileId 

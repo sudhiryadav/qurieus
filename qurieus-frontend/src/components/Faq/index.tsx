@@ -48,7 +48,7 @@ const Faq = () => {
             />
             <SingleFaq
               question="Who do I contact for support?"
-              answer="For any questions or support, please use the 'Contact' page on our website or email us directly at Hello@qurieus.com."
+              answer="For any questions or support, please use the 'Contact' page on our website or email us directly at hello@qurieus.com."
             />
             <SingleFaq
               question="What file formats are supported?"

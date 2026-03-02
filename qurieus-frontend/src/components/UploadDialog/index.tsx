@@ -70,13 +70,13 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
         if (response.data.success) {
           const document = response.data.document;
           
-          if (document.processingStatus === 'PROCESSED') {
+          if (document.status === 'PROCESSED' || document.isProcessed) {
             // Processing completed
             console.log('🎉 UploadDialog: Processing completed, showing completion message');
             showToast.success(`${fileName} processing completed!`);
             onUploadSuccess();
             return true; // Stop monitoring
-          } else if (document.processingStatus === 'FAILED') {
+          } else if (document.status === 'FAILED') {
             // Processing failed
             console.log('❌ UploadDialog: Processing failed, showing error message');
             showToast.error(`${fileName} processing failed!`);
@@ -314,7 +314,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
         if (data.success && data.document) {
           const document = data.document;
           
-          if (document.processingStatus === 'PROCESSING') {
+          if (document.status === 'PROCESSING' && !document.isProcessed) {
             // Background processing - show upload success without processing message
             console.log('📤 UploadDialog: Showing upload success message for background processing');
             showToast.success(`${validFiles[0].file.name} uploaded successfully`);
