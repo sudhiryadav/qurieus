@@ -1,32 +1,15 @@
 #!/bin/bash
-# Update email values in deployment env files on server.
-# Run this on the server (or via: ssh user@server 'bash -s' < ci-cd/scripts/update-env-emails.sh)
+# Email configuration reference for Qurieus deployment.
+# Ensure these vars are set in your env files (prod.qurieus.frontend.env, etc.):
 #
-# Changes: support@qurieus.com, hello@qurieus.com -> hello@qurieus.com
+# SMTP_FROM_EMAIL=no-reply@qurieus.com     # Transactional emails (verification, password reset)
+# ADMIN_EMAIL=hello@qurieus.com            # Admin notifications (subscriptions, alerts)
+# NEXT_PUBLIC_CONTACT_EMAIL=contact@qurieus.com   # Contact form submissions
+# NEXT_PUBLIC_SUPPORT_EMAIL=support@qurieus.com  # Footer, FAQ, terms, email templates
+# NEXT_PUBLIC_SALES_EMAIL=sales@qurieus.com      # Sales/pricing inquiries (optional)
+#
+# Run: pm2 restart all  (after updating env files)
 
 ENV_DIR="${ENV_DIR:-/home/ubuntu}"
-
-update_file() {
-  local f="$1"
-  if [ -f "$f" ]; then
-    # support@qurieus.com -> hello@qurieus.com
-    sed -i.bak "s/support@qurieus\.com/hello@qurieus.com/g" "$f"
-    # hello@qurieus.com -> hello@qurieus.com (lowercase hello)
-    sed -i.bak "s/hello@qurieus\.com/hello@qurieus.com/g" "$f"
-    # admin@qurieus.com fallback -> hello@qurieus.com
-    sed -i.bak "s/admin@qurieus\.com/hello@qurieus.com/g" "$f"
-    rm -f "${f}.bak"
-    echo "Updated: $f"
-  else
-    echo "Skip (not found): $f"
-  fi
-}
-
-echo "Updating email values in $ENV_DIR..."
-update_file "$ENV_DIR/prod.qurieus.frontend.env"
-update_file "$ENV_DIR/prod.qurieus.backend.env"
-update_file "$ENV_DIR/prod.qurieus.bot.env"
-update_file "$ENV_DIR/staging.qurieus.frontend.env"
-update_file "$ENV_DIR/staging.qurieus.backend.env"
-update_file "$ENV_DIR/staging.qurieus.bot.env"
-echo "Done. Restart apps to pick up changes: pm2 restart all"
+echo "Email config reference. Check env files in $ENV_DIR for:"
+echo "  SMTP_FROM_EMAIL, ADMIN_EMAIL, NEXT_PUBLIC_CONTACT_EMAIL, NEXT_PUBLIC_SUPPORT_EMAIL"

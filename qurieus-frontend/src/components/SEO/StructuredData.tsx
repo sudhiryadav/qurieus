@@ -46,9 +46,9 @@ export const OrganizationData = {
   },
   contactPoint: {
     "@type": "ContactPoint",
-    "telephone": "+919953633888",
+    "telephone": process.env.NEXT_PUBLIC_SUPPORT_PHONE || "+919953633888",
     "contactType": "customer service",
-    "email": "hello@qurieus.com"
+    "email": process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@qurieus.com"
   },
   sameAs: [
     "https://twitter.com/qurieus",

@@ -72,8 +72,8 @@ export async function sendEmail({ to, subject, template, context, html,attachmen
         'X-Priority': '3',
         'X-MSMail-Priority': 'Normal',
         'X-Mailer': 'Qurieus Email System',
-        'X-Report-Abuse': 'Please report abuse here: ' + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'hello@qurieus.com'),
-        'List-Unsubscribe': '<mailto:' + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'hello@qurieus.com') + '?subject=unsubscribe>',
+        'X-Report-Abuse': 'Please report abuse here: ' + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@qurieus.com'),
+        'List-Unsubscribe': '<mailto:' + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@qurieus.com') + '?subject=unsubscribe>',
         'Precedence': 'bulk',
         'Message-ID': '<' + Date.now() + '.' + Math.random().toString(36).substr(2, 9) + '@qurieus.com>'
       },
