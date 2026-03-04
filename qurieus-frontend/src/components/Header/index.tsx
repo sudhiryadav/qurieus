@@ -23,18 +23,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Home, Info, DollarSign, Phone, BookOpen, Users, Briefcase, Layers, Rocket } from "lucide-react";
 
-// Icon mapping for menu items
+// Icon mapping for menu items (align-middle for inline flow, self-center for flex)
 const menuIcons: Record<string, JSX.Element> = {
-  Home: <Home className="mr-2 h-4 w-4 inline" />,
-  About: <Info className="mr-2 h-4 w-4 inline" />,
-  Pricing: <DollarSign className="mr-2 h-4 w-4 inline" />,
-  Contact: <Phone className="mr-2 h-4 w-4 inline" />,
-  Blog: <BookOpen className="mr-2 h-4 w-4 inline" />,
-  "For You": <Users className="mr-2 h-4 w-4 inline" />,
-  Lawyers: <Briefcase className="mr-2 h-4 w-4 inline" />,
-  HR: <Users className="mr-2 h-4 w-4 inline" />,
-  SaaS: <Layers className="mr-2 h-4 w-4 inline" />,
-  Startups: <Rocket className="mr-2 h-4 w-4 inline" />,
+  Home: <Home className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  About: <Info className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  Pricing: <DollarSign className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  Contact: <Phone className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  Blog: <BookOpen className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  "For You": <Users className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  Lawyers: <Briefcase className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  HR: <Users className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  SaaS: <Layers className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
+  Startups: <Rocket className="mr-2 h-4 w-4 shrink-0 self-center align-middle" />,
 };
 
 const Header: React.FC = () => {
@@ -266,7 +266,7 @@ const Header: React.FC = () => {
                         >
                           {menuIcons[menuItem.title]}
                           {menuItem.title}
-                          <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                          <svg className="ml-1 h-4 w-4 shrink-0 self-center" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                         </button>
                         <ul className="absolute left-0 top-full z-20 hidden min-w-[180px] rounded-md bg-white py-2 shadow-lg group-hover:block dark:bg-dark-2">
                           {menuItem.submenu.map((sub, subIdx) => (
@@ -285,7 +285,7 @@ const Header: React.FC = () => {
                     ) : (
                       <Link
                         href={menuItem.path || '#'}
-                        className={`ud-menu-scroll flex py-2 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary lg:inline-flex lg:px-0 lg:py-6 ${
+                        className={`ud-menu-scroll flex items-center py-2 text-base text-gray-800 dark:text-white group-hover:text-primary dark:group-hover:text-primary lg:inline-flex lg:px-0 lg:py-6 ${
                           pathUrl === menuItem?.path && "text-primary"
                         }`}
                       >
