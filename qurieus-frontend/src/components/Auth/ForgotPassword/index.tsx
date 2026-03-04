@@ -60,6 +60,29 @@ const ForgotPassword = () => {
                 </Link>
               </div>
 
+              {sent ? (
+                <div className="space-y-4">
+                  <p className="text-base text-body-color dark:text-dark-6">
+                    We&apos;ve sent a password reset link to <strong className="text-dark dark:text-white">{email}</strong>. Check your inbox and follow the instructions to reset your password.
+                  </p>
+                  <p className="text-sm text-body-color dark:text-dark-6">
+                    Didn&apos;t receive the email?{" "}
+                    <button
+                      type="button"
+                      onClick={() => setSent(false)}
+                      className="font-medium text-primary hover:text-primary/80"
+                    >
+                      Try again
+                    </button>
+                  </p>
+                  <Link
+                    href="/signin"
+                    className="inline-block w-full rounded-md border border-primary bg-primary px-5 py-3 text-center text-base font-medium text-white transition duration-300 ease-in-out hover:bg-primary/90"
+                  >
+                    Back to sign in
+                  </Link>
+                </div>
+              ) : (
               <form onSubmit={handleSubmit}>
                 <div className="mb-[22px]">
                   <input
@@ -72,7 +95,7 @@ const ForgotPassword = () => {
                     className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
                   />
                 </div>
-                <div className="">
+                <div className="mb-4">
                   <button
                     type="submit"
                     className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark"
@@ -80,7 +103,17 @@ const ForgotPassword = () => {
                     Send Email {loading && <Loader />}
                   </button>
                 </div>
+                <p className="text-center text-sm text-body-color dark:text-dark-6">
+                  Remember your password?{" "}
+                  <Link
+                    href="/signin"
+                    className="font-medium text-primary hover:text-primary/80"
+                  >
+                    Back to sign in
+                  </Link>
+                </p>
               </form>
+              )}
 
               <div>
                 <span className="absolute right-1 top-1">
