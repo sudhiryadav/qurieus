@@ -12,6 +12,7 @@ export default function TermsOfServicePage() {
       <Breadcrumb
         pageName="Terms of Service"
         pageDescription="Read our terms of service"
+        showBackButton
       />
       <section className="py-16 md:py-20 lg:py-28">
         <div className="container">
@@ -24,7 +25,7 @@ export default function TermsOfServicePage() {
                 <div>
                   <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">1. Agreement to Terms</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    By accessing or using Qurieus, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this service.
+                    By accessing or using Qurieus (&quot;Service&quot;), an AI-powered document conversation and search platform, you agree to be bound by these Terms of Service, our <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>, and all applicable laws. If you do not agree with any of these terms, you are prohibited from using the Service.
                   </p>
                 </div>
 
@@ -34,22 +35,31 @@ export default function TermsOfServicePage() {
                     <div>
                       <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">2.1 Permitted Use</h4>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                        <li>Access and use the service for personal or business purposes</li>
-                        <li>Upload and process documents within your subscription limits</li>
-                        <li>Use AI-powered features for document analysis and search</li>
-                        <li>Share access with authorized team members</li>
+                        <li>Upload documents and build knowledge bases for personal or business use</li>
+                        <li>Use AI-powered chat and semantic search within your documents</li>
+                        <li>Embed chat widgets on your websites (where enabled by your plan)</li>
+                        <li>Share workspace access with authorized team members</li>
+                        <li>Use the Service within your subscription and usage limits</li>
                       </ul>
                     </div>
 
                     <div>
                       <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">2.2 Prohibited Use</h4>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                        <li>Violate any applicable laws or regulations</li>
-                        <li>Upload malicious content or software</li>
-                        <li>Attempt to reverse engineer the service</li>
-                        <li>Share access credentials with unauthorized users</li>
-                        <li>Use the service for any illegal or unauthorized purpose</li>
+                        <li>Upload content that infringes intellectual property or violates laws</li>
+                        <li>Upload malicious files, malware, or content harmful to systems</li>
+                        <li>Attempt to extract, scrape, or reverse engineer our AI models or APIs</li>
+                        <li>Use the Service to generate misleading, harmful, or illegal content</li>
+                        <li>Share credentials or circumvent access controls</li>
+                        <li>Resell or redistribute the Service without authorization</li>
                       </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">2.3 AI-Generated Content</h4>
+                      <p className="text-gray-600 dark:text-gray-400 mb-2">
+                        Our AI provides answers based on your documents. AI outputs are for assistance only and may contain errors. You are responsible for verifying accuracy before relying on AI-generated content for decisions.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -88,7 +98,7 @@ export default function TermsOfServicePage() {
                         <li>Subscriptions are billed in advance</li>
                         <li>Automatic renewal unless cancelled</li>
                         <li>Prices may change with notice</li>
-                        <li>Refunds subject to our refund policy</li>
+                        <li>Refunds subject to our <a href="/refund-policy" className="text-primary hover:underline">Refund Policy</a></li>
                       </ul>
                     </div>
 
@@ -120,7 +130,7 @@ export default function TermsOfServicePage() {
                     <div>
                       <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">5.2 Data Processing</h4>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                        <li>We process data according to our Privacy Policy</li>
+                        <li>We process data according to our <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a></li>
                         <li>We implement security measures to protect data</li>
                         <li>We may use anonymized data for service improvement</li>
                         <li>You can request data deletion as per our policy</li>
@@ -187,9 +197,9 @@ export default function TermsOfServicePage() {
                     If you have any questions about these Terms of Service, please contact us at:
                   </p>
                   <p className="text-gray-600 dark:text-gray-400 mt-4">
-                    Email: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL}<br />
-                    Address: {process.env.NEXT_PUBLIC_SUPPORT_ADDRESS}<br />
-                    Phone: {process.env.NEXT_PUBLIC_SUPPORT_PHONE}
+                    Email: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@qurieus.com"}<br />
+                    Address: {process.env.NEXT_PUBLIC_SUPPORT_ADDRESS || "FrontSlash, New Delhi"}<br />
+                    Phone: {process.env.NEXT_PUBLIC_SUPPORT_PHONE || "+91 9953633888"}
                   </p>
                 </div>
               </div>

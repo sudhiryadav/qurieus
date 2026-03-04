@@ -273,7 +273,7 @@ const Header: React.FC = () => {
                             <li key={subIdx}>
                               <Link
                                 href={sub.path || '#'}
-                                className="block px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                                className="flex items-center px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                               >
                                 {menuIcons[sub.title]}
                                 {sub.title}
@@ -410,7 +410,7 @@ const Header: React.FC = () => {
                             <Link
                               href={sub.path || '#'}
                               onClick={navbarToggleHandler}
-                              className="block px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                              className="flex items-center px-4 py-2 text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
                             >
                               {menuIcons[sub.title]}
                               {sub.title}

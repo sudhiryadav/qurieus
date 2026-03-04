@@ -12,6 +12,7 @@ export default function LegalNoticePage() {
       <Breadcrumb
         pageName="Legal Notice"
         pageDescription="Important legal information"
+        showBackButton
       />
       <section className="py-16 md:py-20 lg:py-28">
         <div className="container">
@@ -57,6 +58,9 @@ export default function LegalNoticePage() {
               <li>California Consumer Privacy Act (CCPA)</li>
               <li>Industry-specific regulations</li>
             </ul>
+            <p>
+              For details on how we collect and use data, see our <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>. For terms governing use of our services, see our <a href="/terms-of-service" className="text-primary hover:underline">Terms of Service</a>.
+            </p>
 
             <h3>5. Intellectual Property</h3>
             <p>

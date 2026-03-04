@@ -272,13 +272,13 @@ export default function SignUp({
       )}
 
       <p className="text-body-secondary mb-4 text-base">
-        By creating an account you are agree with our{" "}
-        <Link href="/#" className="text-primary hover:underline">
-          Privacy
+        By creating an account you agree to our{" "}
+        <Link href="/privacy-policy" className="text-primary hover:underline">
+          Privacy Policy
         </Link>{" "}
         and{" "}
-        <Link href="/#" className="text-primary hover:underline">
-          Policy
+        <Link href="/terms-of-service" className="text-primary hover:underline">
+          Terms of Service
         </Link>
       </p>
     </div>

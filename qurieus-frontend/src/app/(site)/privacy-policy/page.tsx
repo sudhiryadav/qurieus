@@ -12,6 +12,7 @@ export default function PrivacyPolicyPage() {
       <Breadcrumb
         pageName="Privacy Policy"
         pageDescription="Read our privacy policy"
+        showBackButton
       />
       <section className="py-16 md:py-20 lg:py-28">
         <div className="container">
@@ -52,12 +53,23 @@ export default function PrivacyPolicyPage() {
                     </div>
 
                     <div>
-                      <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">2.3 Content Information</h4>
+                      <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">2.3 Document and AI Content</h4>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                        <li>Documents and files you upload</li>
-                        <li>Conversations and interactions with our AI</li>
-                        <li>User-generated content and feedback</li>
-                        <li>Workspace and project data</li>
+                        <li>Documents and files you upload (PDFs, text, spreadsheets)</li>
+                        <li>Conversations and queries with our AI-powered chat interface</li>
+                        <li>Document embeddings and processed content for search and retrieval</li>
+                        <li>User-generated content, knowledge bases, and workspace data</li>
+                        <li>Chat transcripts and conversation history</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">2.4 Cookies and Similar Technologies</h4>
+                      <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                        <li>Essential cookies for authentication and session management</li>
+                        <li>Preference cookies for language and display settings</li>
+                        <li>Analytics cookies to understand product usage</li>
+                        <li>Performance cookies for load balancing and error tracking</li>
                       </ul>
                     </div>
                   </div>
@@ -69,20 +81,33 @@ export default function PrivacyPolicyPage() {
                     <div>
                       <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">3.1 Primary Purposes</h4>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                        <li>To provide, maintain, and improve our services</li>
-                        <li>To process your transactions and manage your account</li>
-                        <li>To communicate with you about our services</li>
-                        <li>To personalize your experience and content</li>
+                        <li>To provide AI-powered document search, chat, and conversation features</li>
+                        <li>To process, index, and analyze your documents for intelligent retrieval</li>
+                        <li>To manage your account, subscriptions, and billing</li>
+                        <li>To communicate with you about service updates and support</li>
+                        <li>To personalize your experience and improve AI response quality</li>
                       </ul>
                     </div>
 
                     <div>
-                      <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">3.2 Secondary Purposes</h4>
+                      <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">3.2 AI and Machine Learning</h4>
+                      <p className="text-gray-600 dark:text-gray-400 mb-2">
+                        Qurieus uses AI and machine learning to power document understanding and conversational search. Your document content is processed to:
+                      </p>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                        <li>To analyze and improve our services</li>
-                        <li>To detect and prevent fraud or abuse</li>
+                        <li>Generate embeddings for semantic search within your knowledge base</li>
+                        <li>Enable natural language queries and AI-powered answers</li>
+                        <li>Improve model accuracy (we do not use your content to train general-purpose models without consent)</li>
+                        <li>Detect and prevent abuse or policy violations</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">3.3 Other Purposes</h4>
+                      <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                        <li>To analyze and improve our SaaS platform</li>
                         <li>To comply with legal obligations</li>
-                        <li>To develop new features and services</li>
+                        <li>To develop new AI features and integrations</li>
                       </ul>
                     </div>
                   </div>
@@ -91,14 +116,15 @@ export default function PrivacyPolicyPage() {
                 <div>
                   <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">4. Data Security</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    We implement appropriate technical and organizational measures to protect your personal data, including:
+                    As a SaaS provider handling sensitive documents, we implement industry-standard security measures including:
                   </p>
                   <ul className="space-y-2 text-gray-600 dark:text-gray-400 mt-4">
-                    <li>End-to-end encryption for data in transit and at rest</li>
-                    <li>Regular security assessments and audits</li>
-                    <li>Access controls and authentication mechanisms</li>
-                    <li>Secure data centers and cloud infrastructure</li>
-                    <li>Regular backups and disaster recovery procedures</li>
+                    <li>Encryption in transit (TLS) and at rest (AES) for all document and user data</li>
+                    <li>Role-based access controls and multi-factor authentication options</li>
+                    <li>Secure cloud infrastructure with SOC 2 compliant providers</li>
+                    <li>Regular security assessments, penetration testing, and audits</li>
+                    <li>Data isolation between customer workspaces</li>
+                    <li>Automated backups and disaster recovery procedures</li>
                   </ul>
                 </div>
 
@@ -111,10 +137,11 @@ export default function PrivacyPolicyPage() {
                         We may share your information with trusted third-party service providers who assist us in operating our services, such as:
                       </p>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400 mt-4">
-                        <li>Cloud hosting and storage providers</li>
-                        <li>Payment processors and billing services</li>
-                        <li>Analytics and monitoring services</li>
-                        <li>Customer support and communication tools</li>
+                        <li>Cloud hosting and AI/ML infrastructure providers</li>
+                        <li>Payment processors (e.g., Paddle) for subscription billing</li>
+                        <li>Email delivery and transactional notification services</li>
+                        <li>Analytics and error monitoring (anonymized usage data only)</li>
+                        <li>Customer support and help desk tools</li>
                       </ul>
                     </div>
 
@@ -134,7 +161,14 @@ export default function PrivacyPolicyPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">6. Your Rights and Choices</h3>
+                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">6. Data Retention</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    We retain your data for as long as your account is active or as needed to provide our services. Document content, chat history, and embeddings are retained until you delete them or close your account. Upon account deletion, we remove your data within 30 days, except where retention is required by law.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">7. Your Rights and Choices</h3>
                   <p className="text-gray-600 dark:text-gray-400">
                     You have the following rights regarding your personal data:
                   </p>
@@ -150,35 +184,35 @@ export default function PrivacyPolicyPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">7. International Data Transfers</h3>
+                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">8. International Data Transfers</h3>
                   <p className="text-gray-600 dark:text-gray-400">
                     Your information may be transferred to and processed in countries other than your country of residence. We ensure appropriate safeguards are in place for such transfers in compliance with applicable data protection laws.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">8. Children&apos;s Privacy</h3>
+                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">9. Children&apos;s Privacy</h3>
                   <p className="text-gray-600 dark:text-gray-400">
                     Our services are not intended for individuals under 16 years of age. We do not knowingly collect personal information from children under 16.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">9. Changes to This Policy</h3>
+                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">10. Changes to This Policy</h3>
                   <p className="text-gray-600 dark:text-gray-400">
                     We may update this privacy policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the &quot;Last updated&quot; date. We encourage you to review this policy periodically.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">10. Contact Us</h3>
+                  <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">11. Contact Us</h3>
                   <p className="text-gray-600 dark:text-gray-400">
                     If you have any questions about this Privacy Policy or our data practices, please contact us at:
                   </p>
                   <p className="text-gray-600 dark:text-gray-400 mt-4">
-                    Email: privacy@qurieus.com<br />
-                    Address: FrontSlash,  New Delhi<br />
-                    Phone: +919953633888
+                    Email: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "privacy@qurieus.com"}<br />
+                    Address: {process.env.NEXT_PUBLIC_SUPPORT_ADDRESS || "FrontSlash, New Delhi"}<br />
+                    Phone: {process.env.NEXT_PUBLIC_SUPPORT_PHONE || "+91 9953633888"}
                   </p>
                 </div>
               </div>

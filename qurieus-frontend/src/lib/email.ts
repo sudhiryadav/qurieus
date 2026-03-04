@@ -27,11 +27,17 @@ const transporter = nodemailer.createTransport({
   rateLimit: 5, // Send max 5 emails per second
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://qurieus.com";
+
 export const footerData = {
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
   supportAddress: process.env.NEXT_PUBLIC_SUPPORT_ADDRESS,
   supportPhone: process.env.NEXT_PUBLIC_SUPPORT_PHONE,
   year: new Date().getFullYear(),
+  appUrl,
+  privacyPolicyUrl: `${appUrl}/privacy-policy`,
+  termsOfServiceUrl: `${appUrl}/terms-of-service`,
+  refundPolicyUrl: `${appUrl}/refund-policy`,
 }
 
 const logoUrl = `https://qurieus.com/images/logo/logo.png`;

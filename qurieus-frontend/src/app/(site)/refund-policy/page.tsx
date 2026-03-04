@@ -12,6 +12,7 @@ export default function RefundPolicyPage() {
       <Breadcrumb
         pageName="Refund Policy"
         pageDescription="Learn about our refund policy"
+        showBackButton
       />
       <section className="py-16 md:py-20 lg:py-28">
         <div className="container">
@@ -84,7 +85,7 @@ export default function RefundPolicyPage() {
                     <div>
                       <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">4.1 Request Submission</h4>
                       <ol className="space-y-2 text-gray-600 dark:text-gray-400 list-decimal pl-5">
-                        <li>Contact our support team at {process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</li>
+                        <li>Contact our support team at {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@qurieus.com"}</li>
                         <li>Provide your account details and reason for refund</li>
                         <li>Include any relevant documentation or evidence</li>
                         <li>Specify your preferred refund method</li>
@@ -128,9 +129,9 @@ export default function RefundPolicyPage() {
                     For any questions regarding our refund policy or to request a refund, please contact us at:
                   </p>
                   <p className="text-gray-600 dark:text-gray-400 mt-4">
-                    Email: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL}<br />
-                    Address: {process.env.NEXT_PUBLIC_SUPPORT_ADDRESS}<br />
-                    Phone: {process.env.NEXT_PUBLIC_SUPPORT_PHONE}
+                    Email: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@qurieus.com"}<br />
+                    Address: {process.env.NEXT_PUBLIC_SUPPORT_ADDRESS || "FrontSlash, New Delhi"}<br />
+                    Phone: {process.env.NEXT_PUBLIC_SUPPORT_PHONE || "+91 9953633888"}
                   </p>
                 </div>
 
