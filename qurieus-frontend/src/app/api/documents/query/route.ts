@@ -188,6 +188,7 @@ export async function POST(request: Request) {
       where: { id: apiKey },
       select: {
         id: true,
+        role: true,
         allowedOrigins: true,
         allowedReferrers: true,
         allowedIPs: true,
@@ -216,20 +217,25 @@ export async function POST(request: Request) {
     if (!checkAllowed(userWithSubscription.allowedIPs, ip))
       return corsErrorResponse({ error: "IP not allowed", errorCode: "IP_NOT_ALLOWED" }, 403);
 
-    // Check if user has a subscription
-    const subscription = await prisma.userSubscription.findFirst({
-      where: { userId: apiKey, status: 'active' },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (!subscription)
-      return corsErrorResponse({ error: "User has no subscription", errorCode: "NO_SUBSCRIPTION" }, 403);
+    const isAdmin = userWithSubscription.role === 'ADMIN' || userWithSubscription.role === 'SUPER_ADMIN';
 
-    // Check if number of request is greater than the subscription plan
+    // Admin/Super Admin: unlimited chat access - they run the app, no subscription needed
+    if (!isAdmin) {
+      const subscription = await prisma.userSubscription.findFirst({
+        where: { userId: apiKey, status: 'active' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!subscription)
+        return corsErrorResponse({ error: "User has no subscription", errorCode: "NO_SUBSCRIPTION" }, 403);
+    }
+
+    // Check if number of request is greater than the subscription plan (admins: unlimited)
     const queryCount = await prisma.queryAnalytics.count({
       where: { userId: apiKey, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 1)) } },
     });
     const plan = userWithSubscription.subscription?.planSnapshot || userWithSubscription.subscription?.plan;
-    if (plan?.maxQueriesPerDay && plan.maxQueriesPerDay < queryCount)
+    const maxQueries = isAdmin ? 999999 : (plan?.maxQueriesPerDay ?? 0);
+    if (maxQueries > 0 && maxQueries < queryCount)
       return corsErrorResponse({ error: "Number of requests exceeded", errorCode: "QUERY_LIMIT_EXCEEDED" }, 403);
 
     // Get chat history and handle visitor ID

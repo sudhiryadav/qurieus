@@ -43,14 +43,21 @@ export async function GET() {
     }
   }
 
-  // Don't show the chat widget if embed user has no active subscription
+  // Admin/Super Admin always get the widget - they run the app, no subscription needed
   if (embedUserId) {
-    const hasActiveSubscription = await prisma.userSubscription.findFirst({
-      where: { userId: embedUserId, status: "active" },
-      select: { id: true },
+    const embedUser = await prisma.user.findUnique({
+      where: { id: embedUserId },
+      select: { role: true },
     });
-    if (!hasActiveSubscription) {
-      embedUserId = null;
+    const isAdmin = embedUser?.role === UserRole.ADMIN || embedUser?.role === UserRole.SUPER_ADMIN;
+    if (!isAdmin) {
+      const hasActiveSubscription = await prisma.userSubscription.findFirst({
+        where: { userId: embedUserId, status: "active" },
+        select: { id: true },
+      });
+      if (!hasActiveSubscription) {
+        embedUserId = null;
+      }
     }
   }
 
