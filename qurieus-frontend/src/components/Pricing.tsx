@@ -16,8 +16,11 @@ import LoadingOverlay from "@/components/Common/LoadingOverlay";
 
 export default function Pricing({
   onUpdatePlan,
+  hideFreeTrialWhenExpired,
 }: {
   onUpdatePlan?: (subscriptionId: string, priceId: string) => void;
+  /** When true, hides Free Trial from the plan list (e.g. when user's trial has expired) */
+  hideFreeTrialWhenExpired?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -252,9 +255,11 @@ export default function Pricing({
     }
   };
 
-  // Separate enterprise plan
+  // Separate enterprise plan and optionally hide Free Trial for expired users
   const nonEnterprisePlans = plans?.filter(
-    (plan) => plan.name.toLowerCase() !== "enterprise",
+    (plan) =>
+      plan.name.toLowerCase() !== "enterprise" &&
+      !(hideFreeTrialWhenExpired && (plan.name === "Free Trial" || plan.price === 0)),
   );
   // const enterprisePlan = plans?.find(
   //   (plan) => plan.name.toLowerCase() === "enterprise",

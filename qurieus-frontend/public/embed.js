@@ -2089,12 +2089,22 @@
     showSources: document.currentScript.getAttribute('data-show-sources') === 'true',
   };
 
-
-
   if (config.apiKey) {
-    // Initialize immediately
-    window.QurieusChat.init(config);
+    // Check subscription status before showing the chat bubble.
+    // Hide the bubble entirely if subscription is expired (better UX than showing a non-functional bubble).
+    fetch(config.baseUrl + '/api/embed/status?apiKey=' + encodeURIComponent(config.apiKey))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.hasActiveSubscription) {
+          window.QurieusChat.init(config);
+        } else {
+          container.remove();
+        }
+      })
+      .catch(function () {
+        container.remove();
+      });
   } else {
-    // No API key found in data attributes
+    container.remove();
   }
 })(); 

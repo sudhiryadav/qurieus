@@ -29,8 +29,9 @@ cron.schedule("*/5 * * * *", async () => {
   }
 });
 
-// Check trial expiration and send warnings every hour
-cron.schedule("0 * * * *", async () => {
+// Check trial expiration and send warnings daily at 6:00 AM UTC
+// (Running hourly caused duplicate emails; daily is sufficient for trial management)
+cron.schedule("0 6 * * *", async () => {
   console.log("[CRON] Running trial management...");
   try {
     await checkTrialExpiration();

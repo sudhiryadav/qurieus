@@ -17,10 +17,12 @@ const FullScreenPricing = ({
   showPricingModal,
   setShowPricingModal,
   onUpdatePlan,
+  hideFreeTrialWhenExpired,
 }: {
   showPricingModal: boolean;
   setShowPricingModal: (show: boolean) => void;
   onUpdatePlan: (subscriptionId: string, priceId: string) => void;
+  hideFreeTrialWhenExpired?: boolean;
 }) => {
   return (
     <FullScreenDialog
@@ -36,7 +38,7 @@ const FullScreenPricing = ({
         </button>
       }
     >
-      <Pricing onUpdatePlan={onUpdatePlan} />
+      <Pricing onUpdatePlan={onUpdatePlan} hideFreeTrialWhenExpired={hideFreeTrialWhenExpired} />
     </FullScreenDialog>
   );
 };
@@ -123,8 +125,26 @@ export default function SubscriptionPage() {
     );
   }
 
+  const isExpiredTrial = subscription.plan.name === "Free Trial" && subscription.status === "expired";
+
   return (
     <div>
+      {isExpiredTrial && (
+        <div className="mb-6 rounded-lg border-2 border-amber-500 bg-amber-50 p-6 dark:border-amber-600 dark:bg-amber-950/30">
+          <h3 className="mb-2 text-lg font-semibold text-amber-800 dark:text-amber-200">
+            Your free trial has expired
+          </h3>
+          <p className="mb-4 text-amber-700 dark:text-amber-300">
+            You can still view your documents and dashboard, but chat and new queries are disabled. Upgrade to a paid plan to restore full access and continue using Qurieus.
+          </p>
+          <button
+            onClick={() => setShowPricingModal(true)}
+            className="rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
+          >
+            Upgrade to a paid plan
+          </button>
+        </div>
+      )}
       <div className="mb-8 flex items-center justify-between">
       <div className="flex items-center gap-3">
       <CreditCard className="h-8 w-8 text-blue-600" />
@@ -135,7 +155,7 @@ export default function SubscriptionPage() {
             onClick={() => setShowPricingModal(true)}
             className="rounded-lg border border-primary bg-white px-6 py-3 text-primary hover:bg-primary hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
           >
-            Change Plan
+            {isExpiredTrial ? "Upgrade Plan" : "Change Plan"}
           </button>
           <button
             onClick={() => fetchSubscription(true)}
@@ -158,13 +178,15 @@ export default function SubscriptionPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
-              {/* set color green if active, red if inactive and show it with background color and padding */}
+              {/* set color green if active, red if expired/inactive */}
               <p
                 className={`text-lg font-medium capitalize ${subscription.status === "active" ? "rounded-md bg-green-500/10 p-2 text-green-500" : "rounded-md bg-red-500/10 p-2 text-red-500"}`}
               >
                 {subscription.status === "active"
                   ? "Active"
-                  : "Inactive (Processing)"}
+                  : subscription.status === "expired"
+                    ? "Expired"
+                    : "Inactive (Processing)"}
               </p>
             </div>
             <div>
@@ -275,6 +297,7 @@ export default function SubscriptionPage() {
         showPricingModal={showPricingModal}
         onUpdatePlan={onUpdatePlan}
         setShowPricingModal={setShowPricingModal}
+        hideFreeTrialWhenExpired={isExpiredTrial}
       />
     </div>
   );
