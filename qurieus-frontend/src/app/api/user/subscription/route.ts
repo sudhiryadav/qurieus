@@ -25,6 +25,21 @@ export const GET = RequireRoles([UserRole.USER,UserRole.SUPER_ADMIN])(async () =
       return NextResponse.json(null);
     }
 
+    // Check if Free Trial has expired and update status on-the-fly
+    // (cron may not have run yet; ensures subscription page shows correct status)
+    if (
+      subscription.plan.name === "Free Trial" &&
+      subscription.status === "active" &&
+      subscription.currentPeriodEnd < new Date()
+    ) {
+      const updated = await prisma.userSubscription.update({
+        where: { id: subscription.id },
+        data: { status: "expired" },
+        include: { plan: true },
+      });
+      return NextResponse.json(updated);
+    }
+
     return NextResponse.json(subscription);
   } catch (error) {
     console.error("Error fetching subscription:", error);

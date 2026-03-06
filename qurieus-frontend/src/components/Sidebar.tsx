@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X, Users as UsersIcon, MessageSquare, Globe } from "lucide-react";
+import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X, Users as UsersIcon, MessageSquare, Globe, Clock } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -19,6 +19,7 @@ export const userNav = [
 const adminNav = [
   { name: "Users", href: "/admin/users", icon: <User className="h-4 w-4 mr-2" /> },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: <BarChart3 className="h-4 w-4 mr-2" /> },
+  { name: "Trial Extensions", href: "/admin/trial-extensions", icon: <Clock className="h-4 w-4 mr-2" /> },
   { name: "Plans", href: "/admin/plans", icon: <Code className="h-4 w-4 mr-2" /> },
   { name: "Knowledge Base", href: "/admin/knowledge-base", icon: <Upload className="h-4 w-4 mr-2" /> },
   { name: "Website Crawler", href: "/admin/website-crawler", icon: <Globe className="h-4 w-4 mr-2" /> },

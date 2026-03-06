@@ -10,7 +10,8 @@ import {
   Menu, 
   X,
   Code,
-  MessageSquare
+  MessageSquare,
+  Clock
 } from "lucide-react";
 import React from "react";
 import Logo from "../Common/Logo";
@@ -166,6 +167,11 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
                 <DropdownMenuItem asChild>
                   <Link href="/admin/plans" className={pathname === "/admin/plans" ? "text-primary font-semibold" : ""}>
                     <Code className="mr-2 h-4 w-4 inline" /> Plans
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/trial-extensions" className={pathname === "/admin/trial-extensions" ? "text-primary font-semibold" : ""}>
+                    <Clock className="mr-2 h-4 w-4 inline" /> Trial Extensions
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuSubContent>

@@ -121,7 +121,25 @@ model User {
   allowedOrigins        String[] // e.g. ["https://mydomain.com"]
   allowedReferrers      String[] // e.g. ["https://mydomain.com/page"]
   allowedIPs            String[] // e.g. ["1.2.3.4"]
+
+  trialExtensionRequests TrialExtensionRequest[]
   @@map("Users")
+}
+
+model TrialExtensionRequest {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userSubscriptionId String
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  requestedAt     DateTime  @default(now())
+  extensionDays   Int       @default(7)
+  newPeriodEnd    DateTime?
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model VerificationToken {

@@ -54,6 +54,12 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [extensionStatus, setExtensionStatus] = useState<{
+    latestRequest: { id: string; status: string; requestedAt: string; rejectionReason?: string } | null;
+    hasUsedExtension: boolean;
+    canRequestExtension: boolean;
+  } | null>(null);
+  const [requestingExtension, setRequestingExtension] = useState(false);
 
   const onUpdatePlan = (subscriptionId: string, priceId: string) => {
     setShowPricingModal(false);
@@ -78,11 +84,26 @@ export default function SubscriptionPage() {
     }
   }, []);
 
+  const fetchExtensionStatus = useCallback(async () => {
+    try {
+      const res = await axiosInstance.get("/api/user/trial-extension");
+      setExtensionStatus(res.data);
+    } catch {
+      setExtensionStatus(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (session?.user) {
       fetchSubscription(false);
     }
   }, [session, fetchSubscription]);
+
+  useEffect(() => {
+    if (session?.user && subscription?.plan?.name === "Free Trial" && subscription?.status === "expired") {
+      fetchExtensionStatus();
+    }
+  }, [session, subscription, fetchExtensionStatus]);
 
   if (loading) {
     return (
@@ -137,12 +158,50 @@ export default function SubscriptionPage() {
           <p className="mb-4 text-amber-700 dark:text-amber-300">
             You can still view your documents and dashboard, but chat and new queries are disabled. Upgrade to a paid plan to restore full access and continue using Qurieus.
           </p>
-          <button
-            onClick={() => setShowPricingModal(true)}
-            className="rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
-          >
-            Upgrade to a paid plan
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setShowPricingModal(true)}
+              className="rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
+            >
+              Upgrade to a paid plan
+            </button>
+            {extensionStatus?.canRequestExtension && (
+              <button
+                onClick={async () => {
+                  setRequestingExtension(true);
+                  try {
+                    await axiosInstance.post("/api/user/trial-extension");
+                    showToast.success("Extension request submitted. An admin will review it shortly.");
+                    fetchExtensionStatus();
+                  } catch (err: unknown) {
+                    const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+                    showToast.error(msg || "Failed to submit request");
+                  } finally {
+                    setRequestingExtension(false);
+                  }
+                }}
+                disabled={requestingExtension}
+                className="rounded-lg border-2 border-amber-600 bg-white px-6 py-3 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/50"
+              >
+                {requestingExtension ? "Submitting..." : "Request 7-day extension (one-time)"}
+              </button>
+            )}
+            {extensionStatus?.latestRequest?.status === "PENDING" && (
+              <span className="flex items-center rounded-lg border border-amber-600 px-4 py-3 text-amber-700 dark:text-amber-200">
+                Extension request pending admin approval
+              </span>
+            )}
+            {extensionStatus?.latestRequest?.status === "REJECTED" && (
+              <span className="flex items-center rounded-lg border border-red-300 px-4 py-3 text-red-700 dark:text-red-300">
+                {extensionStatus.latestRequest.rejectionReason || "Extension request was declined"}
+              </span>
+            )}
+            {extensionStatus?.hasUsedExtension && (
+              <span className="flex items-center rounded-lg border border-amber-600 px-4 py-3 text-amber-700 dark:text-amber-200">
+                You have already used your one-time extension
+              </span>
+            )}
+          </div>
         </div>
       )}
       <div className="mb-8 flex items-center justify-between">
@@ -247,9 +306,14 @@ export default function SubscriptionPage() {
               <p className="text-lg font-medium">
               {(() => {
                   const daysLeft = differenceInDays(new Date(subscription.nextBillingDate), new Date());
-                  return daysLeft >= 0 ? (
-                    <>{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</>
-                  ) : null;
+                  if (daysLeft >= 0) {
+                    return <>{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</>;
+                  }
+                  return (
+                    <span className="text-red-500 dark:text-red-400">
+                      Expired
+                    </span>
+                  );
                 })()}
               </p>
             </div>
