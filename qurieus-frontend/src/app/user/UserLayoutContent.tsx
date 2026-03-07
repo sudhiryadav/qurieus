@@ -3,6 +3,7 @@
 import { showToast } from "@/components/Common/Toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import axiosInstance from "@/lib/axios";
+import { differenceInDays } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import SubscriptionPage from "./subscription/page";
@@ -35,8 +36,7 @@ export default function UserLayoutContent({
           if (response.data?.status === "active") {
             const trialEnd = new Date(response.data.currentPeriodEnd);
             const now = new Date();
-            const diffTime = trialEnd.getTime() - now.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.max(0, differenceInDays(trialEnd, now));
             
             // Show banner if trial expires in 7 days or less
             if (diffDays <= 7 && diffDays > 0) {
