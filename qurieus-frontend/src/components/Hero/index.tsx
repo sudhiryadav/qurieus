@@ -40,6 +40,22 @@ const Hero = () => {
                     Learn More
                   </Link>
                 </div>
+                <p className="mt-6 text-sm text-white/90">
+                  Need live chat for your website?{" "}
+                  <Link
+                    href="/live-chat-for-website"
+                    className="font-medium underline hover:text-white"
+                  >
+                    Add AI chat to your site
+                  </Link>
+                  {" · "}
+                  <Link
+                    href="/intercom-alternative"
+                    className="font-medium underline hover:text-white"
+                  >
+                    Intercom alternative
+                  </Link>
+                </p>
               </div>
             </div>
 

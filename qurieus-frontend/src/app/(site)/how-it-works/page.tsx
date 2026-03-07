@@ -1,6 +1,7 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "How It Works | Qurieus - AI-Powered Document Conversations",
@@ -76,6 +77,28 @@ export default function HowItWorksPage() {
                   className="w-full"
                 />
               </div>
+            </div>
+          </div>
+          <div className="mt-16 rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-dark-3 dark:bg-dark-2">
+            <h3 className="mb-4 text-xl font-semibold text-black dark:text-white">
+              Use Qurieus for
+            </h3>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-base">
+              <Link href="/live-chat-for-website" className="text-primary hover:underline">
+                Live chat for website
+              </Link>
+              <Link href="/customer-support-chat" className="text-primary hover:underline">
+                Customer support chat
+              </Link>
+              <Link href="/chat-widget-for-wordpress" className="text-primary hover:underline">
+                Chat widget for WordPress
+              </Link>
+              <Link href="/intercom-alternative" className="text-primary hover:underline">
+                Intercom alternative
+              </Link>
+              <Link href="/zendesk-alternative" className="text-primary hover:underline">
+                Zendesk alternative
+              </Link>
             </div>
           </div>
         </div>

@@ -259,6 +259,79 @@ const Footer = () => {
               </ul>
             </div>
           </div>
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12">
+            <div className="mb-10 w-full">
+              <h4 className="mb-9 text-lg font-semibold text-white">
+                Solutions
+              </h4>
+              <ul>
+                <li>
+                  <Link
+                    href="/intercom-alternative"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Intercom Alternative
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/live-chat-for-website"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Live Chat for Website
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/chat-widget-for-wordpress"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Chat Widget for WordPress
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/customer-support-chat"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Customer Support Chat
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/zendesk-alternative"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Zendesk Alternative
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/ai-chatbot-for-website"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    AI Chatbot for Website
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/tawk-alternative"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Tawk Alternative
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/live-chat-software"
+                    className="mb-3 inline-block text-base text-gray-7 hover:text-primary"
+                  >
+                    Live Chat Software
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 

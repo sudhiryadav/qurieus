@@ -21,5 +21,19 @@ Allow: /terms-of-service
 Allow: /refund-policy
 Allow: /legal-notice
 
-# Crawl delay (optional)
-Crawl-delay: 1 
+# Allow SEO pages
+Allow: /intercom-alternative
+Allow: /live-chat-for-website
+Allow: /chat-widget-for-wordpress
+Allow: /customer-support-chat
+Allow: /zendesk-alternative
+Allow: /ai-chatbot-for-website
+Allow: /crisp-alternative
+Allow: /live-chat-for-shopify
+Allow: /help-desk-chat
+Allow: /chatbot-for-customer-service
+Allow: /tawk-alternative
+Allow: /drift-alternative
+Allow: /freshdesk-alternative
+Allow: /live-chat-software
+Allow: /chat-support-software

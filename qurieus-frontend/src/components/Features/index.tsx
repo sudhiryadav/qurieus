@@ -1,3 +1,4 @@
+import Link from "next/link";
 import SectionTitle from "../Common/SectionTitle";
 import SingleFeature from "./SingleFeature";
 import featuresData from "./featuresData";
@@ -16,6 +17,29 @@ const Features = () => {
           {featuresData.map((feature, i) => (
             <SingleFeature key={i} feature={feature} />
           ))}
+        </div>
+
+        <div className="mt-12 rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-dark-3 dark:bg-dark-2 lg:mt-16">
+          <p className="mb-3 text-sm font-semibold text-body-color dark:text-gray-4">
+            Solutions for your use case:
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link href="/live-chat-for-website" className="text-primary hover:underline">
+              Live Chat for Website
+            </Link>
+            <Link href="/intercom-alternative" className="text-primary hover:underline">
+              Intercom Alternative
+            </Link>
+            <Link href="/chat-widget-for-wordpress" className="text-primary hover:underline">
+              Chat Widget for WordPress
+            </Link>
+            <Link href="/zendesk-alternative" className="text-primary hover:underline">
+              Zendesk Alternative
+            </Link>
+            <Link href="/ai-chatbot-for-website" className="text-primary hover:underline">
+              AI Chatbot for Website
+            </Link>
+          </div>
         </div>
       </div>
     </section>
