@@ -14,8 +14,8 @@ const Footer = () => {
       data-wow-delay=".15s"
     >
       <div className="container">
-        <div className="-mx-4 flex flex-wrap">
-          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-4/12 xl:w-3/12">
+        <div className="-mx-4 flex flex-wrap lg:flex-nowrap">
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12 lg:min-w-0 lg:shrink-0">
             <div className="mb-10 w-full">
               <Logo />
               <p className="mb-8 max-w-[270px] text-base text-gray-7">
@@ -95,7 +95,7 @@ const Footer = () => {
               </div>
             </div>
           </div>
-          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12">
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12 lg:min-w-0 lg:shrink-0">
             <div className="mb-10 w-full">
               <h4 className="mb-9 text-lg font-semibold text-white">
                 About Us
@@ -136,7 +136,7 @@ const Footer = () => {
               </ul>
             </div>
           </div>
-          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-3/12 xl:w-2/12">
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12 lg:min-w-0 lg:shrink-0">
             <div className="mb-10 w-full">
               <h4 className="mb-9 text-lg font-semibold text-white">
                 Features
@@ -177,7 +177,7 @@ const Footer = () => {
               </ul>
             </div>
           </div>
-          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-3/12 xl:w-2/12">
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12 lg:min-w-0 lg:shrink-0">
             <div className="mb-10 w-full">
               <h4 className="mb-9 text-lg font-semibold text-white">
                 Support
@@ -218,7 +218,7 @@ const Footer = () => {
               </ul>
             </div>
           </div>
-          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12">
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12 lg:min-w-0 lg:shrink-0">
             <div className="mb-10 w-full">
               <h4 className="mb-9 text-lg font-semibold text-white">
                 For You
@@ -259,7 +259,7 @@ const Footer = () => {
               </ul>
             </div>
           </div>
-          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12">
+          <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12 lg:min-w-0 lg:shrink-0">
             <div className="mb-10 w-full">
               <h4 className="mb-9 text-lg font-semibold text-white">
                 Solutions
