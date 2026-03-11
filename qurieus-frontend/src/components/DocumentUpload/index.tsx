@@ -237,7 +237,7 @@ export default function DocumentUpload({
     }
 
     setIsUploading(false);
-  }, [disabled, onUploadComplete, onUploadError, monitorProcessingStatus]);
+  }, [disabled, onUploadComplete, onUploadError, monitorProcessingStatus, customUploadEndpoint]);
 
 
 

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function TestRoutingPage() {
   return (
     <div className="container mx-auto p-6">
@@ -15,15 +17,15 @@ export default function TestRoutingPage() {
         <div className="p-4 bg-blue-100 rounded-md">
           <h2 className="font-semibold text-blue-800">🔗 Test Links</h2>
           <div className="space-y-2 mt-2">
-            <a href="/user/profile" className="block text-blue-600 hover:underline">
+            <Link href="/user/profile" className="block text-blue-600 hover:underline">
               /user/profile
-            </a>
-            <a href="/user/dashboard" className="block text-blue-600 hover:underline">
+            </Link>
+            <Link href="/user/dashboard" className="block text-blue-600 hover:underline">
               /user/dashboard
-            </a>
-            <a href="/debug-session" className="block text-blue-600 hover:underline">
+            </Link>
+            <Link href="/debug-session" className="block text-blue-600 hover:underline">
               /debug-session
-            </a>
+            </Link>
           </div>
         </div>
       </div>

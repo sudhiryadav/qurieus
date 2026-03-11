@@ -1,4 +1,5 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
+import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -59,7 +60,7 @@ export default function LegalNoticePage() {
               <li>Industry-specific regulations</li>
             </ul>
             <p>
-              For details on how we collect and use data, see our <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>. For terms governing use of our services, see our <a href="/terms-of-service" className="text-primary hover:underline">Terms of Service</a>.
+              For details on how we collect and use data, see our <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>. For terms governing use of our services, see our <Link href="/terms-of-service" className="text-primary hover:underline">Terms of Service</Link>.
             </p>
 
             <h3>5. Intellectual Property</h3>

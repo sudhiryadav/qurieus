@@ -1,4 +1,5 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
+import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ export default function TermsOfServicePage() {
                 <div>
                   <h3 className="text-2xl font-bold mb-6 text-primary dark:text-primary/90 border-b border-gray-200 dark:border-gray-700 pb-2">1. Agreement to Terms</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    By accessing or using Qurieus (&quot;Service&quot;), an AI-powered document conversation and search platform, you agree to be bound by these Terms of Service, our <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>, and all applicable laws. If you do not agree with any of these terms, you are prohibited from using the Service.
+                    By accessing or using Qurieus (&quot;Service&quot;), an AI-powered document conversation and search platform, you agree to be bound by these Terms of Service, our <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>, and all applicable laws. If you do not agree with any of these terms, you are prohibited from using the Service.
                   </p>
                 </div>
 
@@ -98,7 +99,7 @@ export default function TermsOfServicePage() {
                         <li>Subscriptions are billed in advance</li>
                         <li>Automatic renewal unless cancelled</li>
                         <li>Prices may change with notice</li>
-                        <li>Refunds subject to our <a href="/refund-policy" className="text-primary hover:underline">Refund Policy</a></li>
+                        <li>Refunds subject to our <Link href="/refund-policy" className="text-primary hover:underline">Refund Policy</Link></li>
                       </ul>
                     </div>
 
@@ -130,7 +131,7 @@ export default function TermsOfServicePage() {
                     <div>
                       <h4 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 mt-8">5.2 Data Processing</h4>
                       <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                        <li>We process data according to our <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a></li>
+                        <li>We process data according to our <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link></li>
                         <li>We implement security measures to protect data</li>
                         <li>We may use anonymized data for service improvement</li>
                         <li>You can request data deletion as per our policy</li>
