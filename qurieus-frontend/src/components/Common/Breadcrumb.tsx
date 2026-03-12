@@ -63,7 +63,7 @@ const Breadcrumb = ({
           {pageName}
         </h1>
         {pageDescription && (
-          <p className="text-xs text-gray-500 dark:text-dark-6 mt-0.5 max-w-xs truncate">
+          <p className="text-xs text-gray-500 dark:text-dark-6 mt-0.5 max-w-sm">
             {pageDescription}
           </p>
         )}

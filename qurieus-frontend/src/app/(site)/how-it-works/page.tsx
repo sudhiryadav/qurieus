@@ -68,13 +68,13 @@ export default function HowItWorksPage() {
               </div>
             </div>
             <div className="w-full px-4 lg:w-1/2">
-              <div className="relative mx-auto aspect-[25/24] max-w-[500px] lg:mr-0">
+              <div className="relative mx-auto aspect-[25/24] max-w-[500px] lg:mr-0 overflow-hidden rounded-xl">
                 <Image
-                  src="/images/how-it-works.svg"
-                  alt="How Qurieus Works"
+                  src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80"
+                  alt="How Qurieus Works - AI document conversations"
                   width={500}
                   height={480}
-                  className="w-full"
+                  className="w-full object-cover"
                 />
               </div>
             </div>

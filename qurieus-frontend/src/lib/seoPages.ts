@@ -393,7 +393,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "live-chat-for-shopify",
     title: "Live Chat for Shopify",
-    heroImage: UNSPLASH("1556742044-3c52c6e2cecb", "Ecommerce store with chat support"),
+    heroImage: UNSPLASH("1519389950473-47ba0277781c", "Ecommerce store with chat support"),
     metaTitle: "Live Chat for Shopify | AI Chat Widget - Qurieus",
     metaDescription:
       "Add AI live chat to your Shopify store. Qurieus answers product, shipping, and policy questions from your content. Free trial.",
