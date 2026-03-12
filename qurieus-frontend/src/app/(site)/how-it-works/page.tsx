@@ -81,23 +81,56 @@ export default function HowItWorksPage() {
           </div>
           <div className="mt-16 rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-dark-3 dark:bg-dark-2">
             <h3 className="mb-4 text-xl font-semibold text-black dark:text-white">
-              Use Qurieus for
+              Related Solutions
             </h3>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-base">
               <Link href="/live-chat-for-website" className="text-primary hover:underline">
-                Live chat for website
-              </Link>
-              <Link href="/customer-support-chat" className="text-primary hover:underline">
-                Customer support chat
-              </Link>
-              <Link href="/chat-widget-for-wordpress" className="text-primary hover:underline">
-                Chat widget for WordPress
+                Live Chat for Website
               </Link>
               <Link href="/intercom-alternative" className="text-primary hover:underline">
-                Intercom alternative
+                Intercom Alternative
+              </Link>
+              <Link href="/chat-widget-for-wordpress" className="text-primary hover:underline">
+                Chat Widget for WordPress
+              </Link>
+              <Link href="/customer-support-chat" className="text-primary hover:underline">
+                Customer Support Chat
               </Link>
               <Link href="/zendesk-alternative" className="text-primary hover:underline">
-                Zendesk alternative
+                Zendesk Alternative
+              </Link>
+              <Link href="/ai-chatbot-for-website" className="text-primary hover:underline">
+                AI Chatbot for Website
+              </Link>
+              <Link href="/tawk-alternative" className="text-primary hover:underline">
+                Tawk Alternative
+              </Link>
+              <Link href="/drift-alternative" className="text-primary hover:underline">
+                Drift Alternative
+              </Link>
+              <Link href="/freshdesk-alternative" className="text-primary hover:underline">
+                Freshdesk Alternative
+              </Link>
+              <Link href="/crisp-alternative" className="text-primary hover:underline">
+                Crisp Alternative
+              </Link>
+              <Link href="/live-chat-for-shopify" className="text-primary hover:underline">
+                Live Chat for Shopify
+              </Link>
+              <Link href="/live-chat-software" className="text-primary hover:underline">
+                Live Chat Software
+              </Link>
+              <Link href="/chat-support-software" className="text-primary hover:underline">
+                Chat Support Software
+              </Link>
+              <Link href="/help-desk-chat" className="text-primary hover:underline">
+                Help Desk Chat
+              </Link>
+              <Link href="/chatbot-for-customer-service" className="text-primary hover:underline">
+                Chatbot for Customer Service
+              </Link>
+              <Link href="/pricing" className="text-primary hover:underline">
+                Pricing
               </Link>
             </div>
           </div>

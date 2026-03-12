@@ -289,7 +289,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "ai-chatbot-for-website",
     title: "AI Chatbot for Website",
-    heroImage: UNSPLASH("1677442136019-4768a1d4ecf5", "AI chatbot and artificial intelligence"),
+    heroImage: UNSPLASH("1506744038136-46273834b3fb", "AI chatbot and artificial intelligence"),
     metaTitle: "AI Chatbot for Website | Train on Your Content - Qurieus",
     metaDescription:
       "Add an AI chatbot to your website trained on your content. Qurieus answers from your docs, FAQs, and pages. Free trial. No coding.",
@@ -601,7 +601,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "drift-alternative",
     title: "Drift Alternative",
-    heroImage: UNSPLASH("1517245381367-920b83d8b43", "Conversational chat and messaging"),
+    heroImage: UNSPLASH("1515378791036-0648a3ef77b2", "Conversational chat and messaging"),
     metaTitle: "Qurieus - Best Drift Alternative | AI Conversational Chat",
     metaDescription:
       "Looking for a Drift alternative? Qurieus offers AI-powered chat from your docs. Affordable, easy to set up. Free trial.",
@@ -653,7 +653,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "freshdesk-alternative",
     title: "Freshdesk Alternative",
-    heroImage: UNSPLASH("1600880292203-757bb62b4eaf", "Help desk and document support"),
+    heroImage: UNSPLASH("1519389950473-47ba0277781c", "Help desk and document support"),
     metaTitle: "Qurieus - Best Freshdesk Alternative | AI Support Chat",
     metaDescription:
       "Looking for a Freshdesk alternative? Qurieus offers AI-powered support chat from your docs. Reduce tickets, lower cost. Free trial.",
