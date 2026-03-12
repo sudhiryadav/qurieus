@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
 import Breadcrumb from "@/components/Common/Breadcrumb";
@@ -74,11 +75,37 @@ export default function SeoLandingPage({ config }: SeoLandingPageProps) {
           {config.heroDescription}
         </p>
 
+        {config.heroImage && (
+          <section className="mb-12">
+            <div className="relative w-full aspect-[21/9] max-h-[320px] rounded-xl overflow-hidden shadow-lg">
+              <Image
+                src={config.heroImage.src}
+                alt={config.heroImage.alt}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 800px"
+                priority
+              />
+            </div>
+          </section>
+        )}
+
         {config.sections.map((section, idx) => (
           <section key={idx} className="mb-12">
             <h2 className="text-2xl font-semibold mb-4 text-dark dark:text-white">
               {section.heading}
             </h2>
+            {section.image && (
+              <div className="relative w-full aspect-video max-h-[280px] rounded-lg overflow-hidden mb-6">
+                <Image
+                  src={section.image.src}
+                  alt={section.image.alt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
+              </div>
+            )}
             <p className="text-lg text-body-color dark:text-gray-4 mb-4">
               {section.content}
             </p>

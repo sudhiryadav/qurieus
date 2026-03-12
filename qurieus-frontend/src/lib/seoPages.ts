@@ -9,19 +9,27 @@ export interface SeoPageConfig {
   metaDescription: string;
   h1: string;
   heroDescription: string;
+  heroImage?: { src: string; alt: string };
   sections: {
     heading: string;
     content: string;
     bullets?: string[];
+    image?: { src: string; alt: string };
   }[];
   keywords: string[];
   faqs?: { question: string; answer: string }[];
 }
 
+const UNSPLASH = (id: string, alt: string) => ({
+  src: `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`,
+  alt,
+});
+
 export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "intercom-alternative",
     title: "Intercom Alternative",
+    heroImage: UNSPLASH("1556742049-0cfed4f6a45d", "AI-powered customer chat and support"),
     metaTitle: "Qurieus - Best Intercom Alternative | AI-Powered Customer Chat",
     metaDescription:
       "Looking for an Intercom alternative? Qurieus offers AI-powered live chat, knowledge base search, and document Q&A at a fraction of the cost. Try free.",
@@ -73,6 +81,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "live-chat-for-website",
     title: "Live Chat for Website",
+    heroImage: UNSPLASH("1516321318423-f06f85e504b3", "Live chat widget on website"),
     metaTitle: "Live Chat for Website | AI-Powered Chat Widget - Qurieus",
     metaDescription:
       "Add live chat to your website in minutes. Qurieus AI chat answers from your docs 24/7. Free trial. Works on any website—WordPress, Shopify, custom.",
@@ -124,6 +133,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "chat-widget-for-wordpress",
     title: "Chat Widget for WordPress",
+    heroImage: UNSPLASH("1461749280684-dccba630e2f6", "WordPress website with chat widget"),
     metaTitle: "Chat Widget for WordPress | AI Chat Plugin - Qurieus",
     metaDescription:
       "Add an AI chat widget to your WordPress site in minutes. Qurieus answers from your content 24/7. No plugin bloat. Free trial.",
@@ -175,6 +185,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "customer-support-chat",
     title: "Customer Support Chat",
+    heroImage: UNSPLASH("1521791055366-0d553872125f", "Customer support team with AI chat"),
     metaTitle: "Customer Support Chat | AI-Powered 24/7 Support - Qurieus",
     metaDescription:
       "Upgrade your customer support with AI chat. Qurieus answers from your docs, FAQs, and knowledge base 24/7. Reduce tickets, improve satisfaction.",
@@ -226,6 +237,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "zendesk-alternative",
     title: "Zendesk Alternative",
+    heroImage: UNSPLASH("1552664730-d307ca884978", "Help desk and support team"),
     metaTitle: "Qurieus - Best Zendesk Alternative | AI Support Chat",
     metaDescription:
       "Looking for a Zendesk alternative? Qurieus offers AI-powered support chat from your docs at a fraction of the cost. No per-agent pricing.",
@@ -277,6 +289,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "ai-chatbot-for-website",
     title: "AI Chatbot for Website",
+    heroImage: UNSPLASH("1677442136019-4768a1d4ecf5", "AI chatbot and artificial intelligence"),
     metaTitle: "AI Chatbot for Website | Train on Your Content - Qurieus",
     metaDescription:
       "Add an AI chatbot to your website trained on your content. Qurieus answers from your docs, FAQs, and pages. Free trial. No coding.",
@@ -328,6 +341,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "crisp-alternative",
     title: "Crisp Alternative",
+    heroImage: UNSPLASH("1507679799987-c73779587ccf", "Live chat on laptop"),
     metaTitle: "Qurieus - Best Crisp Alternative | AI Live Chat",
     metaDescription:
       "Looking for a Crisp alternative? Qurieus offers AI-powered chat from your docs. Smarter answers, simpler pricing. Try free.",
@@ -379,6 +393,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "live-chat-for-shopify",
     title: "Live Chat for Shopify",
+    heroImage: UNSPLASH("1556742044-3c52c6e2cecb", "Ecommerce store with chat support"),
     metaTitle: "Live Chat for Shopify | AI Chat Widget - Qurieus",
     metaDescription:
       "Add AI live chat to your Shopify store. Qurieus answers product, shipping, and policy questions from your content. Free trial.",
@@ -430,6 +445,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "help-desk-chat",
     title: "Help Desk Chat",
+    heroImage: UNSPLASH("1522071820081-009f0129c71c", "Help desk team collaboration"),
     metaTitle: "Help Desk Chat | AI-Powered Support - Qurieus",
     metaDescription:
       "Upgrade your help desk with AI chat. Qurieus answers from your knowledge base 24/7. Reduce tickets, improve resolution time.",
@@ -481,6 +497,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "chatbot-for-customer-service",
     title: "Chatbot for Customer Service",
+    heroImage: UNSPLASH("1551431009-a802eeec77b1", "Customer service and support"),
     metaTitle: "Chatbot for Customer Service | AI Support - Qurieus",
     metaDescription:
       "Deploy an AI chatbot for customer service. Qurieus answers from your docs and FAQs. Reduce tickets, improve satisfaction. Free trial.",
@@ -532,6 +549,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "tawk-alternative",
     title: "Tawk Alternative",
+    heroImage: UNSPLASH("1531482615713-2afd69097998", "Live chat widget on website"),
     metaTitle: "Qurieus - Best Tawk Alternative | AI-Powered Live Chat",
     metaDescription:
       "Looking for a Tawk alternative? Qurieus offers AI-powered chat from your docs. No ads, smarter answers. Free trial.",
@@ -583,6 +601,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "drift-alternative",
     title: "Drift Alternative",
+    heroImage: UNSPLASH("1517245381367-920b83d8b43", "Conversational chat and messaging"),
     metaTitle: "Qurieus - Best Drift Alternative | AI Conversational Chat",
     metaDescription:
       "Looking for a Drift alternative? Qurieus offers AI-powered chat from your docs. Affordable, easy to set up. Free trial.",
@@ -634,6 +653,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "freshdesk-alternative",
     title: "Freshdesk Alternative",
+    heroImage: UNSPLASH("1600880292203-757bb62b4eaf", "Help desk and document support"),
     metaTitle: "Qurieus - Best Freshdesk Alternative | AI Support Chat",
     metaDescription:
       "Looking for a Freshdesk alternative? Qurieus offers AI-powered support chat from your docs. Reduce tickets, lower cost. Free trial.",
@@ -685,6 +705,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "live-chat-software",
     title: "Live Chat Software",
+    heroImage: UNSPLASH("1460925895917-afdab827c52f", "Live chat software dashboard"),
     metaTitle: "Live Chat Software | AI-Powered - Qurieus",
     metaDescription:
       "Best live chat software with AI. Qurieus answers from your docs 24/7. Embed on any website. Free trial. No per-seat limits.",
@@ -736,6 +757,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
   {
     slug: "chat-support-software",
     title: "Chat Support Software",
+    heroImage: UNSPLASH("1519389950473-47ba0277781c", "Chat support and document Q&A"),
     metaTitle: "Chat Support Software | AI-Powered - Qurieus",
     metaDescription:
       "Chat support software with AI. Qurieus answers from your docs 24/7. Reduce tickets, improve satisfaction. Free trial.",

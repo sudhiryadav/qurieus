@@ -23,6 +23,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://qurieus.com";
   const url = `${baseUrl}/${slug}`;
 
+  const ogImage = config.heroImage?.src || `${baseUrl}/images/og-image.png`;
+
   return {
     title: config.metaTitle,
     description: config.metaDescription,
@@ -33,11 +35,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url,
       siteName: "Qurieus",
       type: "website",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: config.heroImage?.alt || config.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: config.metaTitle,
       description: config.metaDescription,
+      images: [ogImage],
     },
     alternates: {
       canonical: url,
