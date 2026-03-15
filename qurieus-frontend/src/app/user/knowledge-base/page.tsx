@@ -99,12 +99,14 @@ export default function KnowledgeBase() {
             Knowledge Base
           </h1>
         </div>
-        <button
-          onClick={() => setIsUploadDialogOpen(true)}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-        >
-          Upload Documents
-        </button>
+        {documents.length > 0 && (
+          <button
+            onClick={() => setIsUploadDialogOpen(true)}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+          >
+            Upload Documents
+          </button>
+        )}
       </div>
       <p className="mb-6 text-gray-600 dark:text-gray-300">
         Welcome to your Knowledge Base! Here you can securely upload, organize, and manage documents that power your workspace. Accepted file types include PDFs, Word documents, and text files. Use this space to store research, manuals, policies, or any reference material your team needs. Uploaded documents will be available for search and AI-powered insights. To get started, click &quot;Upload Documents&quot; and select your files. You can track your storage and file limits below.
@@ -123,6 +125,7 @@ export default function KnowledgeBase() {
         <DocumentsList
           documents={documents}
           onRefresh={fetchDocuments}
+          onUploadClick={documents.length === 0 ? () => setIsUploadDialogOpen(true) : undefined}
           onDownload={async (documentId: string) => {
             try {
               const response = await axiosInstance.get(`/api/documents/${documentId}/download`, {

@@ -13,7 +13,7 @@ import { useSidebar } from "@/hooks/useSidebar";
 import menuData from "./menuData";
 import { userNav } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
@@ -137,10 +137,12 @@ const Header: React.FC = () => {
                   <p className="text-sm font-medium text-foreground">{session.user.name}</p>
                   <p className="text-xs text-muted-foreground">Agent</p>
                 </div>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
-                  <AvatarFallback className="bg-muted text-muted-foreground">{session.user.name?.[0] || "A"}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={session.user.name || "Agent"}
+                  image={session.user.image}
+                  userId={session.user.id}
+                  size="sm"
+                />
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40 bg-neutral-50 dark:bg-neutral-900">

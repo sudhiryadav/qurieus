@@ -3,7 +3,7 @@
 import { showToast } from "@/components/Common/Toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import axiosInstance from "@/lib/axios";
-import { differenceInDays } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import SubscriptionPage from "./subscription/page";
@@ -22,7 +22,8 @@ export default function UserLayoutContent({
 
   useEffect(() => {
     const checkSubscription = async () => {
-      if (!session?.user || session?.user?.role === "AGENT") {
+      // Skip subscription/trial checks for agents and admins (no limitations)
+      if (!session?.user || session?.user?.role === "AGENT" || session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
         setIsSubscriptionChecked(true);
         return;
       }
@@ -36,7 +37,8 @@ export default function UserLayoutContent({
           if (response.data?.status === "active") {
             const trialEnd = new Date(response.data.currentPeriodEnd);
             const now = new Date();
-            const diffDays = Math.max(0, differenceInDays(trialEnd, now));
+            // Use calendar days so "7-day trial" shows "7 days" on signup day (differenceInDays counts full 24h periods)
+            const diffDays = Math.max(0, differenceInCalendarDays(trialEnd, now));
             
             // Show banner if trial expires in 7 days or less
             if (diffDays <= 7 && diffDays > 0) {
@@ -91,8 +93,9 @@ export default function UserLayoutContent({
     checkSubscription();
   }, [session, sessionStatus, setSubscriptionPlan, isSubscriptionChecked]);
 
-  // Skip subscription check for admins and agents
+  // Skip subscription page for admins and agents (no trial limitations)
   const isAgent = session?.user?.role === "AGENT";
+  const isAdminUser = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
   
   // Show loading state while checking subscription
   if (sessionStatus === "loading" || !isSubscriptionChecked) {
@@ -115,8 +118,8 @@ export default function UserLayoutContent({
     );
   }
   
-  // Only show subscription page if we've confirmed the user needs it
-  if (!subscriptionPlan && !isAdmin && !isAgent) {
+  // Only show subscription page if we've confirmed the user needs it (admins/agents bypass)
+  if (!subscriptionPlan && !isAdmin && !isAgent && !isAdminUser) {
     return <SubscriptionPage />;
   }
 

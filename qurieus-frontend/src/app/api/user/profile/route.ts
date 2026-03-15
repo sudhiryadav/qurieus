@@ -5,7 +5,7 @@ import { prisma } from "@/utils/prismaDB";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
-export const PUT = RequireRoles([UserRole.USER,UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
+export const PUT = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
     const session = await getServerSession(authOptions);
   const user = session!.user!;
     
@@ -34,11 +34,12 @@ export const PUT = RequireRoles([UserRole.USER,UserRole.SUPER_ADMIN])(async (req
         company: updatedUser.company,
         jobTitle: updatedUser.jobTitle,
         bio: updatedUser.bio,
+        image: updatedUser.image,
       },
     });
 });
 
-export const GET = RequireRoles([UserRole.USER,UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
+export const GET = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
     const session = await getServerSession(authOptions);
   const user = session!.user!;
     
@@ -54,6 +55,7 @@ export const GET = RequireRoles([UserRole.USER,UserRole.SUPER_ADMIN])(async (req
         company: true,
         jobTitle: true,
         bio: true,
+        image: true,
       },
     });
     

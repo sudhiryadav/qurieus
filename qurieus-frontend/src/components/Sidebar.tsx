@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X, Users as UsersIcon, MessageSquare, Globe, Clock } from "lucide-react";
+import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X, Users as UsersIcon, MessageSquare, Globe, Clock, Star } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -8,6 +8,7 @@ import { useSidebar } from "@/hooks/useSidebar";
 export const userNav = [
   { name: "Dashboard", href: "/user/dashboard", icon: <LayoutDashboard className="h-5 w-5" />, hideForAgent: true },
   { name: "Profile", href: "/user/profile", icon: <User className="h-5 w-5" />, hideForAgent: true },
+  { name: "Feedback", href: "/user/feedback", icon: <Star className="h-5 w-5" />, hideForAgent: true },
   { name: "Agents", href: "/user/agents", icon: <UsersIcon className="h-5 w-5" />, hideForAgent: true },
   { name: "Agent Dashboard", href: "/agent/dashboard", icon: <MessageSquare className="h-5 w-5" />, agentOnly: true },
   { name: "Subscription", href: "/user/subscription", icon: <CreditCard className="h-5 w-5" />, hideForAgent: true },
@@ -24,6 +25,7 @@ const adminNav = [
   { name: "Knowledge Base", href: "/admin/knowledge-base", icon: <Upload className="h-4 w-4 mr-2" /> },
   { name: "Website Crawler", href: "/admin/website-crawler", icon: <Globe className="h-4 w-4 mr-2" /> },
   { name: "Email Broadcast", href: "/admin/email-broadcast", icon: <MessageSquare className="h-4 w-4 mr-2" /> },
+  { name: "Testimonials", href: "/admin/testimonials", icon: <Star className="h-4 w-4 mr-2" /> },
 ];
 
 const Sidebar = () => {

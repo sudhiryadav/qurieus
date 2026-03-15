@@ -208,6 +208,48 @@ class S3Service {
     console.log('📝 S3 Service: Generated filename:', { originalName, userId, fileName });
     return fileName;
   }
+
+  async uploadAvatar(
+    file: Buffer,
+    userId: string,
+    contentType: string,
+  ): Promise<string> {
+    if (!this.initialized) {
+      this.initializeS3Client();
+    }
+    const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+    const s3Key = `avatars/${userId}/avatar.${ext}`;
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: s3Key,
+      Body: file,
+      ContentType: contentType,
+      ACL: 'private',
+    });
+    await this.s3Client.send(command);
+    return s3Key;
+  }
+
+  async getObjectAsBuffer(s3Key: string): Promise<Buffer> {
+    if (!this.initialized) {
+      this.initializeS3Client();
+    }
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: s3Key,
+    });
+    const response = await this.s3Client.send(command);
+    if (!response.Body) {
+      throw new Error('No body in S3 response');
+    }
+    const chunks: Uint8Array[] = [];
+    const stream = response.Body as NodeJS.ReadableStream;
+    return new Promise((resolve, reject) => {
+      stream.on('data', (chunk: Uint8Array) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
+  }
 }
 
 export const s3Service = new S3Service();

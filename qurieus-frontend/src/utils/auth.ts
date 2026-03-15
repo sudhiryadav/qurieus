@@ -192,6 +192,10 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         const dbUser = await prisma.user.findUnique({ where: { id: token.id } });
         session.user.hasPassword = !!dbUser?.password;
+        if (dbUser) {
+          session.user.name = dbUser.name;
+          session.user.image = dbUser.image ?? undefined;
+        }
       }
       return session;
     },

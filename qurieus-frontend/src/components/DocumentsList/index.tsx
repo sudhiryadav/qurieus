@@ -55,6 +55,8 @@ interface DocumentsListProps {
   canDelete?: boolean;
   /** When true (e.g. for super admin), show download button even for PROCESSING documents */
   allowDownloadWhenProcessing?: boolean;
+  /** When provided and documents are empty, show upload button below the empty state text */
+  onUploadClick?: () => void;
 }
 
 export default function DocumentsList({
@@ -64,7 +66,8 @@ export default function DocumentsList({
   onDownload,
   onView,
   canDelete = false,
-  allowDownloadWhenProcessing = false
+  allowDownloadWhenProcessing = false,
+  onUploadClick,
 }: DocumentsListProps) {
   const [processingDocuments, setProcessingDocuments] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -266,9 +269,15 @@ export default function DocumentsList({
         <h3 className="text-lg font-medium text-foreground mb-2">
           No documents found
         </h3>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mb-6">
           Get started by uploading your first document
         </p>
+        {onUploadClick && (
+          <Button onClick={onUploadClick} className="gap-2">
+            <Upload className="w-4 h-4" />
+            Upload Documents
+          </Button>
+        )}
       </div>
     );
   }

@@ -11,12 +11,13 @@ import {
   X,
   Code,
   MessageSquare,
-  Clock
+  Clock,
+  Star
 } from "lucide-react";
 import React from "react";
 import Logo from "../Common/Logo";
 import { useSession, signOut } from "next-auth/react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -117,10 +118,12 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
-            <AvatarFallback>{session.user.name?.[0] || "U"}</AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            name={session.user.name || "User"}
+            image={session.user.image}
+            userId={session.user.id}
+            size="sm"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -150,7 +153,7 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
               </Link>
             </DropdownMenuItem>
           ))}
-          {session.user.role === "SUPER_ADMIN" && (
+          {(session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN") && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Admin</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
@@ -172,6 +175,11 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
                 <DropdownMenuItem asChild>
                   <Link href="/admin/trial-extensions" className={pathname === "/admin/trial-extensions" ? "text-primary font-semibold" : ""}>
                     <Clock className="mr-2 h-4 w-4 inline" /> Trial Extensions
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/testimonials" className={pathname === "/admin/testimonials" ? "text-primary font-semibold" : ""}>
+                    <Star className="mr-2 h-4 w-4 inline" /> Testimonials
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuSubContent>

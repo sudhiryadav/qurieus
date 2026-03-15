@@ -3,13 +3,16 @@
 import PasswordForm from "@/components/Auth/PasswordForm";
 import { showToast } from "@/components/Common/Toast";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axiosInstance from "@/lib/axios";
-import { User as UserIcon } from "lucide-react";
+import { User as UserIcon, Camera } from "lucide-react";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export default function Profile() {
   const { data: session, update } = useSession();
   const [loading, setLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -17,6 +20,7 @@ export default function Profile() {
     company: "",
     jobTitle: "",
     bio: "",
+    image: "" as string | null,
     currentPassword: "",
   });
 
@@ -39,6 +43,7 @@ export default function Profile() {
             company: data.user.company || "",
             jobTitle: data.user.jobTitle || "",
             bio: data.user.bio || "",
+            image: data.user.image || null,
             currentPassword: "",
       });
         } catch (error) {
@@ -67,12 +72,15 @@ export default function Profile() {
       // Call API to update profile
       await axiosInstance.put("/api/user/profile", formData);
 
-      // Update session data
+      // Update session data (exclude image - it's resolved via avatar API)
       await update({
         ...session,
         user: {
           ...session?.user,
-          ...formData,
+          name: formData.name,
+          company: formData.company,
+          jobTitle: formData.jobTitle,
+          bio: formData.bio,
         },
       });
 
@@ -82,6 +90,27 @@ export default function Profile() {
       showToast.error("Failed to update profile. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session?.user?.id) return;
+    setAvatarLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await axiosInstance.post("/api/user/profile/avatar", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setFormData((prev) => ({ ...prev, image: res.data.image }));
+      await update({ ...session, user: { ...session.user, image: res.data.image } });
+      showToast.success("Avatar updated successfully");
+    } catch (err: any) {
+      showToast.error(err.response?.data?.error || "Failed to upload avatar");
+    } finally {
+      setAvatarLoading(false);
+      e.target.value = "";
     }
   };
 
@@ -106,6 +135,47 @@ export default function Profile() {
 
       <div className="space-y-6">
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <div className="mb-6 flex items-center gap-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarChange}
+              disabled={avatarLoading}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="relative group"
+              disabled={avatarLoading}
+            >
+              <UserAvatar
+                name={formData.name || "User"}
+                image={formData.image}
+                userId={session?.user?.id}
+                size="lg"
+                className="h-20 w-20"
+              />
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="h-6 w-6 text-white" />
+              </span>
+            </button>
+            <div>
+              <p className="text-sm font-medium text-dark dark:text-white">Profile photo</p>
+              <p className="text-xs text-muted-foreground">
+                JPEG, PNG or WebP. Max 2MB.
+              </p>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarLoading}
+                className="mt-1 text-sm text-primary hover:underline disabled:opacity-70"
+              >
+                {avatarLoading ? "Uploading..." : "Change photo"}
+              </button>
+            </div>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div>

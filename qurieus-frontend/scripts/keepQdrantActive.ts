@@ -5,8 +5,8 @@
  * Qdrant Cloud free tier: clusters suspend after 1 week of inactivity,
  * deleted after 4 weeks. See: https://qdrant.tech/documentation/cloud/create-cluster
  *
- * Run via system crontab every 3-5 days. Example crontab line:
- *   0 6 * * 0,3,6  (6 AM on Sun/Wed/Sat) or 0 6 1,15 * * (6 AM on 1st and 15th)
+ * Run via system crontab daily. Example crontab line:
+ *   0 6 * * *  (6 AM every day)
  */
 import "dotenv/config";
 

@@ -123,6 +123,7 @@ model User {
   allowedIPs            String[] // e.g. ["1.2.3.4"]
 
   trialExtensionRequests TrialExtensionRequest[]
+  testimonials            Testimonial[]
   @@map("Users")
 }
 
@@ -222,6 +223,21 @@ model ContactMessage {
   phone     String
   message   String   @db.Text
   createdAt DateTime @default(now())
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String   @db.Text
+  designation String?  // e.g. "Founder @ Company"
+  star        Int      @default(5)
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isApproved])
+  @@index([userId])
 }
 
 // New chat-related models

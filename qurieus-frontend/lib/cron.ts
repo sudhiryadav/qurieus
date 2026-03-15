@@ -4,8 +4,8 @@ import { checkTrialExpiration, sendTrialExpiringWarnings } from "./trialManageme
 import { keepQdrantActive } from "@/lib/keepQdrantActive";
 
 // Qdrant Cloud free tier: clusters suspend after 1 week of inactivity, deleted after 4 weeks.
-// Ping every 3 days to prevent suspension. See: https://qdrant.tech/documentation/cloud/create-cluster
-cron.schedule("0 6 */3 * *", async () => {
+// Ping daily at 6 AM UTC to prevent suspension. See: https://qdrant.tech/documentation/cloud/create-cluster
+cron.schedule("0 6 * * *", async () => {
   console.log("[CRON] Running Qdrant keep-alive...");
   try {
     const result = await keepQdrantActive();
