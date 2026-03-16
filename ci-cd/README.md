@@ -57,11 +57,22 @@ Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && gi
 - `STAGING_SSH_PRIVATE_KEY`, `STAGING_SSH_USER`, `STAGING_SERVER_IP`
 - `PROD_SSH_PRIVATE_KEY`, `PROD_SSH_USER`, `PROD_SERVER_IP`
 
-**Paddle (prod frontend):** Injected into `prod.qurieus.frontend.env` on deploy. Set as **masked** and **protected**:
+**Paddle (prod frontend):** Injected into `prod.qurieus.frontend.env` on deploy.
+
+**Option A – CI/CD variables** (masked/protected vars may not pass through SSH; if Paddle stays "not configured", use Option B):
 - `PADDLE_API_KEY` – Paddle API key for server-side calls (Paddle Dashboard → Developer Tools → Authentication → API keys)
 - `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` – Paddle client token for checkout (Developer Tools → Client-side tokens)
 - `PADDLE_WEBHOOK_SIGNING_KEY` – Webhook signing secret (Developer Tools → Notifications → webhook → Signing secret)
 - `BYPASS_WEBHOOK_VERIFICATION` – (optional) `false` by default; set `true` to skip webhook verification
+
+**Option B – Server-side file** (recommended if CI/CD injection fails): Create `/home/ubuntu/prod.paddle.env` on the server:
+```
+PADDLE_API_KEY=pdl_live_apikey_...
+NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=live_...
+PADDLE_WEBHOOK_SIGNING_KEY=pdl_ntfset_...
+BYPASS_WEBHOOK_VERIFICATION=false
+```
+Deploy script appends this file when CI/CD vars are not available (e.g. masked/protected)
 
 **Optional:**
 - `PROD_REPO_DIR`, `STAGING_REPO_DIR` – if repo is not at `/home/ubuntu/qurieus`

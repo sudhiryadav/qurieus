@@ -65,7 +65,7 @@ ENV_PREFIX="$([ "$ENV" = "prod" ] && echo "prod" || echo "staging").qurieus"
 if [ "$ENV" = "prod" ]; then
   if [ -f "$REPO_DIR/qurieus-frontend/.env.prod" ]; then
     cp "$REPO_DIR/qurieus-frontend/.env.prod" "$ENV_DIR/prod.qurieus.frontend.env"
-    # Inject Paddle vars from CI/CD if set (passed via SSH env)
+    # Inject Paddle vars: from CI/CD env first, else from server-side file (masked/protected vars may not pass through SSH)
     if [ -n "$PADDLE_API_KEY" ] || [ -n "$NEXT_PUBLIC_PADDLE_CLIENT_TOKEN" ] || [ -n "$PADDLE_WEBHOOK_SIGNING_KEY" ]; then
       {
         echo ""
@@ -76,6 +76,11 @@ if [ "$ENV" = "prod" ]; then
         [ -n "$BYPASS_WEBHOOK_VERIFICATION" ] && echo "BYPASS_WEBHOOK_VERIFICATION=$BYPASS_WEBHOOK_VERIFICATION"
       } >> "$ENV_DIR/prod.qurieus.frontend.env"
       echo "   Injected Paddle vars from CI/CD"
+    elif [ -f "$ENV_DIR/prod.paddle.env" ]; then
+      echo "" >> "$ENV_DIR/prod.qurieus.frontend.env"
+      echo "# Paddle (from server-side prod.paddle.env)" >> "$ENV_DIR/prod.qurieus.frontend.env"
+      cat "$ENV_DIR/prod.paddle.env" >> "$ENV_DIR/prod.qurieus.frontend.env"
+      echo "   Injected Paddle vars from prod.paddle.env"
     fi
     echo "   Synced frontend .env.prod from repo"
   else
