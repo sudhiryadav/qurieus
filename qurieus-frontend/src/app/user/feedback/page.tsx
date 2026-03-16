@@ -89,15 +89,20 @@ export default function FeedbackPage() {
               {testimonials.map((t) => (
                 <div
                   key={t.id}
-                  className="p-3 rounded-lg bg-gray-50 dark:bg-dark-1 border border-gray-100 dark:border-dark-3"
+                  className="p-3 rounded-lg bg-gray-50 dark:bg-dark-2 border border-gray-100 dark:border-dark-3"
                 >
                   <div className="flex justify-between items-start gap-2 mb-1">
+                    <div className="flex gap-1">
+                      {Array.from({ length: t.star ?? 5 }).map((_, i) => (
+                        <span key={i} className="text-[#fbb040]">★</span>
+                      ))}
+                    </div>
                     {getStatusBadge(t.status)}
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(t.createdAt), "MMM d, yyyy")}
-                    </span>
                   </div>
                   <p className="text-sm text-body-color dark:text-dark-6">"{t.content}"</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {format(new Date(t.createdAt), "MMM d, yyyy")}
+                  </p>
                   {t.status === "REJECTED" && t.rejectionReason && (
                     <div className="mt-2 p-2 rounded bg-amber-50 dark:bg-amber-900/20 text-sm text-amber-800 dark:text-amber-200">
                       <span className="font-medium">Feedback from our team: </span>

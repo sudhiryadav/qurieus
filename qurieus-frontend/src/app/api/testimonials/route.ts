@@ -6,10 +6,11 @@ import { prisma } from "@/utils/prismaDB";
 /**
  * GET /api/testimonials
  * Public - returns approved testimonials with user info (name, image) for display.
+ * Only the latest approved testimonial per user is shown.
  */
 export async function GET() {
   try {
-    const testimonials = await prisma.testimonial.findMany({
+    const allApproved = await prisma.testimonial.findMany({
       where: { status: "APPROVED" },
       include: {
         user: {
@@ -17,8 +18,15 @@ export async function GET() {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 12,
     });
+
+    // Keep only the latest approved testimonial per user
+    const seenUserIds = new Set<string>();
+    const testimonials = allApproved.filter((t) => {
+      if (seenUserIds.has(t.userId)) return false;
+      seenUserIds.add(t.userId);
+      return true;
+    }).slice(0, 12);
 
     const data = testimonials.map((t) => ({
       id: t.id,

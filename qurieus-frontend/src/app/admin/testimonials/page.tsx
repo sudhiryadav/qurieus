@@ -35,6 +35,7 @@ export default function AdminTestimonialsPage() {
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [approveModal, setApproveModal] = useState<{ id: string; content: string } | null>(null);
   const [rejectModal, setRejectModal] = useState<{ id: string; content: string } | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
@@ -66,11 +67,17 @@ export default function AdminTestimonialsPage() {
     }
   }, [userHistory]);
 
-  const handleApprove = async (id: string) => {
-    setActioning(id);
+  const openApproveModal = (t: TestimonialItem) => {
+    setApproveModal({ id: t.id, content: t.content });
+  };
+
+  const handleApprove = async () => {
+    if (!approveModal) return;
+    setActioning(approveModal.id);
     try {
-      await axiosInstance.post(`/api/admin/testimonials/${id}/approve`);
+      await axiosInstance.post(`/api/admin/testimonials/${approveModal.id}/approve`);
       showToast.success("Testimonial approved");
+      setApproveModal(null);
       fetchTestimonials();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
@@ -258,7 +265,7 @@ export default function AdminTestimonialsPage() {
                     <>
                       <Button
                         size="sm"
-                        onClick={() => handleApprove(t.id)}
+                        onClick={() => openApproveModal(t)}
                         disabled={actioning === t.id}
                         className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
                       >
@@ -287,13 +294,20 @@ export default function AdminTestimonialsPage() {
                       {userHistory[t.user.id].map((hist) => (
                         <div
                           key={hist.id}
-                          className="p-3 rounded bg-gray-50 dark:bg-dark-1 text-sm"
+                          className="p-3 rounded-lg bg-gray-50 dark:bg-dark-3 border border-gray-100 dark:border-dark-3 text-sm"
                         >
                           <div className="flex justify-between items-start gap-2">
-                            <p className="text-body-color dark:text-dark-6">"{hist.content}"</p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex gap-1 mb-1">
+                                {Array.from({ length: hist.star ?? 5 }).map((_, i) => (
+                                  <span key={i} className="text-[#fbb040]">★</span>
+                                ))}
+                              </div>
+                              <p className="text-body-color dark:text-dark-6">"{hist.content}"</p>
+                            </div>
                             {getStatusBadge(hist.status)}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {format(new Date(hist.createdAt), "MMM d, yyyy")}
                             {hist.rejectionReason && ` • Rejection: ${hist.rejectionReason}`}
                           </p>
@@ -301,7 +315,7 @@ export default function AdminTestimonialsPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Loading...</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
                   )}
                 </div>
               )}
@@ -309,6 +323,34 @@ export default function AdminTestimonialsPage() {
           ))
         )}
       </div>
+
+      <ModalDialog
+        isOpen={!!approveModal}
+        onClose={() => setApproveModal(null)}
+        header="Approve testimonial"
+        width="90%"
+        maxHeight="70vh"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setApproveModal(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApprove} disabled={!!actioning} className="bg-green-600 hover:bg-green-700">
+              <Check className="h-4 w-4 mr-1" />
+              {actioning ? "Approving..." : "Approve"}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Are you sure you want to approve this testimonial? It will appear on the public testimonials section.
+        </p>
+        {approveModal && (
+          <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-dark-3 border border-gray-100 dark:border-dark-3">
+            <p className="text-sm text-body-color dark:text-dark-6">"{approveModal.content}"</p>
+          </div>
+        )}
+      </ModalDialog>
 
       <ModalDialog
         isOpen={!!rejectModal}

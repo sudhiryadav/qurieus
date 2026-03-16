@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, User, Upload, BarChart3, Code, ChevronDown, ChevronUp, CreditCard, X, Users as UsersIcon, MessageSquare, Globe, Clock, Star } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { LayoutDashboard, User, Upload, BarChart3, Code, CreditCard, X, Users as UsersIcon, MessageSquare, Globe, Clock, Star } from "lucide-react";
+import { useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/hooks/useSidebar";
 
@@ -30,7 +30,6 @@ const adminNav = [
 
 const Sidebar = () => {
   const { data: session } = useSession();
-  const [adminOpen, setAdminOpen] = useState(false);
   const pathname = usePathname();
   const { sidebarOpen, updateSidebarOpen } = useSidebar();
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -73,6 +72,32 @@ const Sidebar = () => {
       </div>
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
         <nav className="mt-0 px-2">
+          {/* Admin section - shown first for admins */}
+          {(session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
+            <div className="mb-2">
+              <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Admin
+              </p>
+              <div className="space-y-0.5">
+                {adminNav.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => updateSidebarOpen(false)}
+                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+                        ${isActive ? "bg-primary/10 text-primary" : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"}`}
+                    >
+                      {item.icon}
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+              <hr className="my-3 border-gray-200 dark:border-dark-3" />
+            </div>
+          )}
           {userNav.map((item) => {
             // Skip agent-only items if user is not an agent
             if (item.agentOnly && session?.user?.role !== "AGENT") {
@@ -98,39 +123,6 @@ const Sidebar = () => {
               </Link>
             );
           })}
-          {/* Show admin menu for both ADMIN and SUPER_ADMIN */}
-          {(session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
-            <div>
-              <button
-                className="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-dark-3 rounded-md transition-colors focus:outline-none"
-                onClick={() => setAdminOpen((v) => !v)}
-                aria-expanded={adminOpen}
-              >
-                <BarChart3 className="h-5 w-5" />
-                Admin
-                {adminOpen ? <ChevronUp className="ml-auto h-4 w-4" /> : <ChevronDown className="ml-auto h-4 w-4" />}
-              </button>
-              {adminOpen && (
-                <div className="ml-8 mt-1 space-y-1">
-                  {adminNav.map((item) => {
-                    const isActive = pathname === item.href;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => updateSidebarOpen(false)}
-                        className={`flex items-center px-2 py-1 text-sm rounded-md transition-colors
-                          ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 dark:text-gray-300 hover:text-primary"}`}
-                      >
-                        {item.icon}
-                        {item.name}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </nav>
       </div>
     </aside>
