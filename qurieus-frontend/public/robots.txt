@@ -22,6 +22,7 @@ Allow: /refund-policy
 Allow: /legal-notice
 
 # Allow SEO pages
+Allow: /ai-document-conversations
 Allow: /intercom-alternative
 Allow: /live-chat-for-website
 Allow: /chat-widget-for-wordpress

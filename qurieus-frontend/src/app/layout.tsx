@@ -46,14 +46,14 @@ export default function RootLayout({
   // Don't add padding-top on agent pages
   const shouldAddPadding = !pathname?.startsWith('/agent');
 
-  // Static values for meta tags
+  // Static values for meta tags - "Qurieus AI" and "AI document conversations" help differentiate from "Qurious" in search
   const siteUrl = 'https://qurieus.com';
   const siteName = 'Qurieus';
-  const title = 'Qurieus - AI Document Q&A | Chat with PDFs, Ask Questions About Your Documents';
-  const description = 'Qurieus is the AI-powered document platform with agentic capabilities: chat with PDFs, ask questions about your documents, and embed an AI chatbot on your website. Escalate to human agents when needed. Upload documents, train the AI, and get instant answers—or hand off to your support team. Perfect for lawyers, HR, SaaS, and startups.';
+  const title = 'Qurieus AI - AI Document Conversations | Chat with PDFs & Documents';
+  const description = 'Qurieus AI powers AI document conversations—chat with PDFs, ask questions about your documents, and embed an AI chatbot on your website. Agentic platform with human escalation. Upload documents, train the AI, get instant answers. Perfect for lawyers, HR, SaaS, and startups.';
   const imageUrl = `${siteUrl}/images/og-image.png`;
   const logoUrl = `${siteUrl}/images/logo/logo.png`;
-  const keywords = 'Qurieus, AI document Q&A, chat with PDF, AI document chatbot, PDF chatbot, document AI, agentic AI, human agent escalation, AI to human handoff, hybrid AI chat, AI plus human support, ask questions about documents, AI document reader, document conversation AI, knowledge base AI, document management AI, embed AI chat, website chatbot, Intercom alternative, AI document search, document summarization AI, legal document AI, HR document AI, SaaS document AI, startup document AI, RAG, retrieval augmented generation, document embeddings, AI document assistant, smart document search, conversational AI documents, escalated to agent, live agent support';
+  const keywords = 'Qurieus AI, Qurieus, AI document conversations, AI document Q&A, chat with PDF, AI document chatbot, PDF chatbot, document AI, agentic AI, human agent escalation, AI to human handoff, hybrid AI chat, AI plus human support, ask questions about documents, AI document reader, document conversation AI, knowledge base AI, document management AI, embed AI chat, website chatbot, Intercom alternative, AI document search, document summarization AI, legal document AI, HR document AI, SaaS document AI, startup document AI, RAG, retrieval augmented generation, document embeddings, AI document assistant, smart document search, conversational AI documents, escalated to agent, live agent support';
 
   return (
     <html suppressHydrationWarning={true} className="!scroll-smooth" lang="en">
@@ -79,7 +79,7 @@ export default function RootLayout({
         <meta property="og:image" content={imageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Qurieus - AI Document Q&A, Chat with PDFs and Your Documents" />
+        <meta property="og:image:alt" content="Qurieus AI - AI Document Conversations, Chat with PDFs and Your Documents" />
         <meta property="og:site_name" content={siteName} />
         <meta property="og:locale" content="en_US" />
         {/* Twitter */}
@@ -88,7 +88,7 @@ export default function RootLayout({
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={imageUrl} />
-        <meta name="twitter:image:alt" content="Qurieus - AI Document Q&A, Chat with PDFs and Your Documents" />
+        <meta name="twitter:image:alt" content="Qurieus AI - AI Document Conversations, Chat with PDFs and Your Documents" />
         {/* LinkedIn */}
         <meta property="linkedin:owner" content="qurieus" />
         <meta property="linkedin:page_id" content="qurieus" />
@@ -100,43 +100,57 @@ export default function RootLayout({
         <meta name="instagram:title" content={title} />
         <meta name="instagram:description" content={description} />
         <meta name="instagram:image" content={imageUrl} />
-        {/* Schema.org structured data */}
+        {/* Schema.org structured data - Organization + WebSite help Google understand brand and differentiate from similar names */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              "name": "Qurieus",
-              "alternateName": "Qurieus AI Document Q&A",
-              "description": description,
-              "url": siteUrl,
-              "logo": logoUrl,
-              "image": imageUrl,
-              "applicationCategory": "BusinessApplication",
-              "applicationSubCategory": "AI Document Assistant",
-              "operatingSystem": "Web",
-              "featureList": ["AI document Q&A", "Chat with PDF", "Document chatbot", "Knowledge base AI", "Website embed", "Document search", "AI summarization", "Agentic AI", "Human agent escalation", "AI to human handoff", "Hybrid AI and human support"],
-              "keywords": "AI document Q&A, chat with PDF, document AI, PDF chatbot, document chatbot, knowledge base AI, agentic AI, human agent escalation, AI to human handoff",
-              "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "USD",
-                "availability": "https://schema.org/InStock"
-              },
-              "author": {
-                "@type": "Organization",
-                "name": "Qurieus",
-                "url": siteUrl
-              },
-              "publisher": {
-                "@type": "Organization",
-                "name": "Qurieus",
-                "logo": {
-                  "@type": "ImageObject",
-                  "url": logoUrl
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": `${siteUrl}/#organization`,
+                  "name": "Qurieus",
+                  "alternateName": ["Qurieus AI", "Qurieus - AI Document Conversations"],
+                  "url": siteUrl,
+                  "logo": { "@type": "ImageObject", "url": logoUrl },
+                  "description": "Qurieus AI powers AI document conversations—chat with PDFs, documents, and embed AI chatbots on your website."
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": `${siteUrl}/#website`,
+                  "url": siteUrl,
+                  "name": "Qurieus AI - AI Document Conversations",
+                  "description": description,
+                  "publisher": { "@id": `${siteUrl}/#organization` }
+                },
+                {
+                  "@type": "SoftwareApplication",
+                  "name": "Qurieus",
+                  "alternateName": ["Qurieus AI", "Qurieus AI Document Q&A"],
+                  "description": description,
+                  "url": siteUrl,
+                  "logo": logoUrl,
+                  "image": imageUrl,
+                  "applicationCategory": "BusinessApplication",
+                  "applicationSubCategory": "AI Document Assistant",
+                  "operatingSystem": "Web",
+                  "featureList": ["AI document conversations", "AI document Q&A", "Chat with PDF", "Document chatbot", "Knowledge base AI", "Website embed", "Document search", "AI summarization", "Agentic AI", "Human agent escalation", "AI to human handoff", "Hybrid AI and human support"],
+                  "keywords": "Qurieus AI, AI document conversations, AI document Q&A, chat with PDF, document AI, PDF chatbot, knowledge base AI, agentic AI, human agent escalation, AI to human handoff",
+                  "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD",
+                    "availability": "https://schema.org/InStock"
+                  },
+                  "author": { "@id": `${siteUrl}/#organization` },
+                  "publisher": {
+                    "@type": "Organization",
+                    "name": "Qurieus",
+                    "logo": { "@type": "ImageObject", "url": logoUrl }
+                  }
                 }
-              }
+              ]
             })
           }}
         />

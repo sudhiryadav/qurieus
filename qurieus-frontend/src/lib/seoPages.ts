@@ -27,6 +27,60 @@ const UNSPLASH = (id: string, alt: string) => ({
 
 export const SEO_PAGES: SeoPageConfig[] = [
   {
+    slug: "ai-document-conversations",
+    title: "AI Document Conversations",
+    heroImage: UNSPLASH("1558494709-eefe21364a4c", "AI document chat interface"),
+    metaTitle: "Qurieus AI - AI Document Conversations | Chat with PDFs & Documents",
+    metaDescription:
+      "Qurieus AI powers AI document conversations—chat with PDFs, ask questions about your documents, and embed an AI chatbot on your website. Agentic platform with human escalation. Free trial.",
+    h1: "Qurieus AI: AI Document Conversations That Actually Work",
+    heroDescription:
+      "Transform documents into interactive AI conversations. Qurieus AI lets you chat with PDFs, ask questions, and embed AI chatbots on your website—with human agent escalation when needed.",
+    sections: [
+      {
+        heading: "What Are AI Document Conversations?",
+        content:
+          "AI document conversations let you chat naturally with your PDFs, docs, and knowledge base. Qurieus AI trains on your content and answers questions instantly—no more searching through files manually.",
+        bullets: [
+          "Chat with PDFs and documents in natural language",
+          "Upload docs, train the AI, get instant answers",
+          "Embed AI chatbot on your website",
+          "Escalate to human agents when AI can't help",
+        ],
+      },
+      {
+        heading: "Why Qurieus AI for Document Conversations?",
+        content:
+          "Qurieus AI combines document Q&A with agentic capabilities. When the AI doesn't know the answer, it hands off to your support team seamlessly. Perfect for lawyers, HR, SaaS, and startups.",
+        bullets: [
+          "Agentic AI—escalate to humans when needed",
+          "Knowledge base search and summarization",
+          "Works with PDFs, Word docs, and more",
+          "One embed code for any website",
+        ],
+      },
+      {
+        heading: "Get Started with AI Document Conversations",
+        content:
+          "Upload your documents, train Qurieus AI, and start having document conversations in minutes. Embed on your website or use the chat interface directly. Free trial available.",
+      },
+    ],
+    keywords: [
+      "AI document conversations",
+      "Qurieus AI",
+      "chat with PDF",
+      "AI document chat",
+      "document conversation AI",
+      "AI document Q&A",
+      "chat with documents",
+    ],
+    faqs: [
+      { question: "What are AI document conversations?", answer: "AI document conversations let you chat with your PDFs and documents using natural language. Qurieus AI trains on your content and answers questions instantly." },
+      { question: "How does Qurieus AI handle document conversations?", answer: "Upload your documents, train the AI, and users can ask questions in plain English. Qurieus AI searches your content and returns accurate answers—or escalates to a human agent when needed." },
+      { question: "Can I embed AI document conversations on my website?", answer: "Yes. Qurieus AI provides an embeddable chat widget that powers AI document conversations on any website—WordPress, Shopify, or custom sites." },
+    ],
+  },
+  {
     slug: "intercom-alternative",
     title: "Intercom Alternative",
     heroImage: UNSPLASH("1556742049-0cfed4f6a45d", "AI-powered customer chat and support"),

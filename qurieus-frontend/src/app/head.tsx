@@ -1,8 +1,8 @@
 export default function Head() {
   const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qurieus.com';
   const siteName = 'Qurieus';
-  const title = 'Qurieus - AI-Powered Document Conversations';
-  const description = 'Transform your documents into interactive conversations with Qurieus. Our AI-powered platform allows you to upload PDFs, train the AI, and let your users engage with your content through natural conversations.';
+  const title = 'Qurieus AI - AI Document Conversations';
+  const description = 'Qurieus AI powers AI document conversations—chat with PDFs, ask questions about your documents, and embed an AI chatbot on your website. Agentic platform with human escalation.';
   const imageUrl = `${siteUrl}/images/og-image.png`;
   const logoUrl = `${siteUrl}/images/logo/logo.png`;
 
@@ -35,7 +35,7 @@ export default function Head() {
       <meta property="og:image" content={imageUrl} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:image:alt" content="Qurieus - AI-Powered Document Conversations" />
+      <meta property="og:image:alt" content="Qurieus AI - AI Document Conversations" />
       <meta property="og:site_name" content={siteName} />
       <meta property="og:locale" content="en_US" />
       
@@ -45,7 +45,7 @@ export default function Head() {
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={imageUrl} />
-      <meta name="twitter:image:alt" content="Qurieus - AI-Powered Document Conversations" />
+      <meta name="twitter:image:alt" content="Qurieus AI - AI Document Conversations" />
       
       {/* LinkedIn */}
       <meta property="linkedin:owner" content="qurieus" />
@@ -98,7 +98,7 @@ export default function Head() {
       />
       
       {/* Additional SEO Meta Tags */}
-      <meta name="keywords" content="AI, artificial intelligence, document processing, PDF, chatbot, conversation, SaaS, document management, natural language processing, machine learning" />
+      <meta name="keywords" content="Qurieus AI, AI document conversations, AI document Q&A, chat with PDF, document AI, PDF chatbot, agentic AI, human agent escalation" />
       <meta name="theme-color" content="#4F46E5" />
       <meta name="msapplication-TileColor" content="#4F46E5" />
       <meta name="msapplication-config" content="/browserconfig.xml" />
