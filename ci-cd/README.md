@@ -47,6 +47,10 @@ nano /home/ubuntu/staging.qurieus.bot.env
 
 See `ci-cd/env.template` for required vars (no secrets).
 
+## Deployment
+
+Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && git push github prod`. The repo contains `.env.prod` with secrets; allow them in GitHub push protection (one-time) to push to GitHub.
+
 ## GitLab CI/CD variables
 
 **Required:**
