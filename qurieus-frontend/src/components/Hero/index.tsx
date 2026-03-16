@@ -21,7 +21,7 @@ const Hero = () => {
                   AI Document Q&A: Chat with Your PDFs &amp; Ask Questions Instantly
                 </h1>
                 <p className="mx-auto mb-9 max-w-[600px] text-base font-medium text-white sm:text-lg sm:leading-[1.44]">
-                  Qurieus is the AI document platform that lets you chat with PDFs, ask questions about your documents, and embed an AI chatbot on your website. Upload documents, train the AI, and get instant answers. Perfect for lawyers, HR, SaaS, and startups.
+                  Qurieus is the AI document platform with agentic capabilities: chat with PDFs, ask questions about your documents, and embed an AI chatbot on your website. Escalate to human agents when needed. Upload documents, train the AI, and get instant answers—or hand off to your support team. Perfect for lawyers, HR, SaaS, and startups.
                 </p>
                 <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
                   <Link

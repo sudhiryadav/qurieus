@@ -32,7 +32,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
     heroImage: UNSPLASH("1556742049-0cfed4f6a45d", "AI-powered customer chat and support"),
     metaTitle: "Qurieus - Best Intercom Alternative | AI-Powered Customer Chat",
     metaDescription:
-      "Looking for an Intercom alternative? Qurieus offers AI-powered live chat, knowledge base search, and document Q&A at a fraction of the cost. Try free.",
+      "Looking for an Intercom alternative? Qurieus offers AI-powered live chat with agentic capabilities—escalate to human agents when needed. Knowledge base search and document Q&A. Try free.",
     h1: "Qurieus: The Smart Intercom Alternative for AI-Powered Support",
     heroDescription:
       "Replace Intercom with Qurieus—an AI-powered chat platform that answers from your docs, knowledge base, and website. No per-seat pricing. Embed in minutes.",
@@ -71,6 +71,9 @@ export const SEO_PAGES: SeoPageConfig[] = [
       "cheap intercom alternative",
       "AI customer support",
       "intercom competitor",
+      "agentic AI chat",
+      "human agent escalation",
+      "AI to human handoff",
     ],
     faqs: [
       { question: "Is Qurieus cheaper than Intercom?", answer: "Yes. Qurieus offers AI-powered chat at a fraction of Intercom's pricing, with no per-seat limits on AI conversations." },
@@ -84,7 +87,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
     heroImage: UNSPLASH("1516321318423-f06f85e504b3", "Live chat widget on website"),
     metaTitle: "Live Chat for Website | AI-Powered Chat Widget - Qurieus",
     metaDescription:
-      "Add live chat to your website in minutes. Qurieus AI chat answers from your docs 24/7. Free trial. Works on any website—WordPress, Shopify, custom.",
+      "Add live chat to your website in minutes. Qurieus AI chat answers from your docs 24/7. Agentic: escalate to human agents when needed. Free trial. Works on any website—WordPress, Shopify, custom.",
     h1: "Live Chat for Website: AI That Knows Your Business",
     heroDescription:
       "Add a chat widget to your website that answers visitor questions instantly—powered by your documents, FAQs, and knowledge base. No coding required.",
@@ -123,6 +126,8 @@ export const SEO_PAGES: SeoPageConfig[] = [
       "add chat to website",
       "live chat software",
       "chat widget",
+      "agentic chat",
+      "AI to human agent escalation",
     ],
     faqs: [
       { question: "How do I add live chat to my website?", answer: "Upload your docs or FAQs to Qurieus, then copy the embed code and paste it into your website. Your AI chat is live in minutes." },
@@ -188,7 +193,7 @@ export const SEO_PAGES: SeoPageConfig[] = [
     heroImage: UNSPLASH("1521791055366-0d553872125f", "Customer support team with AI chat"),
     metaTitle: "Customer Support Chat | AI-Powered 24/7 Support - Qurieus",
     metaDescription:
-      "Upgrade your customer support with AI chat. Qurieus answers from your docs, FAQs, and knowledge base 24/7. Reduce tickets, improve satisfaction.",
+      "Upgrade your customer support with AI chat. Qurieus answers from your docs, FAQs, and knowledge base 24/7. Agentic: escalate to human agents when needed. Reduce tickets, improve satisfaction.",
     h1: "Customer Support Chat Powered by AI",
     heroDescription:
       "Give your customers instant answers from your help docs, product guides, and FAQs. Qurieus AI support chat reduces ticket volume and improves satisfaction.",
@@ -227,6 +232,9 @@ export const SEO_PAGES: SeoPageConfig[] = [
       "support chat software",
       "24/7 customer support",
       "chat support",
+      "agentic chat support",
+      "human agent escalation",
+      "hybrid AI and human support",
     ],
     faqs: [
       { question: "How does AI customer support work?", answer: "Qurieus AI is trained on your help docs, FAQs, and product guides. It answers customer questions 24/7 with accurate, context-aware responses." },
@@ -331,6 +339,8 @@ export const SEO_PAGES: SeoPageConfig[] = [
       "AI chat widget",
       "chatbot for business",
       "custom AI chatbot",
+      "agentic AI chatbot",
+      "chat escalate to human agent",
     ],
     faqs: [
       { question: "How do I train the chatbot on my content?", answer: "Upload your PDFs, help docs, or product pages. Qurieus indexes everything and answers from your actual content—not generic scripts." },
@@ -539,6 +549,8 @@ export const SEO_PAGES: SeoPageConfig[] = [
       "AI customer service",
       "support chatbot",
       "customer support AI",
+      "agentic customer service",
+      "AI escalate to human agent",
     ],
     faqs: [
       { question: "What makes a good customer service chatbot?", answer: "A good chatbot is trained on your content—so it gives accurate, on-brand answers. Qurieus learns from your docs and FAQs." },
@@ -747,6 +759,8 @@ export const SEO_PAGES: SeoPageConfig[] = [
       "live chat solution",
       "AI live chat",
       "chat software",
+      "agentic live chat",
+      "AI to human agent handoff",
     ],
     faqs: [
       { question: "What is the best live chat software?", answer: "The best live chat software depends on your needs. Qurieus is ideal if you want AI that answers from your docs 24/7—no agents needed." },
@@ -799,6 +813,8 @@ export const SEO_PAGES: SeoPageConfig[] = [
       "live chat support",
       "AI support chat",
       "customer chat support",
+      "agentic chat support",
+      "human agent escalation",
     ],
     faqs: [
       { question: "What is chat support software?", answer: "Chat support software lets customers get help via chat. Qurieus adds AI that answers from your docs—so support is instant and 24/7." },
