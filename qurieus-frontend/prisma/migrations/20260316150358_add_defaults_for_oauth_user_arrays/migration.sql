@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Users" ALTER COLUMN "allowedOrigins" SET DEFAULT ARRAY[]::TEXT[],
+ALTER COLUMN "allowedReferrers" SET DEFAULT ARRAY[]::TEXT[],
+ALTER COLUMN "allowedIPs" SET DEFAULT ARRAY[]::TEXT[];
