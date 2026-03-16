@@ -68,40 +68,63 @@ async function checkPaddle(): Promise<ServiceCheck> {
 async function checkBackend(): Promise<ServiceCheck> {
   const start = Date.now();
   const url = process.env.BACKEND_URL;
-  if (!url) {
+  const healthUrl = process.env.BACKEND_HEALTH_URL;
+  const baseUrl = (healthUrl || url)?.replace(/\/$/, "");
+  if (!baseUrl) {
     return {
       name: "Backend API",
       status: "skipped",
       message: "BACKEND_URL not configured",
     };
   }
-  try {
-    const baseUrl = url.replace(/\/$/, "");
-    const res = await fetch(`${baseUrl}/`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  const endpoints = healthUrl ? [baseUrl] : [`${baseUrl}/`, `${baseUrl}/api/v1/openapi.json`];
+  let lastError: string | null = null;
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        lastError = "URL returned HTML (BACKEND_URL may point to frontend; set BACKEND_HEALTH_URL to FastAPI root)";
+        continue;
+      }
+      if (!res.ok) {
+        lastError = `HTTP ${res.status}: ${res.statusText}`;
+        continue;
+      }
+      const text = await res.text();
+      let data: { status?: string; message?: string };
+      try {
+        data = JSON.parse(text);
+      } catch {
+        lastError = "Response is not valid JSON";
+        continue;
+      }
+      if (endpoint.endsWith("openapi.json")) {
+        if (data && typeof data === "object") return { name: "Backend API", status: "ok", latencyMs: Date.now() - start };
+      }
+      if (data?.status !== "healthy") {
+        lastError = data?.message || "Unhealthy response";
+        continue;
+      }
+      return {
+        name: "Backend API",
+        status: "ok",
+        latencyMs: Date.now() - start,
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
     }
-    const data = await res.json();
-    if (data?.status !== "healthy") {
-      throw new Error(data?.message || "Unhealthy response");
-    }
-    return {
-      name: "Backend API",
-      status: "ok",
-      latencyMs: Date.now() - start,
-    };
-  } catch (error) {
-    return {
-      name: "Backend API",
-      status: "error",
-      message: error instanceof Error ? error.message : String(error),
-      latencyMs: Date.now() - start,
-    };
   }
+  return {
+    name: "Backend API",
+    status: "error",
+    message: lastError || "Unknown error",
+    latencyMs: Date.now() - start,
+  };
 }
 
 async function checkModal(): Promise<ServiceCheck> {
@@ -122,7 +145,7 @@ async function checkModal(): Promise<ServiceCheck> {
         "Content-Type": "application/json",
         "X-Api-Key": apiKey,
       },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -213,11 +236,13 @@ async function checkS3(): Promise<ServiceCheck> {
       status: "ok",
       latencyMs: Date.now() - start,
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error as { name?: string; Code?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+    const msg = err?.message || err?.name || err?.Code || (typeof error === "object" && error !== null && "message" in error ? String((error as { message: unknown }).message) : String(error));
     return {
       name: "AWS S3 (File Storage)",
       status: "error",
-      message: error instanceof Error ? error.message : String(error),
+      message: msg || "Check AWS credentials, bucket name, and region",
       latencyMs: Date.now() - start,
     };
   }
@@ -260,22 +285,33 @@ async function checkSmtp(): Promise<ServiceCheck> {
   }
 }
 
+const SERVICE_KEYS = ["database", "paddle", "backend", "modal", "qdrant", "s3", "smtp"] as const;
+const CHECK_FNS: Record<string, () => Promise<ServiceCheck>> = {
+  database: checkDatabase,
+  paddle: checkPaddle,
+  backend: checkBackend,
+  modal: checkModal,
+  qdrant: checkQdrant,
+  s3: checkS3,
+  smtp: checkSmtp,
+};
+
 export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN])(
-  async () => {
+  async (request: Request) => {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const checks = await Promise.all([
-      checkDatabase(),
-      checkPaddle(),
-      checkBackend(),
-      checkModal(),
-      checkQdrant(),
-      checkS3(),
-      checkSmtp(),
-    ]);
+    const { searchParams } = new URL(request.url);
+    const service = searchParams.get("service");
+
+    let checks: ServiceCheck[];
+    if (service && CHECK_FNS[service]) {
+      checks = [await CHECK_FNS[service]()];
+    } else {
+      checks = await Promise.all(SERVICE_KEYS.map((k) => CHECK_FNS[k]()));
+    }
 
     const summary = {
       ok: checks.filter((c) => c.status === "ok").length,

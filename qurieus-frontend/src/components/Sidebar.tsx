@@ -18,7 +18,6 @@ export const userNav = [
 ];
 
 const adminNav = [
-  { name: "Services", href: "/admin/services", icon: <Activity className="h-4 w-4 mr-2" /> },
   { name: "Users", href: "/admin/users", icon: <User className="h-4 w-4 mr-2" /> },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: <BarChart3 className="h-4 w-4 mr-2" /> },
   { name: "Trial Extensions", href: "/admin/trial-extensions", icon: <Clock className="h-4 w-4 mr-2" /> },
@@ -27,6 +26,7 @@ const adminNav = [
   { name: "Website Crawler", href: "/admin/website-crawler", icon: <Globe className="h-4 w-4 mr-2" /> },
   { name: "Email Broadcast", href: "/admin/email-broadcast", icon: <MessageSquare className="h-4 w-4 mr-2" /> },
   { name: "Testimonials", href: "/admin/testimonials", icon: <Star className="h-4 w-4 mr-2" /> },
+  { name: "Services", href: "/admin/services", icon: <Activity className="h-4 w-4 mr-2" /> },
 ];
 
 const Sidebar = () => {
