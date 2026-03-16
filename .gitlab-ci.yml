@@ -79,7 +79,12 @@ deploy_production:
       git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
       rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 \
+         PADDLE_API_KEY='${PADDLE_API_KEY}' \
+         NEXT_PUBLIC_PADDLE_CLIENT_TOKEN='${NEXT_PUBLIC_PADDLE_CLIENT_TOKEN}' \
+         PADDLE_WEBHOOK_SIGNING_KEY='${PADDLE_WEBHOOK_SIGNING_KEY}' \
+         BYPASS_WEBHOOK_VERIFICATION='${BYPASS_WEBHOOK_VERIFICATION:-false}' \
+         && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "prod"'
     - if: '$RUN_PIPELINE == "true"'

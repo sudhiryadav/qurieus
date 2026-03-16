@@ -153,7 +153,7 @@ export async function POST(request: Request) {
       // Verify webhook signature using proper Paddle method
       const headersList = await headers();
       const paddleSignature = headersList.get('paddle-signature');
-      const secretKey = process.env.PADDLE_WEBHOOK_SECRET_KEY;
+      const secretKey = process.env.PADDLE_WEBHOOK_SIGNING_KEY;
 
       // Check if header and secret key are present
       if (!paddleSignature) {

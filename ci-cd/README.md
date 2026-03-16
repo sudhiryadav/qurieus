@@ -57,6 +57,12 @@ Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && gi
 - `STAGING_SSH_PRIVATE_KEY`, `STAGING_SSH_USER`, `STAGING_SERVER_IP`
 - `PROD_SSH_PRIVATE_KEY`, `PROD_SSH_USER`, `PROD_SERVER_IP`
 
+**Paddle (prod frontend):** Injected into `prod.qurieus.frontend.env` on deploy. Set as **masked** and **protected**:
+- `PADDLE_API_KEY` – Paddle API key for server-side calls (Paddle Dashboard → Developer Tools → Authentication → API keys)
+- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` – Paddle client token for checkout (Developer Tools → Client-side tokens)
+- `PADDLE_WEBHOOK_SIGNING_KEY` – Webhook signing secret (Developer Tools → Notifications → webhook → Signing secret)
+- `BYPASS_WEBHOOK_VERIFICATION` – (optional) `false` by default; set `true` to skip webhook verification
+
 **Optional:**
 - `PROD_REPO_DIR`, `STAGING_REPO_DIR` – if repo is not at `/home/ubuntu/qurieus`
 
