@@ -237,27 +237,25 @@ async function checkS3(): Promise<ServiceCheck> {
       latencyMs: Date.now() - start,
     };
   } catch (error: unknown) {
-    let msg = "Check AWS credentials, bucket name, region, and IAM permissions (s3:ListBucket)";
-    if (error instanceof Error) {
-      const e = error as Error & { Code?: string; $metadata?: { httpStatusCode?: number } };
-      const raw = [e.message, e.Code, e.name].filter(Boolean).map(String).join("; ") || "";
-      const http = e.$metadata?.httpStatusCode;
-      if (raw && raw !== "UnknownError") msg = raw;
-      else if (http) {
-        const hints: Record<number, string> = {
-          403: "Forbidden – check IAM policy (s3:ListBucket) and bucket exists",
-          404: "Bucket not found – verify bucket name and region",
-          400: "Bad request – bucket may be in different region than AWS_REGION",
-        };
-        msg = `HTTP ${http}: ${hints[http] ?? "Request failed"}`;
-      } else if (raw) msg = raw;
-    } else if (error && typeof error === "object") {
-      const e = error as Record<string, unknown>;
-      const parts = [e.message, e.name, e.Code, e.code].filter(Boolean).map(String);
-      msg = parts.length ? parts.join("; ") : msg;
-    } else if (error) {
-      msg = String(error);
+    const fallback = "Check AWS credentials, bucket name, region, and IAM permissions (s3:ListBucket)";
+    let msg = fallback;
+    const e = error && typeof error === "object" ? (error as Record<string, unknown>) : null;
+    const http = e?.["$metadata"] && typeof e["$metadata"] === "object"
+      ? (e["$metadata"] as { httpStatusCode?: number }).httpStatusCode
+      : undefined;
+    const raw = error instanceof Error
+      ? [error.message, (e?.Code ?? e?.code) as string, error.name].filter(Boolean).map(String).join("; ") || ""
+      : e ? [e.message, e.name, e.Code, e.code].filter(Boolean).map(String).join("; ") || "" : String(error ?? "");
+    if (raw && raw !== "UnknownError") msg = raw;
+    else if (http) {
+      const hints: Record<number, string> = {
+        403: "Forbidden – check IAM policy (s3:ListBucket) and bucket exists",
+        404: "Bucket not found – verify bucket name and region",
+        400: "Bad request – bucket may be in different region than AWS_REGION",
+      };
+      msg = `HTTP ${http}: ${hints[http] ?? "Request failed"}`;
     }
+    // When raw is "UnknownError" and no http, keep fallback (more helpful than "UnknownError")
     return {
       name: "AWS S3 (File Storage)",
       status: "error",
