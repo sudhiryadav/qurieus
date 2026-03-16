@@ -245,7 +245,7 @@ export default function AdminTestimonialsPage() {
                       <span key={i} className="text-[#fbb040]">★</span>
                     ))}
                   </div>
-                  <p className="text-body-color dark:text-dark-6">"{t.content}"</p>
+                  <p className="text-body-color dark:text-dark-6">&quot;{t.content}&quot;</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     Submitted {format(new Date(t.createdAt), "MMM d, yyyy")}
                   </p>
@@ -303,7 +303,7 @@ export default function AdminTestimonialsPage() {
                                   <span key={i} className="text-[#fbb040]">★</span>
                                 ))}
                               </div>
-                              <p className="text-body-color dark:text-dark-6">"{hist.content}"</p>
+                              <p className="text-body-color dark:text-dark-6">&quot;{hist.content}&quot;</p>
                             </div>
                             {getStatusBadge(hist.status)}
                           </div>
@@ -347,7 +347,7 @@ export default function AdminTestimonialsPage() {
         </p>
         {approveModal && (
           <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-dark-3 border border-gray-100 dark:border-dark-3">
-            <p className="text-sm text-body-color dark:text-dark-6">"{approveModal.content}"</p>
+            <p className="text-sm text-body-color dark:text-dark-6">&quot;{approveModal.content}&quot;</p>
           </div>
         )}
       </ModalDialog>

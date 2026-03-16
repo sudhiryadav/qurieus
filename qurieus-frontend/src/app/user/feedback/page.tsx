@@ -99,7 +99,7 @@ export default function FeedbackPage() {
                     </div>
                     {getStatusBadge(t.status)}
                   </div>
-                  <p className="text-sm text-body-color dark:text-dark-6">"{t.content}"</p>
+                  <p className="text-sm text-body-color dark:text-dark-6">&quot;{t.content}&quot;</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {format(new Date(t.createdAt), "MMM d, yyyy")}
                   </p>

@@ -60,6 +60,13 @@ requirements_changed() {
 ENV_DIR="${ENV_DIR:-/home/ubuntu}"
 ENV_PREFIX="$([ "$ENV" = "prod" ] && echo "prod" || echo "staging").qurieus"
 
+# Sync .env.prod from repo to server when present (optional; .env.prod not committed due to secrets)
+# For env updates, use sync-frontend-env-prod-to-server.sh / sync-backend-env-prod-to-server.sh locally
+if [ "$ENV" = "prod" ]; then
+  [ -f "$REPO_DIR/qurieus-frontend/.env.prod" ] && cp "$REPO_DIR/qurieus-frontend/.env.prod" "$ENV_DIR/prod.qurieus.frontend.env" && echo "   Synced frontend .env.prod"
+  [ -f "$REPO_DIR/qurieus-backend/.env.prod" ] && cp "$REPO_DIR/qurieus-backend/.env.prod" "$ENV_DIR/prod.qurieus.backend.env" && echo "   Synced backend .env.prod"
+fi
+
 copy_app_env() {
   local app_dir=$1
   local app_name=$2   # frontend | backend | bot
