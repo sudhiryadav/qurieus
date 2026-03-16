@@ -60,6 +60,13 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // Allow linking OAuth accounts to existing users by email. Fixes
+            // "Email already used with another provider" when:
+            // - Dev/prod use different OAuth client IDs (Google returns different
+            //   providerAccountId per client for the same user)
+            // - Google passkey changes affect OAuth identifiers
+            // - User signed up with credentials then tries Google (or vice versa)
+            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),

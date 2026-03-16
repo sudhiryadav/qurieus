@@ -41,7 +41,7 @@ export default function SignIn({
         urlError === "CredentialsSignin"
           ? "Invalid email or password."
           : urlError === "OAuthAccountNotLinked"
-          ? "Email already used with another provider."
+          ? "This email is linked to a different sign-in method. Please sign in with the same method you used originally (e.g. Google or email/password)."
           : "Sign in failed. Please try again.";
       showToast.error(msg);
     }

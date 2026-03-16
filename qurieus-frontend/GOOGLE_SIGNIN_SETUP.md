@@ -28,4 +28,12 @@ GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
 ```
 
+**Optional** – If you see "Email already used with another provider" in production (e.g. when using different OAuth clients for dev/staging/prod, or after Google passkey changes):
+
+```
+NEXTAUTH_ALLOW_EMAIL_ACCOUNT_LINKING=true
+```
+
+This allows linking Google OAuth to existing users by email. It is automatically enabled in development.
+
 Restart the app after adding these variables.
