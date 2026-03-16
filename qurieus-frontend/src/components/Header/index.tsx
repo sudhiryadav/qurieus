@@ -248,7 +248,7 @@ const Header: React.FC = () => {
           )}
           {/* Brand logo */}
           <div className="flex-shrink-0">
-            <Logo />
+            <Logo link="/" />
           </div>
         </div>
         <div className="flex w-full items-center justify-end">
