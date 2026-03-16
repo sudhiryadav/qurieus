@@ -3,7 +3,7 @@
 
 set -e
 
-REPO_URL=${1:-$GITHUB_REPO_URL}
+REPO_URL=${1:-$GITLAB_REPO_URL}
 REPO_DIR="/home/ubuntu/qurieus"
 DEPLOY_BASE="/home/ubuntu"
 
@@ -40,7 +40,7 @@ sudo chown -R ubuntu:ubuntu $DEPLOY_BASE/staging $DEPLOY_BASE/prod
 # Clone repo
 if [ ! -d "$REPO_DIR" ]; then
   if [ -z "$REPO_URL" ]; then
-    echo "❌ Usage: $0 https://github.com/org/qurieus.git"
+    echo "❌ Usage: $0 https://gitlab.com/org/qurieus.git"
     exit 1
   fi
   git clone "$REPO_URL" "$REPO_DIR"

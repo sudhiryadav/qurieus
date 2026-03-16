@@ -1,6 +1,6 @@
 # Qurieus CI/CD – No Docker
 
-Push to `prod` or `dev` → GitHub Actions SSHs to server → git pull, yarn/pip install (if deps changed), build, PM2 restart.
+Push to `prod` or `dev` → GitLab CI SSHs to server → git pull, yarn/pip install (if deps changed), build, PM2 restart.
 
 ## Server layout
 
@@ -12,10 +12,10 @@ Push to `prod` or `dev` → GitHub Actions SSHs to server → git pull, yarn/pip
 
 ```bash
 # SSH to server, then:
-curl -fsSL https://raw.githubusercontent.com/ORG/qurieus/main/ci-cd/scripts/setup-ec2.sh | bash -s https://github.com/ORG/qurieus.git
+curl -fsSL https://gitlab.com/frontslash/apps/qurieus/-/raw/prod/ci-cd/scripts/setup-ec2.sh | bash -s https://gitlab.com/frontslash/apps/qurieus.git
 ```
 
-Or: `./ci-cd/scripts/setup-ec2.sh https://github.com/ORG/qurieus.git`
+Or: `./ci-cd/scripts/setup-ec2.sh https://gitlab.com/frontslash/apps/qurieus.git`
 
 ## Env files (on server)
 
