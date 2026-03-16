@@ -132,7 +132,9 @@ if [ "$FRONTEND_CHANGED" = "true" ]; then
   pm2 restart qurieus-frontend --update-env 2>/dev/null || (cd "$REPO_DIR" && REPO_DIR="$REPO_DIR" pm2 start ecosystem.config.cjs --only qurieus-frontend)
   echo "✅ Frontend deployed"
 else
-  echo "⏭️ Skipping Frontend"
+  echo "⏭️ Skipping Frontend build"
+  # Always restart frontend so it picks up env changes (e.g. Paddle keys)
+  pm2 restart qurieus-frontend --update-env 2>/dev/null && echo "   Frontend restarted (env refresh)" || true
 fi
 
 # Deploy Backend

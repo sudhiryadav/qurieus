@@ -237,12 +237,31 @@ async function checkS3(): Promise<ServiceCheck> {
       latencyMs: Date.now() - start,
     };
   } catch (error: unknown) {
-    const err = error as { name?: string; Code?: string; message?: string; $metadata?: { httpStatusCode?: number } };
-    const msg = err?.message || err?.name || err?.Code || (typeof error === "object" && error !== null && "message" in error ? String((error as { message: unknown }).message) : String(error));
+    let msg = "Check AWS credentials, bucket name, region, and IAM permissions (s3:ListBucket)";
+    if (error instanceof Error) {
+      const e = error as Error & { Code?: string; $metadata?: { httpStatusCode?: number } };
+      const raw = [e.message, e.Code, e.name].filter(Boolean).map(String).join("; ") || "";
+      const http = e.$metadata?.httpStatusCode;
+      if (raw && raw !== "UnknownError") msg = raw;
+      else if (http) {
+        const hints: Record<number, string> = {
+          403: "Forbidden – check IAM policy (s3:ListBucket) and bucket exists",
+          404: "Bucket not found – verify bucket name and region",
+          400: "Bad request – bucket may be in different region than AWS_REGION",
+        };
+        msg = `HTTP ${http}: ${hints[http] ?? "Request failed"}`;
+      } else if (raw) msg = raw;
+    } else if (error && typeof error === "object") {
+      const e = error as Record<string, unknown>;
+      const parts = [e.message, e.name, e.Code, e.code].filter(Boolean).map(String);
+      msg = parts.length ? parts.join("; ") : msg;
+    } else if (error) {
+      msg = String(error);
+    }
     return {
       name: "AWS S3 (File Storage)",
       status: "error",
-      message: msg || "Check AWS credentials, bucket name, and region",
+      message: msg,
       latencyMs: Date.now() - start,
     };
   }
