@@ -221,6 +221,20 @@ export async function sendEscalationNotificationToUser(data: {
   });
 }
 
+export async function sendTestimonialRejectedEmail(data: {
+  email: string;
+  name: string;
+  rejectionReason?: string;
+}) {
+  const feedbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || appUrl}/user/feedback`;
+  return sendEmail({
+    to: data.email,
+    subject: "Your Feedback Needs Revision",
+    template: "testimonial-rejected",
+    context: { ...data, feedbackUrl, ...footerData },
+  });
+}
+
 export async function sendEscalationNotificationToAgents(data: {
   agentEmails: string[];
   userId: string;

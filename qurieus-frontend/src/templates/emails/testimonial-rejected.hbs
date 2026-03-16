@@ -1,0 +1,32 @@
+{{> partials/header title="Your Feedback Needs Revision" }}
+
+<div style="background: linear-gradient(135deg, #636e72 0%, #2d3436 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+  <h1 style="margin: 0; font-size: 28px;">📝 Feedback Review Update</h1>
+  <p style="margin: 10px 0 0 0; font-size: 16px;">Your testimonial has been reviewed</p>
+</div>
+
+<div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+  <p style="margin: 0 0 20px 0; font-size: 16px;">Hi {{name}},</p>
+  
+  <p style="margin: 0 0 20px 0; font-size: 16px;">Thank you for taking the time to share your feedback with us. Our team has reviewed your submission, and we're unable to publish it at this time.</p>
+  
+  {{#if rejectionReason}}
+  <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 5px; margin: 20px 0;">
+    <h3 style="margin: 0 0 15px 0; color: #856404;">💬 Feedback from our team</h3>
+    <p style="margin: 0; color: #856404; white-space: pre-wrap;">{{rejectionReason}}</p>
+  </div>
+  <p style="margin: 20px 0; font-size: 16px;">Please consider the suggestions above and feel free to submit a revised testimonial when you're ready.</p>
+  {{else}}
+  <p style="margin: 20px 0; font-size: 16px;">You're welcome to submit a new testimonial at any time with any updates you'd like to make.</p>
+  {{/if}}
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{feedbackUrl}}" style="display: inline-block; background: #636e72; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Submit New Feedback</a>
+  </div>
+  
+  <p style="margin: 20px 0; font-size: 16px;">We appreciate your support and look forward to hearing from you again!</p>
+  
+  <p style="margin: 20px 0; font-size: 16px;">Best regards,<br>The Qurieus Team</p>
+</div>
+
+{{> partials/footer }}

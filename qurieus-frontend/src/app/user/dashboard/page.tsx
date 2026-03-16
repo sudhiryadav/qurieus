@@ -227,6 +227,9 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+        {!loading && (!dashboardData?.recentActivity || dashboardData.recentActivity.length === 0) && (
+          <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
+        )}
         </div>
       </div>
     </div>

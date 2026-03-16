@@ -10,7 +10,7 @@ import { prisma } from "@/utils/prismaDB";
 export async function GET() {
   try {
     const testimonials = await prisma.testimonial.findMany({
-      where: { isApproved: true },
+      where: { status: "APPROVED" },
       include: {
         user: {
           select: { id: true, name: true, image: true, jobTitle: true, company: true },
@@ -43,12 +43,24 @@ export async function GET() {
 /**
  * POST /api/testimonials
  * Authenticated - user submits a testimonial (pending approval).
+ * Only one pending testimonial per user at a time.
  */
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Block if user already has a pending testimonial
+    const existingPending = await prisma.testimonial.findFirst({
+      where: { userId: session.user.id, status: "PENDING" },
+    });
+    if (existingPending) {
+      return NextResponse.json(
+        { error: "You already have a testimonial pending review. Please wait for admin to review it before submitting again." },
+        { status: 400 }
+      );
     }
 
     const body = await req.json();
@@ -67,6 +79,7 @@ export async function POST(req: NextRequest) {
         content: content.trim(),
         designation: designation?.trim() || null,
         star: Math.min(5, Math.max(1, Number(star) || 5)),
+        status: "PENDING",
       },
     });
 

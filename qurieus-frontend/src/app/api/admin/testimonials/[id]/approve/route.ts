@@ -13,7 +13,7 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN])(
     const { id } = await params;
     const testimonial = await prisma.testimonial.update({
       where: { id },
-      data: { isApproved: true },
+      data: { isApproved: true, status: "APPROVED" },
     });
     return NextResponse.json({ success: true, testimonial });
   }

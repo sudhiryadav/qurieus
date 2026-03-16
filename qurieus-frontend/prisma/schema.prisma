@@ -225,19 +225,30 @@ model ContactMessage {
   createdAt DateTime @default(now())
 }
 
+enum TestimonialStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Testimonial {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content     String   @db.Text
-  designation String?  // e.g. "Founder @ Company"
-  star        Int      @default(5)
-  isApproved  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content         String           @db.Text
+  designation     String?          // e.g. "Founder @ Company"
+  star            Int              @default(5)
+  isApproved      Boolean          @default(false) // Kept for backward compat; sync with status
+  status          TestimonialStatus @default(PENDING)
+  rejectionReason String?          @db.Text       // Admin comment when rejecting (suggestions for user)
+  rejectedAt      DateTime?
+  rejectedById    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([isApproved])
   @@index([userId])
+  @@index([status])
 }
 
 // New chat-related models
