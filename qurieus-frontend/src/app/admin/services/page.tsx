@@ -70,7 +70,7 @@ export default function AdminServicesPage() {
     s === "ok" ? "Healthy" : s === "error" ? "Error" : "Skipped";
 
   if (loading && !data) {
-    return <LoadingOverlay message="Checking services..." />;
+    return <LoadingOverlay loading={true} htmlText="Checking services..." />;
   }
 
   return (
