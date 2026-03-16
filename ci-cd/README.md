@@ -32,10 +32,7 @@ Or: `./ci-cd/scripts/setup-ec2.sh https://github.com/ORG/qurieus.git`
 
 The deploy script copies each app's env file to its `.env` before build/run.
 
-**Prod env sync:** `.env.prod` files are not committed (contain secrets). Keep them local. To update the server:
-- Frontend: `./ci-cd/scripts/sync-frontend-env-prod-to-server.sh ubuntu@your-prod-ip`
-- Backend: `./ci-cd/scripts/sync-backend-env-prod-to-server.sh ubuntu@your-prod-ip`
-Then restart: `pm2 restart qurieus-frontend --update-env` (or backend).
+**Prod env (automated):** `qurieus-frontend/.env.prod` and `qurieus-backend/.env.prod` are committed. On prod deploy, the script syncs them from the repo to the server's `prod.qurieus.frontend.env` and `prod.qurieus.backend.env`, then copies to each app's `.env`. No manual sync needed.
 
 **Setup on server:**
 ```bash
