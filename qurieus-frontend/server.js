@@ -1,3 +1,6 @@
+// Load .env first so process.env is populated before Next.js and any other code runs
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
