@@ -37,8 +37,8 @@ export default function RootLayout({
       .catch(() => {});
   }, []);
 
-  // Don't show footer on user layout pages
-  const shouldShowFooter = !pathname?.startsWith('/user') && !pathname?.startsWith('/admin');
+  // Show footer on all pages including admin and user dashboard
+  const shouldShowFooter = true;
 
   // Don't show header on agent pages
   const shouldShowHeader = !pathname?.startsWith('/agent');
