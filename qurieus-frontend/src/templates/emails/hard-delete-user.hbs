@@ -1,0 +1,33 @@
+{{> partials/header}}
+<div class="content" style="background: #fff; padding: 32px 24px; border: 1px solid #e9ecef; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #1a202c; margin-bottom: 12px;">Permanent Delete Code</h2>
+
+  <p style="font-size: 1.05rem; color: #333; margin-bottom: 18px;">
+    A Qurieus admin requested a <strong>soft delete</strong> for:
+  </p>
+
+  <div style="background: #f8f9fa; padding: 14px 16px; border-radius: 8px; margin-bottom: 18px;">
+    <div style="color: #111827;"><strong>Name:</strong> {{deletedUserName}}</div>
+    <div style="color: #111827; margin-top: 6px;"><strong>Email:</strong> {{deletedUserEmail}}</div>
+  </div>
+
+  <p style="font-size: 1.05rem; color: #333; margin-bottom: 12px;">
+    Use the code below to <strong>permanently hard delete</strong> the user within <strong>10 minutes</strong>:
+  </p>
+
+  <div style="text-align: center; margin: 18px 0 10px 0;">
+    <div style="display: inline-block; font-size: 1.4rem; letter-spacing: 0.14em; font-weight: 800; color: #111827; background: #fff; padding: 12px 18px; border: 1px dashed #9ca3af; border-radius: 10px;">
+      {{code}}
+    </div>
+  </div>
+
+  <p style="font-size: 0.95rem; color: #6b7280; margin-top: 10px;">
+    Expires at: <strong>{{expiresAt}}</strong>
+  </p>
+
+  <p style="font-size: 0.95rem; color: #6b7280; margin-top: 18px;">
+    If you did not initiate this request, you can ignore this email.
+  </p>
+</div>
+{{> partials/footer}}
+

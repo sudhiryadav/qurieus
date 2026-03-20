@@ -105,6 +105,9 @@ export default function AdminUsersPage() {
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [userToHardDelete, setUserToHardDelete] = useState<User | null>(null);
+  const [hardDeleteCode, setHardDeleteCode] = useState("");
+  const [isHardDeleting, setIsHardDeleting] = useState(false);
   const [restoringUserId, setRestoringUserId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "email" | "created_at" | "role" | "deleted">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -172,6 +175,28 @@ export default function AdminUsersPage() {
       showToast.error(error.response?.data?.error || "Failed to delete user");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const confirmHardDelete = async () => {
+    if (!userToHardDelete) return;
+    const code = hardDeleteCode.trim();
+    if (!code) {
+      showToast.error("Enter the hard delete code from the email");
+      return;
+    }
+    setIsHardDeleting(true);
+    try {
+      await axiosInstance.post(`/api/admin/users/${userToHardDelete.id}/hard-delete`, { code });
+      showToast.success("User permanently deleted");
+      setUserToHardDelete(null);
+      setHardDeleteCode("");
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error hard deleting user:", error);
+      showToast.error(error.response?.data?.error || "Failed to permanently delete user");
+    } finally {
+      setIsHardDeleting(false);
     }
   };
 
@@ -471,7 +496,7 @@ export default function AdminUsersPage() {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[140px]"
             >
               <option value="">Active users only</option>
-              <option value="true">Deleted users only</option>
+              <option value="true">Soft-deleted users only</option>
               <option value="all">All users</option>
             </select>
 
@@ -600,20 +625,34 @@ export default function AdminUsersPage() {
                           onClick={() => handleDelete(user)}
                           className="text-amber-600 hover:text-amber-700 hover:border-amber-500"
                         >
-                          Delete
+                          Soft Delete
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRestoreUser(user)}
-                        disabled={restoringUserId === user.id}
-                        className="text-green-600 hover:text-green-700 hover:border-green-500"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                        {restoringUserId === user.id ? "Restoring..." : "Restore"}
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRestoreUser(user)}
+                          disabled={restoringUserId === user.id}
+                          className="text-green-600 hover:text-green-700 hover:border-green-500"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                          {restoringUserId === user.id ? "Restoring..." : "Restore"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setHardDeleteCode("");
+                            setUserToHardDelete(user);
+                          }}
+                          disabled={isHardDeleting}
+                          className="text-red-600 hover:text-red-700 hover:border-red-500"
+                        >
+                          Permanent Delete
+                        </Button>
+                      </>
                     )}
                   </div>
                 </td>
@@ -817,11 +856,61 @@ export default function AdminUsersPage() {
         isOpen={!!userToDelete}
         onClose={() => setUserToDelete(null)}
         onConfirm={confirmDelete}
-        title="Delete User"
-        message={`Are you sure you want to delete ${userToDelete?.name}? The user will be marked as deleted but their data will be retained.`}
+        title="Soft Delete User"
+        message={`Are you sure you want to soft delete ${userToDelete?.name}? The user will be marked as deleted but their data will be retained. Super admins will receive a code to permanently hard delete this user within 10 minutes.`}
         isLoading={isDeleting}
-        confirmText="Delete"
+        confirmText="Soft Delete"
       />
+
+      {/* Permanent (hard) delete modal */}
+      <ModalDialog
+        isOpen={!!userToHardDelete}
+        onClose={() => {
+          setUserToHardDelete(null);
+          setHardDeleteCode("");
+        }}
+        header="Permanent Delete (Hard Delete)"
+        footer={
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUserToHardDelete(null);
+                setHardDeleteCode("");
+              }}
+              disabled={isHardDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmHardDelete}
+              disabled={isHardDeleting || !hardDeleteCode.trim()}
+            >
+              {isHardDeleting ? "Permanently Deleting..." : "Permanently Delete"}
+            </Button>
+          </div>
+        }
+        width="45%"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-300">
+            Enter the code emailed to super admins for user{" "}
+            <span className="font-semibold text-gray-100">{userToHardDelete?.name}</span>.
+            This code is valid for 10 minutes.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Hard Delete Code <span className="text-red-500">*</span>
+            </label>
+            <input
+              value={hardDeleteCode}
+              onChange={(e) => setHardDeleteCode(e.target.value)}
+              placeholder="Enter code"
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </ModalDialog>
 
       {/* Add User Modal */}
       <ModalDialog
