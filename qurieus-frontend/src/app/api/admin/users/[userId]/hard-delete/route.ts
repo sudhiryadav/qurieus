@@ -99,10 +99,14 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(
       }
 
       const qdrantConfig = getQdrantConfig();
+      const collection = qdrantConfig.QDRANT_COLLECTION;
+      const hasQdrant = Boolean(collection && qdrantConfig.QDRANT_URL);
+
+      // Per-document delete (same as single-document delete: user_id + document_id).
       for (const doc of documents) {
         const qdrantIdToDelete = doc.qdrantDocumentId ?? doc.aiDocumentId ?? null;
 
-        if (qdrantIdToDelete && qdrantConfig.QDRANT_COLLECTION && qdrantConfig.QDRANT_URL) {
+        if (qdrantIdToDelete && hasQdrant) {
           try {
             const filter = {
               must: [
@@ -110,7 +114,7 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(
                 { key: "document_id", match: { value: qdrantIdToDelete } },
               ],
             };
-            await qdrant.delete(qdrantConfig.QDRANT_COLLECTION, { filter });
+            await qdrant.delete(collection!, { filter });
           } catch (qdrantError: unknown) {
             logger.warn("Hard delete: failed to delete Qdrant vectors", {
               targetUserId: userId,
@@ -132,6 +136,37 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(
               error: s3Error instanceof Error ? s3Error.message : String(s3Error),
             });
           }
+        }
+      }
+
+      // Final sweep: remove any remaining vectors for this user in Qdrant Cloud (orphans,
+      // legacy payloads, or docs without qdrantDocumentId/aiDocumentId in DB).
+      if (hasQdrant) {
+        try {
+          await qdrant.delete(collection!, {
+            filter: {
+              must: [{ key: "user_id", match: { value: userId } }],
+            },
+          });
+          logger.info("Hard delete: Qdrant user_id sweep completed", { targetUserId: userId });
+        } catch (sweepError: unknown) {
+          logger.warn("Hard delete: Qdrant user_id sweep failed", {
+            targetUserId: userId,
+            error: sweepError instanceof Error ? sweepError.message : String(sweepError),
+          });
+        }
+        // Legacy payloads (before user_id was standardized)
+        try {
+          await qdrant.delete(collection!, {
+            filter: {
+              must: [{ key: "document_owner_id", match: { value: userId } }],
+            },
+          });
+        } catch (legacyError: unknown) {
+          logger.warn("Hard delete: Qdrant document_owner_id sweep failed", {
+            targetUserId: userId,
+            error: legacyError instanceof Error ? legacyError.message : String(legacyError),
+          });
         }
       }
 
