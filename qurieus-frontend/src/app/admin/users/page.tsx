@@ -424,25 +424,26 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      {/* Title + search + filters on one row (wraps on narrow screens) */}
-      <div className="flex flex-wrap items-center gap-3 gap-y-3 mb-6">
-        <div className="flex items-center gap-3 shrink-0">
-          <UserIcon className="h-8 w-8 text-blue-600 shrink-0" />
-          <h1 className="text-2xl font-bold">Users</h1>
+      {/* Row 1: title + search only; row 2: filters */}
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
+            <UserIcon className="h-8 w-8 text-blue-600 shrink-0" />
+            <h1 className="text-2xl font-bold">Users</h1>
+          </div>
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+          </div>
         </div>
 
-        <div className="relative w-full min-w-[200px] sm:w-64 md:w-72 shrink-0">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
             <select
               value={filters.role}
               onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
