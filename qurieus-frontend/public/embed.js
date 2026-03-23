@@ -546,36 +546,9 @@
   let widgetConfig = {};
   let widgetContainer = null;
   let themeObserver = null;
-  let hostThemeObserver = null;
 
   function normalizeTheme(theme) {
     return theme === 'dark' ? 'dark' : 'light';
-  }
-
-  function detectHostTheme() {
-    const htmlTheme = document.documentElement ? document.documentElement.getAttribute('data-theme') : null;
-    const bodyTheme = document.body ? document.body.getAttribute('data-theme') : null;
-
-    if (htmlTheme === 'dark' || htmlTheme === 'light') {
-      return htmlTheme;
-    }
-
-    if (bodyTheme === 'dark' || bodyTheme === 'light') {
-      return bodyTheme;
-    }
-
-    const htmlHasDarkClass = document.documentElement && document.documentElement.classList
-      ? document.documentElement.classList.contains('dark')
-      : false;
-    const bodyHasDarkClass = document.body && document.body.classList
-      ? document.body.classList.contains('dark')
-      : false;
-
-    if (htmlHasDarkClass || bodyHasDarkClass) {
-      return 'dark';
-    }
-
-    return 'light';
   }
 
   function updateWidgetConfig(nextConfig) {
@@ -606,48 +579,6 @@
       attributes: true,
       attributeFilter: ['data-theme']
     });
-  }
-
-  function watchHostThemeChanges() {
-    if (typeof MutationObserver === 'undefined') return;
-
-    if (hostThemeObserver) {
-      hostThemeObserver.disconnect();
-    }
-
-    const syncThemeFromHost = () => {
-      const scriptTheme = embedScriptElement ? embedScriptElement.getAttribute('data-theme') : null;
-      const nextTheme = normalizeTheme(scriptTheme || detectHostTheme());
-      if (widgetConfig.theme !== nextTheme) {
-        updateWidgetConfig({ theme: nextTheme });
-      }
-    };
-
-    hostThemeObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (
-          mutation.type === 'attributes' &&
-          (mutation.attributeName === 'data-theme' || mutation.attributeName === 'class')
-        ) {
-          syncThemeFromHost();
-          return;
-        }
-      }
-    });
-
-    if (document.documentElement) {
-      hostThemeObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme', 'class']
-      });
-    }
-
-    if (document.body) {
-      hostThemeObserver.observe(document.body, {
-        attributes: true,
-        attributeFilter: ['data-theme', 'class']
-      });
-    }
   }
 
   // Helper function to format text with proper HTML formatting
@@ -2220,22 +2151,11 @@
         baseUrl: config.baseUrl,
         initialMessage: config.initialMessage,
         position: config.position,
-        theme: normalizeTheme(config.theme || detectHostTheme()),
+        theme: normalizeTheme(config.theme),
         showSources: config.showSources
       });
 
       watchThemeChanges();
-      watchHostThemeChanges();
-    },
-    updateConfig: (nextConfig) => {
-      if (!nextConfig) return;
-
-      const normalizedConfig = { ...nextConfig };
-      if (Object.prototype.hasOwnProperty.call(normalizedConfig, 'theme')) {
-        normalizedConfig.theme = normalizeTheme(normalizedConfig.theme);
-      }
-
-      updateWidgetConfig(normalizedConfig);
     }
   };
 
@@ -2245,7 +2165,7 @@
     baseUrl: getBaseUrl(),
     initialMessage: embedScriptElement ? embedScriptElement.getAttribute('data-initial-message') : null,
     position: embedScriptElement ? embedScriptElement.getAttribute('data-position') : null,
-    theme: normalizeTheme((embedScriptElement ? embedScriptElement.getAttribute('data-theme') : null) || detectHostTheme()),
+    theme: normalizeTheme(embedScriptElement ? embedScriptElement.getAttribute('data-theme') : null),
     showSources: embedScriptElement ? embedScriptElement.getAttribute('data-show-sources') === 'true' : false,
   };
 
