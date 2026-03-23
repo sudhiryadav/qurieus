@@ -1,6 +1,24 @@
 (function () {
   'use strict';
 
+  const getEmbedScriptElement = () => {
+    if (document.currentScript && document.currentScript.src && document.currentScript.src.includes('/embed.js')) {
+      return document.currentScript;
+    }
+
+    const scripts = document.getElementsByTagName('script');
+    for (let i = scripts.length - 1; i >= 0; i--) {
+      const script = scripts[i];
+      if (script.src && script.src.includes('/embed.js')) {
+        return script;
+      }
+    }
+
+    return scripts[scripts.length - 1] || null;
+  };
+
+  const embedScriptElement = getEmbedScriptElement();
+
   // Create a container for the widget
   const container = document.createElement('div');
   container.id = 'qurieus-chat-widget';
@@ -12,10 +30,7 @@
 
   // Get base URL from the current script's src attribute
   const getBaseUrl = () => {
-    const currentScript = document.currentScript || (() => {
-      const scripts = document.getElementsByTagName('script');
-      return scripts[scripts.length - 1];
-    })();
+    const currentScript = embedScriptElement;
 
     if (currentScript && currentScript.src) {
       const url = new URL(currentScript.src);
@@ -530,6 +545,41 @@
 
   let widgetConfig = {};
   let widgetContainer = null;
+  let themeObserver = null;
+
+  function normalizeTheme(theme) {
+    return theme === 'dark' ? 'dark' : 'light';
+  }
+
+  function updateWidgetConfig(nextConfig) {
+    if (!widgetContainer || !nextConfig) return;
+    widgetConfig = { ...widgetConfig, ...nextConfig };
+    renderWidget();
+  }
+
+  function watchThemeChanges() {
+    if (!embedScriptElement || typeof MutationObserver === 'undefined') return;
+
+    if (themeObserver) {
+      themeObserver.disconnect();
+    }
+
+    themeObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+          const nextTheme = normalizeTheme(embedScriptElement.getAttribute('data-theme'));
+          if (widgetConfig.theme !== nextTheme) {
+            updateWidgetConfig({ theme: nextTheme });
+          }
+        }
+      }
+    });
+
+    themeObserver.observe(embedScriptElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
+  }
 
   // Helper function to format text with proper HTML formatting
   function formatMessageText(text) {
@@ -2101,20 +2151,32 @@
         baseUrl: config.baseUrl,
         initialMessage: config.initialMessage,
         position: config.position,
-        theme: config.theme,
+        theme: normalizeTheme(config.theme),
         showSources: config.showSources
       });
+
+      watchThemeChanges();
+    },
+    updateConfig: (nextConfig) => {
+      if (!nextConfig) return;
+
+      const normalizedConfig = { ...nextConfig };
+      if (Object.prototype.hasOwnProperty.call(normalizedConfig, 'theme')) {
+        normalizedConfig.theme = normalizeTheme(normalizedConfig.theme);
+      }
+
+      updateWidgetConfig(normalizedConfig);
     }
   };
 
   // Auto-initialize if config is provided via data attributes
   const config = {
-    apiKey: document.currentScript.getAttribute('data-api-key'),
+    apiKey: embedScriptElement ? embedScriptElement.getAttribute('data-api-key') : null,
     baseUrl: getBaseUrl(),
-    initialMessage: document.currentScript.getAttribute('data-initial-message'),
-    position: document.currentScript.getAttribute('data-position'),
-    theme: document.currentScript.getAttribute('data-theme'),
-    showSources: document.currentScript.getAttribute('data-show-sources') === 'true',
+    initialMessage: embedScriptElement ? embedScriptElement.getAttribute('data-initial-message') : null,
+    position: embedScriptElement ? embedScriptElement.getAttribute('data-position') : null,
+    theme: normalizeTheme(embedScriptElement ? embedScriptElement.getAttribute('data-theme') : null),
+    showSources: embedScriptElement ? embedScriptElement.getAttribute('data-show-sources') === 'true' : false,
   };
 
   if (config.apiKey) {
