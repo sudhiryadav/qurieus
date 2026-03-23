@@ -1469,9 +1469,13 @@
     form.style.cssText = `
       padding: 16px;
       border-top: 1px solid #e5e7eb;
+      border-radius: 0 0 12px 12px;
+    `;
+
+    const inputRow = document.createElement('div');
+    inputRow.style.cssText = `
       display: flex;
       gap: 8px;
-      border-radius: 0 0 12px 12px;
     `;
 
     const input = document.createElement('textarea');
@@ -2017,8 +2021,32 @@
       }
     });
 
-    form.appendChild(input);
-    form.appendChild(sendBtn);
+    inputRow.appendChild(input);
+    inputRow.appendChild(sendBtn);
+    form.appendChild(inputRow);
+
+    const poweredBy = document.createElement('div');
+    poweredBy.style.cssText = `
+      margin-top: 6px;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1;
+      color: ${widgetConfig.theme === 'dark' ? '#9ca3af' : '#8a8f98'};
+    `;
+    poweredBy.appendChild(document.createTextNode('Powered by '));
+
+    const poweredByLink = document.createElement('a');
+    poweredByLink.href = 'https://qurieus.com';
+    poweredByLink.target = '_blank';
+    poweredByLink.rel = 'noopener noreferrer';
+    poweredByLink.textContent = 'Qurieus';
+    poweredByLink.style.cssText = `
+      color: ${widgetConfig.theme === 'dark' ? '#93c5fd' : '#4a67ff'};
+      text-decoration: underline;
+    `;
+
+    poweredBy.appendChild(poweredByLink);
+    form.appendChild(poweredBy);
 
     chatWindow.appendChild(header);
     chatWindow.appendChild(messagesContainer);
