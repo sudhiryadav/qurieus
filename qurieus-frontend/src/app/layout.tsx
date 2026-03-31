@@ -8,13 +8,14 @@ import ScrollToTop from "@/components/ScrollToTop";
 import SessionRedirector from "@/components/SessionRedirector";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import "../styles/index.css";
 import "../styles/prism-vsc-dark-plus.css";
 import { Providers } from "@/lib/providers";
 import { usePathname } from "next/navigation";
 import { IdentityProvider } from "@/components/IdentityProvider";
 import Script from "next/script";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 
 export default function RootLayout({
   children,
@@ -174,6 +175,9 @@ export default function RootLayout({
       </head>
       <body>
         <SessionProvider>
+          <Suspense fallback={null}>
+            <GoogleAnalytics />
+          </Suspense>
           <SessionRedirector />
           {loading ? (
             <PreLoader />
@@ -199,6 +203,9 @@ export default function RootLayout({
           <Script
             src={`${process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")}/embed.js`}
             data-api-key={embedUserId}
+            data-ga-measurement-id={
+              process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? ""
+            }
             data-initial-message="Hello! How can I help you today?"
             data-position="bottom-right"
             data-theme="light"

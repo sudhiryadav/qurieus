@@ -9,6 +9,7 @@ import Loader from "@/components/Common/Loader";
 // MagicLink component hidden for now
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
+import { GA_OAUTH_PENDING_KEY, trackGaEvent } from "@/lib/gtag";
 
 interface SignInFormProps {
   onSuccess?: () => void;
@@ -75,6 +76,7 @@ export default function SignIn({
         if (result?.error) {
           showToast.error(result.error);
         } else {
+          trackGaEvent("login", { method: "credentials" });
           onSuccess();
         }
       } else {
@@ -87,6 +89,7 @@ export default function SignIn({
         if (result?.error) {
           showToast.error(result.error);
         } else {
+          trackGaEvent("login", { method: "credentials" });
           // router.refresh() forces Next.js to re-fetch with the new session cookie
           router.refresh();
           router.push(callbackUrl);
@@ -137,12 +140,16 @@ export default function SignIn({
       <div className="mb-6">
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            sessionStorage.setItem(
+              GA_OAUTH_PENDING_KEY,
+              JSON.stringify({ intent: "login", provider: "google" })
+            );
             signIn("google", {
               callbackUrl,
               redirect: true,
-            })
-          }
+            });
+          }}
           className="flex w-full items-center justify-center gap-3 rounded-md border border-stroke bg-white px-5 py-3 text-base font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:hover:bg-dark-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">

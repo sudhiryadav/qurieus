@@ -23,6 +23,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import axiosInstance from '@/lib/axios';
+import { trackGaAiConversation } from '@/lib/gtag';
 import { FormattedMessage } from '@/utils/formatMessage';
 
 interface AgentChat {
@@ -154,6 +155,13 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
       const response = await axiosInstance.post(`/api/agent/chats/${chatId}/messages`, {
         content: messageToSend
       });
+
+      if (response.status >= 200 && response.status < 300) {
+        trackGaAiConversation({
+          conversation_surface: "agent_console",
+          chat_id: chatId,
+        });
+      }
 
       // Don't add message to local state immediately - let Socket.IO handle it
       // This prevents duplication since the API endpoint emits the Socket.IO event

@@ -43,6 +43,36 @@
     return fallbackUrl;
   };
 
+  // GA4: successful AI reply in embed — mark event "ai_conversation" as a key event in GA4
+  function trackEmbedAiConversation(measurementId) {
+    if (!measurementId || typeof window === 'undefined') return;
+    try {
+      var w = window;
+      w.dataLayer = w.dataLayer || [];
+      w.__qurieusEmbedGaIds = w.__qurieusEmbedGaIds || {};
+      if (typeof w.gtag !== 'function') {
+        w.gtag = function () {
+          w.dataLayer.push(arguments);
+        };
+        w.gtag('js', new Date());
+        w.gtag('config', measurementId, { send_page_view: false });
+        var gs = document.createElement('script');
+        gs.async = true;
+        gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(measurementId);
+        document.head.appendChild(gs);
+        w.__qurieusEmbedGaIds[measurementId] = true;
+      } else if (!w.__qurieusEmbedGaIds[measurementId]) {
+        w.gtag('config', measurementId, { send_page_view: false });
+        w.__qurieusEmbedGaIds[measurementId] = true;
+      }
+      w.gtag('event', 'ai_conversation', {
+        send_to: measurementId,
+        conversation_surface: 'embed_widget',
+        embed_host: w.location.hostname
+      });
+    } catch (ignore) {}
+  }
+
   // Initialize widget state
   let widgetState = {
     isOpen: false,
@@ -1774,6 +1804,7 @@
         let assistantMessage = '';
         let fullResponse = '';
         let chunkCount = 0;
+        let gaConversationTracked = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -1805,6 +1836,16 @@
                 }
 
                 if (data.done) {
+                  if (
+                    !gaConversationTracked &&
+                    widgetConfig.gaMeasurementId &&
+                    assistantMessage &&
+                    assistantMessage.trim()
+                  ) {
+                    gaConversationTracked = true;
+                    trackEmbedAiConversation(widgetConfig.gaMeasurementId);
+                  }
+
                   // Remove peeking character indicator
                   const peekingIndicator = chatWindow.querySelector('[style*="position: absolute"][style*="bottom: 80px"]');
                   if (peekingIndicator) {
@@ -2149,6 +2190,7 @@
       ChatWidget({
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,
+        gaMeasurementId: config.gaMeasurementId || null,
         initialMessage: config.initialMessage,
         position: config.position,
         theme: normalizeTheme(config.theme),
@@ -2163,6 +2205,10 @@
   const config = {
     apiKey: embedScriptElement ? embedScriptElement.getAttribute('data-api-key') : null,
     baseUrl: getBaseUrl(),
+    gaMeasurementId: (function () {
+      var v = embedScriptElement ? embedScriptElement.getAttribute('data-ga-measurement-id') : null;
+      return v && v.trim() ? v.trim() : null;
+    })(),
     initialMessage: embedScriptElement ? embedScriptElement.getAttribute('data-initial-message') : null,
     position: embedScriptElement ? embedScriptElement.getAttribute('data-position') : null,
     theme: normalizeTheme(embedScriptElement ? embedScriptElement.getAttribute('data-theme') : null),

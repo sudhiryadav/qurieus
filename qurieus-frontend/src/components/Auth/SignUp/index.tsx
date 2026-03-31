@@ -7,6 +7,7 @@ import { showToast } from "@/components/Common/Toast";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { OTPInput } from "@/components/OTPInput";
 import axios from "@/lib/axios";
+import { GA_OAUTH_PENDING_KEY, trackGaEvent } from "@/lib/gtag";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -93,6 +94,7 @@ export default function SignUp({
         password: user.password,
       });
       if (signInResult && !signInResult.error) {
+        trackGaEvent("sign_up", { method: "credentials" });
         if (onSuccess) {
           onSuccess();
         } else {
@@ -221,12 +223,16 @@ export default function SignUp({
       <div className="mb-6">
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            sessionStorage.setItem(
+              GA_OAUTH_PENDING_KEY,
+              JSON.stringify({ intent: "sign_up", provider: "google" })
+            );
             signIn("google", {
               callbackUrl: "/user/knowledge-base",
               redirect: true,
-            })
-          }
+            });
+          }}
           className="flex w-full items-center justify-center gap-3 rounded-md border border-stroke bg-white px-5 py-3 text-base font-medium text-dark transition hover:bg-gray-50 dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:hover:bg-dark-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
