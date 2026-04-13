@@ -3,8 +3,11 @@
 import {
   GA_MEASUREMENT_ID,
   GA_OAUTH_PENDING_KEY,
+  GOOGLE_ADS_ID,
   isGaEnabled,
+  isGtagSnippetEnabled,
   trackGaEvent,
+  trackMarketingSignUp,
   type GaOauthPending,
 } from "@/lib/gtag";
 import { useSession } from "next-auth/react";
@@ -27,7 +30,7 @@ function flushPendingOAuthEvent() {
     sessionStorage.removeItem(GA_OAUTH_PENDING_KEY);
     const { intent, provider } = JSON.parse(raw) as GaOauthPending;
     if (intent === "sign_up") {
-      trackGaEvent("sign_up", { method: provider });
+      trackMarketingSignUp({ method: provider });
     } else {
       trackGaEvent("login", { method: provider });
     }
@@ -40,7 +43,7 @@ function flushPendingOAuthEvent() {
  * Loads GA4 and ties hits to the signed-in user.
  * - page_view: path, full URL, title (SPA navigations).
  * - user_id: internal DB id (recommended by Google; not PII).
- * - login / sign_up: credentials + Google OAuth (recommended events).
+ * - login / sign_up: credentials + Google OAuth (recommended events); optional Google Ads conversions via env.
  * - ai_conversation: fire from agent console / embed (mark as key event in GA4).
  * - Optional user_email user property when NEXT_PUBLIC_GA_SEND_USER_EMAIL=true.
  */
@@ -108,9 +111,11 @@ export function GoogleAnalytics() {
     }
   }, [status, session?.user?.id, session?.user?.email]);
 
-  if (!isGaEnabled()) {
+  if (!isGtagSnippetEnabled()) {
     return null;
   }
+
+  const gtagLoaderId = GA_MEASUREMENT_ID || GOOGLE_ADS_ID;
 
   return (
     <>
@@ -119,13 +124,16 @@ export function GoogleAnalytics() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', {
-            send_page_view: false
-          });
+          ${
+            GA_MEASUREMENT_ID
+              ? `gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });`
+              : ""
+          }
+          ${GOOGLE_ADS_ID ? `gtag('config', '${GOOGLE_ADS_ID}');` : ""}
         `}
       </Script>
       <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${gtagLoaderId}`}
         strategy="afterInteractive"
       />
     </>

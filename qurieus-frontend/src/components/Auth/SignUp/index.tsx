@@ -7,7 +7,7 @@ import { showToast } from "@/components/Common/Toast";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { OTPInput } from "@/components/OTPInput";
 import axios from "@/lib/axios";
-import { GA_OAUTH_PENDING_KEY, trackGaEvent } from "@/lib/gtag";
+import { GA_OAUTH_PENDING_KEY, trackMarketingSignUp } from "@/lib/gtag";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -94,7 +94,7 @@ export default function SignUp({
         password: user.password,
       });
       if (signInResult && !signInResult.error) {
-        trackGaEvent("sign_up", { method: "credentials" });
+        trackMarketingSignUp({ method: "credentials" });
         if (onSuccess) {
           onSuccess();
         } else {

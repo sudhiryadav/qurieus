@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { showToast } from "@/components/Common/Toast";
 import axios from "@/lib/axios";
+import { trackMarketingLead } from "@/lib/gtag";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -29,6 +30,7 @@ const Contact = () => {
 
     try {
       await axios.post("/api/contact", formData);
+      trackMarketingLead({ method: "contact_form" });
       showToast.success("Message sent successfully");
       setFormData({
         fullName: "",

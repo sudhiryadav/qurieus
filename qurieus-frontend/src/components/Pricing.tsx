@@ -13,6 +13,10 @@ import { showToast } from "@/components/Common/Toast";
 import { UserSubscription } from "@prisma/client";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import {
+  trackSubscribeFromAppPlan,
+  trackSubscribeFromPaddleCheckout,
+} from "@/lib/gtag";
 
 export default function Pricing({
   onUpdatePlan,
@@ -62,6 +66,12 @@ export default function Pricing({
           });
           
           if (directPayment.data.success) {
+            const sub = (directPayment.data as { subscription?: { id?: string } })
+              .subscription;
+            trackSubscribeFromAppPlan(plan, {
+              flow: "paddle_direct_payment",
+              transaction_id: sub?.id,
+            });
             showToast.success("Payment processed successfully!");
             window.location.reload();
           } else if (directPayment.data.needsCheckout) {
@@ -144,6 +154,14 @@ export default function Pricing({
         try {
           const response = await axios.post("/api/user/trial");
           if (response.data.success) {
+            if (selectedPlan) {
+              const subId = (response.data as { subscription?: { id?: string } })
+                .subscription?.id;
+              trackSubscribeFromAppPlan(selectedPlan, {
+                flow: "free_trial",
+                transaction_id: subId,
+              });
+            }
             showToast.success("Free plan applied successfully!");
             // Refresh the page to update subscription state
             router.push("/user/knowledge-base");
@@ -177,6 +195,7 @@ export default function Pricing({
   const handlePaddleComplete = async (
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
+    trackSubscribeFromPaddleCheckout(data);
     // Show success message immediately
     showToast.success("Payment processed successfully! Redirecting...");
     
@@ -222,6 +241,12 @@ export default function Pricing({
         try {
           const response = await axios.post("/api/user/trial");
           if (response.data.success) {
+            const subId = (response.data as { subscription?: { id?: string } })
+              .subscription?.id;
+            trackSubscribeFromAppPlan(plan, {
+              flow: "free_trial",
+              transaction_id: subId,
+            });
             showToast.success("Free trial started successfully!");
             // Refresh the page or update state
             window.location.reload();

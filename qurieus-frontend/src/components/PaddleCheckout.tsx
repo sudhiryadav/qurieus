@@ -21,6 +21,7 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { logger } from "@/lib/logger";
+import { trackMarketingSubscribe } from "@/lib/gtag";
 
 export type PaddleCheckoutProps = {
   mode?: "overlay" | "inline";
@@ -191,6 +192,10 @@ export const PaddleCheckout = forwardRef<
           logger.info("PaddleCheckout: Plan updated successfully", { 
             subscriptionId, 
             priceId 
+          });
+          trackMarketingSubscribe({
+            flow: "plan_upgrade",
+            transaction_id: subscriptionId,
           });
           toast.success("Plan upgraded successfully! Redirecting to subscription page...");
           onUpdatePlan?.(subscriptionId, priceId);
