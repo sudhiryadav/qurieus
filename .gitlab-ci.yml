@@ -54,7 +54,7 @@ deploy_staging:
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
       git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
-      rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
+      rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' --rsync-path="mkdir -p ${REPO_DIR} && rsync" -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
         "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
   rules:
@@ -77,7 +77,7 @@ deploy_production:
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
       git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
-      rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
+      rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' --rsync-path="mkdir -p ${REPO_DIR} && rsync" -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
         "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 \
          PADDLE_API_KEY='${PADDLE_API_KEY}' \
