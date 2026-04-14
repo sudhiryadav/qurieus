@@ -8,6 +8,11 @@ import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
 import { SubscriptionPlanWithPaddle } from "@/types/subscription";
 import { CheckoutEventError, CheckoutEventsData } from "@paddle/paddle-js";
+import {
+  trackPurchaseConversionFromDirectPayment,
+  trackPurchaseConversionFromPaddleCheckout,
+  trackPurchaseConversionFromPlan,
+} from "@/lib/gtag";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
 import { UserSubscription } from "@prisma/client";
@@ -41,6 +46,13 @@ export default function Pricing({
   const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
   const [overlayLoading, setOverlayLoading] = useState(false);
 
+  function purchaseTypeForZeroPricePlan(
+    plan: SubscriptionPlanWithPaddle,
+  ): "free_trial" | "free_tier" {
+    if (plan.name === "Free Trial") return "free_trial";
+    return "free_tier";
+  }
+
   // Simplified plan upgrade logic
   const handlePlanUpgrade = async (plan: SubscriptionPlanWithPaddle) => {
     try {
@@ -62,6 +74,10 @@ export default function Pricing({
           });
           
           if (directPayment.data.success) {
+            trackPurchaseConversionFromDirectPayment(
+              plan,
+              session?.user?.id,
+            );
             showToast.success("Payment processed successfully!");
             window.location.reload();
           } else if (directPayment.data.needsCheckout) {
@@ -144,6 +160,11 @@ export default function Pricing({
         try {
           const response = await axios.post("/api/user/trial");
           if (response.data.success) {
+            trackPurchaseConversionFromPlan(
+              selectedPlan,
+              purchaseTypeForZeroPricePlan(selectedPlan),
+              session?.user?.id,
+            );
             showToast.success("Free plan applied successfully!");
             // Refresh the page to update subscription state
             router.push("/user/knowledge-base");
@@ -177,6 +198,9 @@ export default function Pricing({
   const handlePaddleComplete = async (
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
+    if (data?.totals) {
+      trackPurchaseConversionFromPaddleCheckout(data, selectedPlan);
+    }
     // Show success message immediately
     showToast.success("Payment processed successfully! Redirecting...");
     
@@ -222,6 +246,11 @@ export default function Pricing({
         try {
           const response = await axios.post("/api/user/trial");
           if (response.data.success) {
+            trackPurchaseConversionFromPlan(
+              plan,
+              purchaseTypeForZeroPricePlan(plan),
+              session?.user?.id,
+            );
             showToast.success("Free trial started successfully!");
             // Refresh the page or update state
             window.location.reload();
