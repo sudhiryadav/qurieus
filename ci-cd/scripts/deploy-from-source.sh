@@ -12,8 +12,9 @@
 
 set -e
 
-# Load nvm if present (needed for node/yarn in non-interactive SSH)
-[ -f "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+# Load nvm if present (needed for node/yarn in non-interactive SSH).
+# Source with explicit args so nvm does not parse deploy script positional args.
+[ -f "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" --no-use
 
 ENV=${1:-staging}
 BRANCH=${2:-dev}
