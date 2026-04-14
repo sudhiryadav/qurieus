@@ -81,6 +81,23 @@ The runner clones the repo with `CI_JOB_TOKEN` and rsyncs to the server – the 
 
 **Important:** `PROD_SERVER_IP` must point to the server with `/home/ubuntu/qurieus`. If staging and prod share the same server, use the same IP for both.
 
+## Watchdog (auto-heal)
+
+Server setup/deploy also installs a systemd timer that runs every minute and auto-heals PM2 apps:
+
+- Script source: `ci-cd/scripts/qurieus-watchdog.sh`
+- Installed script: `/usr/local/bin/qurieus-watchdog.sh`
+- Service: `qurieus-watchdog.service`
+- Timer: `qurieus-watchdog.timer`
+
+What it checks:
+
+- PM2 processes exist for `qurieus-frontend`, `qurieus-backend`, and `qurieus-bot-teams`
+- Local health probes: `http://127.0.0.1:8000/` and `http://127.0.0.1:8001/`
+- Public health probe: `https://qurieus.com/`
+
+If a probe fails, it restarts the affected PM2 app and writes to syslog with tag `qurieus-watchdog`.
+
 ## Remove Docker (after migration)
 
 ```bash

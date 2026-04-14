@@ -166,6 +166,11 @@ fi
 
 pm2 save 2>/dev/null || true
 
+# Ensure watchdog timer is present and points to latest script from repo.
+if [ -x "$REPO_DIR/ci-cd/scripts/install-qurieus-watchdog.sh" ]; then
+  REPO_DIR="$REPO_DIR" "$REPO_DIR/ci-cd/scripts/install-qurieus-watchdog.sh" || true
+fi
+
 # Deploy nginx site config if present
 NGINX_SITE="$REPO_DIR/qurieus-backend/nginx/sites-available/qurieus"
 if [ -f "$NGINX_SITE" ]; then

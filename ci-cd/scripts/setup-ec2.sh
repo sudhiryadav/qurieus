@@ -47,6 +47,13 @@ if [ ! -d "$REPO_DIR" ]; then
 fi
 
 chmod +x "$REPO_DIR/ci-cd/scripts/deploy-from-source.sh" 2>/dev/null || true
+chmod +x "$REPO_DIR/ci-cd/scripts/qurieus-watchdog.sh" 2>/dev/null || true
+chmod +x "$REPO_DIR/ci-cd/scripts/install-qurieus-watchdog.sh" 2>/dev/null || true
+
+# Install watchdog timer for automatic PM2 self-healing.
+if [ -f "$REPO_DIR/ci-cd/scripts/install-qurieus-watchdog.sh" ]; then
+  REPO_DIR="$REPO_DIR" "$REPO_DIR/ci-cd/scripts/install-qurieus-watchdog.sh" || true
+fi
 
 echo ""
 echo "✅ Setup complete!"
