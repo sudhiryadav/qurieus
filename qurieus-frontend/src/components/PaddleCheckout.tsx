@@ -21,6 +21,7 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { logger } from "@/lib/logger";
+import { buildPaddleCustomData } from "@/lib/paddleProduct";
 
 export type PaddleCheckoutProps = {
   mode?: "overlay" | "inline";
@@ -156,14 +157,18 @@ export const PaddleCheckout = forwardRef<
         customer: { 
           email: email,
         },
-        customData: {
+        customData: buildPaddleCustomData({
           application_customer_id: applicationCustomerId,
           application_customer_email: email,
           application_customer_name: name,
           application_plan_id: planId,
           session_id: session?.user?.id,
           timestamp: Date.now().toString(),
-        },
+          tenantId: applicationCustomerId,
+          practiceId: applicationCustomerId,
+          orderId: `checkout_${applicationCustomerId}_${Date.now()}`,
+          plan: planId,
+        }),
       });
     }
 

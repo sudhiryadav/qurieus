@@ -6,6 +6,7 @@ import paddle from "@/lib/paddle";
 import { logger } from "@/lib/logger";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
+import { buildPaddleCustomData } from "@/lib/paddleProduct";
 
 export const POST = RequireRoles([UserRole.USER])(async (req: Request) => {
   const startTime = Date.now();
@@ -39,6 +40,9 @@ export const POST = RequireRoles([UserRole.USER])(async (req: Request) => {
       where: {
         paddleSubscriptionId: subscriptionId,
         userId: session!.user!.id,
+      },
+      include: {
+        plan: true,
       },
     }) as any;
 
@@ -102,7 +106,16 @@ export const POST = RequireRoles([UserRole.USER])(async (req: Request) => {
           priceId: priceId,
             quantity: 1
           }
-        ]
+        ],
+      customData: buildPaddleCustomData({
+        application_customer_id: session!.user!.id,
+        application_customer_email: session!.user!.email,
+        application_plan_id: subscription.planId,
+        tenantId: session!.user!.id,
+        practiceId: session!.user!.id,
+        orderId: `update_plan_${session!.user!.id}_${Date.now()}`,
+        plan: subscription.plan?.name || subscription.planId,
+      }),
     });
 
     const responseTime = Date.now() - startTime;

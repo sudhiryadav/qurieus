@@ -4,6 +4,7 @@ import { authOptions } from "@/utils/auth";
 import { prisma } from "@/utils/prismaDB";
 import paddle from "@/lib/paddle";
 import { logger } from "@/lib/logger";
+import { buildPaddleCustomData } from "@/lib/paddleProduct";
 
 export async function POST(req: Request) {
   const startTime = Date.now();
@@ -51,7 +52,15 @@ export async function POST(req: Request) {
       
       const newCustomer = await paddle.customers.create({
         email: session.user.email || '',
-        name: session.user.name || session.user.email || 'Customer'
+        name: session.user.name || session.user.email || 'Customer',
+        customData: buildPaddleCustomData({
+          application_customer_id: session.user.id,
+          application_customer_email: session.user.email,
+          tenantId: session.user.id,
+          practiceId: session.user.id,
+          orderId: `customer_create_${session.user.id}_${Date.now()}`,
+          plan: "unknown",
+        }),
       });
       
       customerId = newCustomer.id;

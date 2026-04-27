@@ -1,6 +1,10 @@
 import { footerData, sendEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
-import paddle, { EventName, upsertUserSubscriptionFromPaddle } from "@/lib/paddle";
+import paddle, {
+  EventName,
+  normalizePaddleStatus,
+  upsertUserSubscriptionFromPaddle,
+} from "@/lib/paddle";
 import { prisma } from "@/utils/prismaDB";
 import { ensureSingleActiveSubscription } from "@/utils/subscription";
 import { createHmac, timingSafeEqual } from "crypto";
@@ -10,6 +14,12 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import path from "path";
 import puppeteer from "puppeteer";
+import {
+  extractTagFromCustomData,
+  getNormalizedPaddleProductTag,
+  isMatchingPaddleTag,
+} from "@/lib/paddleProduct";
+import { markWebhookIgnored, markWebhookProcessed } from "@/lib/paddleWebhookDebug";
 
 // Register Handlebars helpers
 handlebars.registerHelper("formatDate", (date: Date) =>
@@ -20,8 +30,35 @@ handlebars.registerHelper("formatAmount", (amount: string) =>
 );
 handlebars.registerHelper("eq", (a: string, b: string) => a === b);
 
+async function resolveSubscriptionFallback(data: any) {
+  const subscriptionId = data?.subscription_id || data?.id;
+  const customerId = data?.customer_id;
+
+  if (!subscriptionId) {
+    return { reason: "missing_subscription_id" as const, subscription: null };
+  }
+
+  const subscription = await prisma.userSubscription.findFirst({
+    where: {
+      OR: [
+        { paddleSubscriptionId: subscriptionId },
+        ...(customerId ? [{ paddleCustomerId: customerId }] : []),
+      ],
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!subscription) {
+    return { reason: "unmapped_practice" as const, subscription: null };
+  }
+
+  return { reason: null, subscription };
+}
+
 // Helper function to validate webhook security and get user
-async function validateWebhookAndGetUser(customData: any) {
+async function validateWebhookAndGetUser(customData: any, eventData?: any) {
   // Enhanced security validation
   const applicationCustomerId = customData?.application_customer_id;
   const applicationCustomerEmail = customData?.application_customer_email;
@@ -30,6 +67,10 @@ async function validateWebhookAndGetUser(customData: any) {
 
   // Validate required fields
   if (!applicationCustomerId) {
+    const fallback = await resolveSubscriptionFallback(eventData || {});
+    if (fallback.subscription?.user) {
+      return fallback.subscription.user;
+    }
     logger.error("Missing application_customer_id in webhook");
     throw new Error("Invalid webhook data");
   }
@@ -247,6 +288,41 @@ export async function POST(request: Request) {
     
     // Extract data from the webhook event (available in both bypass and verification paths)
     const { event_type: eventType, data } = event;
+    const customData = data?.custom_data || {};
+    const detectedTag = extractTagFromCustomData(customData);
+
+    if (!isMatchingPaddleTag(customData)) {
+      if (detectedTag) {
+        logger.info("Ignoring Paddle webhook due to app tag mismatch", {
+          eventType,
+          detectedTag,
+          expectedTag: getNormalizedPaddleProductTag(),
+        });
+        markWebhookIgnored(eventType, "app_tag_mismatch", detectedTag);
+        return NextResponse.json({ ok: true, ignored: true, reason: "app_tag_mismatch" });
+      }
+
+      const fallback = await resolveSubscriptionFallback(data);
+      if (fallback.reason === "missing_subscription_id") {
+        logger.info("Ignoring Paddle webhook due to missing subscription mapping key", {
+          eventType,
+          detectedTag,
+        });
+        markWebhookIgnored(eventType, "missing_subscription_id", detectedTag);
+        return NextResponse.json({ ok: true, ignored: true, reason: "missing_subscription_id" });
+      }
+
+      if (fallback.reason === "unmapped_practice") {
+        logger.info("Ignoring Paddle webhook due to missing mapped practice/subscription", {
+          eventType,
+          detectedTag,
+        });
+        markWebhookIgnored(eventType, "unmapped_practice", detectedTag);
+        return NextResponse.json({ ok: true, ignored: true, reason: "unmapped_practice" });
+      }
+    }
+
+    markWebhookProcessed(eventType, detectedTag);
 
     // Handle all subscription status changes with a single, unified approach
     if (eventType === EventName.SubscriptionUpdated || 
@@ -272,7 +348,7 @@ export async function POST(request: Request) {
 
       let user;
       try {
-        user = await validateWebhookAndGetUser(customData);
+        user = await validateWebhookAndGetUser(customData, data);
       } catch (error) {
         if (error instanceof Error) {
           return NextResponse.json({ error: error.message }, { status: 400 });
@@ -364,7 +440,7 @@ export async function POST(request: Request) {
 
         let user;
         try {
-          user = await validateWebhookAndGetUser(customData);
+          user = await validateWebhookAndGetUser(customData, data);
         } catch (error) {
           if (error instanceof Error) {
             return NextResponse.json({ error: error.message }, { status: 400 });
@@ -378,7 +454,7 @@ export async function POST(request: Request) {
             paddleSubscriptionId: subscriptionId,
           },
           data: {
-            status,
+            status: normalizePaddleStatus(status),
           },
         });
 
@@ -411,7 +487,7 @@ export async function POST(request: Request) {
         let user;
         const transactionCustomData = customData || data?.custom_data || {};
         try {
-          user = await validateWebhookAndGetUser(transactionCustomData);
+          user = await validateWebhookAndGetUser(transactionCustomData, data);
         } catch (error: any) {
           logger.error("Transaction webhook validation failed:", error.message);
           // For transaction events, try to get user from subscription if available

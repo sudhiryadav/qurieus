@@ -14,6 +14,21 @@ const paddle = new Paddle(process.env.PADDLE_API_KEY!, {
 // Re-export EventName for easier imports
 export { EventName };
 
+export function normalizePaddleStatus(status?: string): string {
+  const value = (status || "").toLowerCase();
+  const map: Record<string, string> = {
+    active: "active",
+    trialing: "active",
+    paused: "halted",
+    past_due: "payment_failed",
+    payment_failed: "payment_failed",
+    canceled: "cancelled",
+    cancelled: "cancelled",
+    inactive: "halted",
+  };
+  return map[value] || value || "active";
+}
+
 export async function fetchPaddleSubscription(subscriptionId: string) {
   const endpoint = process.env.NODE_ENV === "production"
     ? `https://api.paddle.com/subscriptions/${subscriptionId}`
@@ -75,7 +90,7 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
     create: {
       paddleSubscriptionId: paddleSub.id,
       paddleCustomerId: paddleSub.customer_id,
-      status: paddleSub.status, 
+      status: normalizePaddleStatus(paddleSub.status),
       paddlePaymentAmount: paddleSub.items[0].price.unit_price.amount ? parseFloat(paddleSub.items[0].price.unit_price.amount) : 0,
       paddlePaymentCurrency: paddleSub.items[0].price.unit_price.currency,
       nextBillingDate: new Date(paddleSub.next_billed_at),
@@ -88,7 +103,7 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
       planSnapshot: planSnapshot,
     },
     update: {
-      status: paddleSub.status,
+      status: normalizePaddleStatus(paddleSub.status),
       paddlePaymentAmount: paddleSub.items[0].price.unit_price.amount ? parseFloat(paddleSub.items[0].price.unit_price.amount) : 0,
       paddlePaymentCurrency: paddleSub.items[0].price.unit_price.currency,
       nextBillingDate: new Date(paddleSub.next_billed_at),

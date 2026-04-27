@@ -11,8 +11,20 @@ import { Search, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import ConfirmDelete from '@/components/ConfirmDelete';
 
+type PaddleWebhookDebug = {
+  sourceApp: string;
+  productTag: string;
+  processedCount: number;
+  ignoredCount: number;
+  lastEvent: string | null;
+  lastTag: string | null;
+  lastIgnoredReason: string | null;
+  updatedAt: string;
+};
+
 export default function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<UserSubscriptionWithUserAndPlan[]>([]);
+  const [webhookDebug, setWebhookDebug] = useState<PaddleWebhookDebug | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingSubscription, setEditingSubscription] = useState<UserSubscriptionWithUserAndPlan | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +45,15 @@ export default function AdminSubscriptionsPage() {
       showToast.error("Failed to fetch subscriptions");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWebhookDebug = async () => {
+    try {
+      const { data } = await axios.get("/api/admin/paddle/webhook-debug");
+      setWebhookDebug(data);
+    } catch (error) {
+      console.error("Error fetching webhook debug:", error);
     }
   };
 
@@ -98,6 +119,7 @@ export default function AdminSubscriptionsPage() {
 
   useEffect(() => {
     fetchSubscriptions();
+    fetchWebhookDebug();
   }, []);
 
   return (
@@ -161,6 +183,23 @@ export default function AdminSubscriptionsPage() {
             )}
           </tbody>
         </table>
+      </div>
+      <div className="mt-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+        <h2 className="mb-3 text-lg font-semibold">Paddle Webhook Debug</h2>
+        {!webhookDebug ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">Debug data unavailable.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 dark:text-gray-300 md:grid-cols-2">
+            <div>Source App: <span className="font-medium">{webhookDebug.sourceApp}</span></div>
+            <div>Product Tag: <span className="font-medium">{webhookDebug.productTag}</span></div>
+            <div>Processed Count: <span className="font-medium">{webhookDebug.processedCount}</span></div>
+            <div>Ignored Count: <span className="font-medium">{webhookDebug.ignoredCount}</span></div>
+            <div>Last Event: <span className="font-medium">{webhookDebug.lastEvent || "-"}</span></div>
+            <div>Last Tag: <span className="font-medium">{webhookDebug.lastTag || "-"}</span></div>
+            <div>Last Reason: <span className="font-medium">{webhookDebug.lastIgnoredReason || "-"}</span></div>
+            <div>Updated At: <span className="font-medium">{new Date(webhookDebug.updatedAt).toLocaleString()}</span></div>
+          </div>
+        )}
       </div>
       {/* Edit Subscription Modal */}
       <ModalDialog

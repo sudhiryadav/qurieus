@@ -5,6 +5,7 @@ import { prisma } from "@/utils/prismaDB";
 import paddle from "@/lib/paddle";
 import { activateSubscription } from "@/utils/subscription";
 import { logger } from "@/lib/logger";
+import { buildPaddleCustomData } from "@/lib/paddleProduct";
 
 export async function POST(req: Request) {
   const startTime = Date.now();
@@ -72,7 +73,16 @@ export async function POST(req: Request) {
       try {
         const updateResponse = await paddle.subscriptions.update(userSubscription.paddleSubscriptionId, {
           prorationBillingMode: "prorated_immediately",
-          items: [{ priceId, quantity: 1 }]
+          items: [{ priceId, quantity: 1 }],
+          customData: buildPaddleCustomData({
+            application_customer_id: session.user.id,
+            application_customer_email: session.user.email,
+            application_plan_id: plan.id,
+            tenantId: session.user.id,
+            practiceId: session.user.id,
+            orderId: `direct_payment_${session.user.id}_${Date.now()}`,
+            plan: plan.name,
+          }),
         });
 
         // Activate this subscription and deactivate others
