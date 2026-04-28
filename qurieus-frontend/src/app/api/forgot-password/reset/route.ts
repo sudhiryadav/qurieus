@@ -11,10 +11,8 @@ export async function POST(request: Request) {
 		const body = await request.json();
 		const { email } = body;
 
-		logger.info("Forgot Password API: Processing password reset request", { email });
 
 		if (!email) {
-			logger.warn("Forgot Password API: Missing email field");
 			return new NextResponse("Missing Fields", { status: 400 });
 		}
 
@@ -27,7 +25,6 @@ export async function POST(request: Request) {
 		});
 
 		if (!user) {
-			logger.warn("Forgot Password API: User not found", { email: formatedEmail });
 			return new NextResponse("User doesn't exist", { status: 400 });
 		}
 

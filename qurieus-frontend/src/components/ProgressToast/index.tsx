@@ -44,17 +44,14 @@ const ProgressToast: React.FC<ProgressToastProps> = ({
 
           // Check if processing is complete or has error
           if (newStatus.status === 'COMPLETED') {
-            console.log('ProgressToast: Document processing completed', { documentId, filename });
             onComplete?.();
             // Don't dismiss the toast automatically - let it stay visible
           } else if (newStatus.status === 'ERROR' || newStatus.error) {
-            console.log('ProgressToast: Document processing error', { documentId, filename, error: newStatus.error });
             onError?.(newStatus.error || 'Processing failed');
             // Don't dismiss the toast automatically - let it stay visible
           }
         }
       } catch (error) {
-        console.error('Error checking document status:', error);
       }
     };
 

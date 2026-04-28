@@ -14,7 +14,6 @@ export async function GET(
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      logger.warn("Document Download API: No authenticated session found");
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -80,7 +79,8 @@ export async function GET(
     headers.set("Content-Disposition", `attachment; filename="${document.originalName}"`);
     headers.set("Content-Length", fileBuffer.length.toString());
 
-    return new NextResponse(fileBuffer, { headers });
+    const responseBody = new Uint8Array(fileBuffer);
+    return new NextResponse(responseBody, { headers });
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error("Document Download API: Unexpected error", {

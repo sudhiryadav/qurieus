@@ -42,7 +42,6 @@ export const GET = RequireRoles([UserRole.USER,UserRole.SUPER_ADMIN])(async () =
 
     return NextResponse.json(subscription);
   } catch (error) {
-    console.error("Error fetching subscription:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

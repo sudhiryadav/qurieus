@@ -15,12 +15,10 @@ export async function ensureAgentRecord(userId: string): Promise<boolean> {
     });
 
     if (!user) {
-      logger.warn(`ensureAgentRecord: User not found`, { userId });
       return false;
     }
 
     if (user.role !== UserRole.AGENT) {
-      logger.warn(`ensureAgentRecord: User is not an agent`, { userId, role: user.role });
       return false;
     }
 
@@ -43,7 +41,6 @@ export async function ensureAgentRecord(userId: string): Promise<boolean> {
       }
     });
 
-    logger.info(`ensureAgentRecord: Created agent record for user`, { userId, displayName: user.name });
     return true;
 
   } catch (error) {
@@ -79,16 +76,13 @@ export async function createMissingAgentRecords(): Promise<{ created: number; er
           errors++;
         }
       } catch (error) {
-        logger.error(`createMissingAgentRecords: Error for user ${user.id}`, { error });
         errors++;
       }
     }
 
-    logger.info(`createMissingAgentRecords: Completed`, { created, errors, total: agentUsers.length });
     return { created, errors };
 
   } catch (error) {
-    logger.error(`createMissingAgentRecords: Error`, { error });
     return { created: 0, errors: 1 };
   }
 } 

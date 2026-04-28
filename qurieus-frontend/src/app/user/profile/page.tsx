@@ -47,7 +47,6 @@ export default function Profile() {
             currentPassword: "",
       });
         } catch (error) {
-          console.error("Error fetching profile:", error);
           showToast.error("Failed to load profile data");
         }
       }
@@ -86,7 +85,6 @@ export default function Profile() {
 
       showToast.success("Profile updated successfully");
     } catch (error) {
-      console.error("Error updating profile:", error);
       showToast.error("Failed to update profile. Please try again.");
     } finally {
       setLoading(false);

@@ -7,7 +7,6 @@ import { logger } from './logger';
  */
 export async function scheduledAgentChatRecovery() {
   try {
-    logger.info('Cron: Starting scheduled agent chat recovery');
     
     const result = await runAgentChatRecovery();
     
@@ -33,7 +32,6 @@ export async function scheduledAgentChatRecovery() {
  */
 export async function manualAgentChatRecovery() {
   try {
-    logger.info('Manual: Starting manual agent chat recovery');
     
     const result = await runAgentChatRecovery();
     

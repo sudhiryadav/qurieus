@@ -90,7 +90,6 @@ export default function DocumentUpload({
         
         return false; // Continue monitoring
       } catch (error) {
-        console.error('Status check error:', error);
         return false; // Continue monitoring
       }
     };
@@ -216,7 +215,6 @@ export default function DocumentUpload({
         }
 
       } catch (error: any) {
-        console.error('Upload error:', error);
         
         setUploadedFiles(prev => 
           prev.map(f => 

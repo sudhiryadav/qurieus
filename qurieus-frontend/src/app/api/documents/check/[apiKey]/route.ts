@@ -14,7 +14,6 @@ export async function GET(
   try {
     const { apiKey } = await params;
 
-    logger.info("Documents Check API: Checking documents for API key", { apiKey });
 
     // Check if user exists
     const userRecord = await prisma.user.findUnique({
@@ -23,7 +22,6 @@ export async function GET(
     });
 
     if (!userRecord) {
-      logger.warn("Documents Check API: Invalid API key", { apiKey });
       return NextResponse.json(
         { error: "Invalid API Key" },
         { status: 404 }
@@ -65,7 +63,6 @@ export async function GET(
           apiKey, 
           error: error instanceof Error ? error.message : String(error) 
         });
-        console.error("Error sending configuration notification:", error);
       }
     }
 
@@ -85,7 +82,6 @@ export async function GET(
       stack: error.stack 
     });
     
-    console.error("Error checking documents:", error);
     return NextResponse.json(
       { error: "Failed to check documents" },
       { status: 500 }

@@ -14,7 +14,6 @@ export async function GET(
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      logger.warn("Document Status API: No authenticated session found");
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -64,7 +63,6 @@ export async function GET(
       const aiApiKey = process.env.BACKEND_API_KEY;
 
       if (!aiServiceUrl || !aiApiKey) {
-        logger.warn("Document Status API: AI service not configured", { userId });
         throw new Error("AI service not configured");
       }
 

@@ -88,7 +88,6 @@ async function trackAnalytics({
       },
     });
   } catch (err) {
-    console.error("Error tracking analytics:", err);
   }
 }
 
@@ -97,12 +96,10 @@ async function queryWithModal(message: string, userId: string, history: any[], c
   const modalApiKey = process.env.MODAL_DOT_COM_X_API_KEY;
   
   if (!modalUrl) {
-    console.error('❌ [QUERY API] Modal.com query URL not configured');
     throw new Error("Modal.com query URL not configured");
   }
   
   if (!modalApiKey) {
-    console.error('❌ [QUERY API] Modal.com API key not configured');
     throw new Error("Modal.com API key not configured");
   }
 
@@ -132,11 +129,6 @@ async function queryWithModal(message: string, userId: string, history: any[], c
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ [QUERY API] Modal.com service error:', {
-      status: response.status,
-      statusText: response.statusText,
-      errorText
-    });
     throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
   }
 
@@ -448,7 +440,6 @@ async function findAvailableAgent(userId: string): Promise<string | null> {
       return availableAgent.id;
     }
 
-    logger.info("Query API: No available agents found", { userId });
     return null;
   } catch (error) {
     logger.error("Query API: Error finding available agent", { 
@@ -473,7 +464,6 @@ async function isAgentActive(agentId: string): Promise<boolean> {
     });
 
     if (!agent || !agent.is_active) {
-      logger.info("Query API: Agent marked as inactive - not active in database", { agentId });
       return false;
     }
 
@@ -501,7 +491,6 @@ async function isAgentActive(agentId: string): Promise<boolean> {
         );
         
         if (!agentSocket) {
-          logger.info("Query API: Agent marked as inactive - not connected via Socket.IO", { agentId });
           return false;
         }
       }
@@ -513,7 +502,6 @@ async function isAgentActive(agentId: string): Promise<boolean> {
       // If we can't check Socket.IO, fall back to timestamp check
     }
     
-    logger.info("Query API: Agent is active and online", { agentId });
     return true;
   } catch (error) {
     logger.error("Query API: Error checking agent activity", { 
@@ -657,7 +645,6 @@ async function handleInactiveAgent(existingAgentChat: any, conversationId: strin
 // Enhanced escalation function with agent assignment and email notifications
 async function escalateChatToAgent(conversationId: string, userId: string, userMessage: string, visitorId: string) {
   try {
-    logger.info("Query API: Starting escalation process", { conversationId, userId, visitorId });
     
     // Find an available agent
     const agentId = await findAvailableAgent(userId);
@@ -698,7 +685,6 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
             priority: 'NORMAL'
           }
         });
-        logger.info("Query API: Updated existing agent chat", { conversationId, agentId });
       } else {
         // Create new agent chat
         await prisma.agentChat.create({
@@ -710,7 +696,6 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
             priority: 'NORMAL'
           }
         });
-        logger.info("Query API: Created new agent chat", { conversationId, agentId });
       }
 
       // Send email notification to the agent
@@ -725,7 +710,6 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
             userEmail: agent.email,
             userMessage: userMessage
           });
-          logger.info("Query API: Sent escalation notification to agent", { agentEmail: agent.email });
         }
       } catch (emailError) {
         logger.error("Query API: Failed to send agent notification email", { 
@@ -752,7 +736,6 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
             priority: 'NORMAL'
           }
         });
-        logger.info("Query API: Updated existing agent chat to pending", { conversationId });
       } else {
         // No available agents - update conversation status and add to queue
         await prisma.chatConversation.update({
@@ -763,7 +746,6 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
             escalationReason: hasAnyAgents ? 'No agents available' : 'No agents configured'
           } as any
         });
-        logger.info("Query API: Updated conversation status to escalated", { conversationId, hasAnyAgents });
       }
 
       // Calculate queue position only if there are agents
@@ -777,7 +759,6 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
           }
         });
         queuePosition = pendingChats;
-        logger.info("Query API: Calculated queue position", { queuePosition, conversationId });
       }
 
       // Send email notification to the user about escalation
@@ -794,7 +775,6 @@ async function escalateChatToAgent(conversationId: string, userId: string, userM
             userEmail: conversation.user.email,
             userMessage: userMessage
           });
-          logger.info("Query API: Sent escalation notification to user", { userEmail: conversation.user.email });
         }
       } catch (emailError) {
         logger.error("Query API: Failed to send user notification email", { 
@@ -859,7 +839,6 @@ export async function POST(request: Request) {
     // Rate Limiting
     const rateKey = `rate:${apiKey}:${ip}`;
     if (await isRateLimited(rateKey)) {
-      logger.warn("Query API: Rate limit exceeded", { apiKey, ip, rateKey }, { userId });
       return corsErrorResponse("Rate limit exceeded", 429);
     }
 
@@ -1392,7 +1371,6 @@ export async function POST(request: Request) {
           escalationMessage = "I understand you'd like to speak with a human agent. I've escalated your request to our support team. You'll receive an email confirmation shortly, and one of our representatives will contact you within the next few hours to assist you further.";
         }
 
-        logger.info("Query API: Escalation message created", { escalationMessage });
 
         // Store escalation message as assistant response
         await prisma.chatMessage.create({
@@ -1642,7 +1620,6 @@ export async function POST(request: Request) {
             }
             
           } catch (error) {
-            console.error('❌ [QUERY API] Error processing stream:', error);
             controller.error(error);
           }
         };
@@ -1673,7 +1650,6 @@ export async function POST(request: Request) {
       stack: error.stack 
     }, { userId });
     
-    console.error("Query error:", error);
     return corsErrorResponse({ 
       error: "An error occurred while processing your query", 
       errorCode: "QUERY_ERROR"

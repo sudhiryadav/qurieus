@@ -22,7 +22,6 @@ export async function GET() {
       embedUserId = row.value;
     }
   } catch (siteConfigError) {
-    console.warn("SiteConfig read failed (table may be missing), using fallback:", siteConfigError);
   }
 
   // Fallback: use super admin's account so footer always shows this website's documents
@@ -35,7 +34,6 @@ export async function GET() {
       embedUserId = superAdmin?.id ?? null;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error("Error fetching site config embed:", error);
       return NextResponse.json(
         { error: "Failed to fetch site config", details: message },
         { status: 500 }

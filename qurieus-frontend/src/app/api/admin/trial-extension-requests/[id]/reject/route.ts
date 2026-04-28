@@ -48,7 +48,6 @@ export const POST = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(
         message: "Trial extension request rejected",
       });
     } catch (error) {
-      console.error("Error rejecting trial extension:", error);
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 }

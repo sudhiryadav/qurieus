@@ -26,7 +26,6 @@ export async function POST(req: Request) {
     });
 
     if (!user) {
-      logger.warn("User Verify Email API: Invalid or expired verification code", { email });
       return NextResponse.json(
         { error: "Invalid or expired verification code" },
         { status: 400 }
@@ -80,7 +79,6 @@ export async function POST(req: Request) {
       stack: error.stack 
     });
     
-    console.error("Verification error:", error);
     return NextResponse.json(
       { error: "Verification failed. Please try again." },
       { status: 500 }

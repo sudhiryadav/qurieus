@@ -161,25 +161,19 @@ export default function DocumentsList({
     setDeleteDialogOpen(false);
     setDocumentToDelete(null);
         
-    console.log('🔴 DocumentsList: Delete confirm clicked for document:', documentToDelete?.id);
     if (documentToDelete && onDelete) {
       // Set loading state for the document being deleted
       setDeletingDocuments(prev => new Set(prev).add(documentToDelete.id));
-      console.log('⏳ DocumentsList: Loading state set for document:', documentToDelete.id);
       
       try {
-        console.log('📞 DocumentsList: Calling onDelete function');
         await onDelete(documentToDelete.id);
-        console.log('✅ DocumentsList: onDelete completed successfully');
         // Remove loading state after successful deletion
         setDeletingDocuments(prev => {
           const newSet = new Set(prev);
           newSet.delete(documentToDelete.id);
           return newSet;
         });
-        console.log('🔄 DocumentsList: Loading state removed');
       } catch (error) {
-        console.error('❌ DocumentsList: Delete error:', error);
         // Remove loading state on error
         setDeletingDocuments(prev => {
           const newSet = new Set(prev);
@@ -190,7 +184,6 @@ export default function DocumentsList({
         showToast.error('Failed to delete document. Please try again.');
       }
     } else {
-      console.log('⚠️ DocumentsList: No document to delete or onDelete function');
     }
   }, [documentToDelete, onDelete]);
 

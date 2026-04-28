@@ -19,15 +19,12 @@ export const initSocket = (userId?: string, agentId?: string) => {
 
   // Connection event handlers
   socket.on('connect', () => {
-    console.log('Socket.IO connected:', socket?.id);
   });
 
   socket.on('disconnect', () => {
-    console.log('Socket.IO disconnected');
   });
 
   socket.on('connect_error', (error) => {
-    console.error('Socket.IO connection error:', error);
   });
 
   return socket;

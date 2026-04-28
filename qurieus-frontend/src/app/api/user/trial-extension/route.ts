@@ -83,7 +83,6 @@ export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_
         message: "Trial extension request submitted. An admin will review it shortly.",
       });
     } catch (error) {
-      console.error("Error creating trial extension request:", error);
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 }
@@ -125,7 +124,6 @@ export const GET = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_A
         canRequestExtension: !latest || (latest.status !== "PENDING" && !hasUsedExtension),
       });
     } catch (error) {
-      console.error("Error fetching trial extension status:", error);
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 }

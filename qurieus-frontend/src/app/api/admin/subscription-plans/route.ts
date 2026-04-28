@@ -40,10 +40,8 @@ async function syncPlanToPaddle(planId: string, userId: string) {
         const existingProduct = products.find((p: any) => p.name === plan.name);
         if (existingProduct) {
           productId = existingProduct.id;
-          console.log(`Found existing Paddle product with name "${plan.name}": ${productId}`);
         }
       } catch (err) {
-        console.log("Could not search for existing products:", err);
       }
     }
     
@@ -57,7 +55,6 @@ async function syncPlanToPaddle(planId: string, userId: string) {
           taxCategory: "standard",
         });
         productId = product.id;
-        console.log(`Created new Paddle product: ${productId}`);
       } else {
         // Update existing Paddle product
         product = await paddle.products.update(productId, {
@@ -65,7 +62,6 @@ async function syncPlanToPaddle(planId: string, userId: string) {
           description: plan.description,
           taxCategory: "standard",
         });
-        console.log(`Updated existing Paddle product: ${productId}`);
       }
     } catch (err: any) {
       // Log error to DB
@@ -131,7 +127,6 @@ async function syncPlanToPaddle(planId: string, userId: string) {
           },
         });
         priceId = price.id;
-        console.log(`Created new Paddle price: ${priceId}`);
       } else {
         // Update existing Paddle price
         price = await paddle.prices.update(priceId, {
@@ -146,7 +141,6 @@ async function syncPlanToPaddle(planId: string, userId: string) {
             frequency: 1,
           },
         });
-        console.log(`Updated existing Paddle price: ${priceId}`);
       }
     } catch (err: any) {
       // Log error to DB
@@ -197,7 +191,6 @@ async function syncPlanToPaddle(planId: string, userId: string) {
     });
 
   } catch (err) {
-    console.error("Paddle sync failed for plan", planId, err);
     throw err;
   }
 }
@@ -211,13 +204,11 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
     });
 
     if (!plan) {
-      console.log(`Plan not found: ${planId}`);
       return;
     }
 
     // If no Paddle config exists, we need to create one first
     if (!plan.paddleConfig?.productId) {
-      console.log(`No Paddle configuration found for plan ${planId}, creating one...`);
       try {
         await syncPlanToPaddle(planId, userId);
         // Re-fetch the plan to get the updated Paddle config
@@ -226,13 +217,11 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
           include: { paddleConfig: true }
         });
         if (!updatedPlan?.paddleConfig?.productId) {
-          console.log(`Failed to create Paddle configuration for plan ${planId}`);
           return;
         }
         // Update the plan reference
         plan.paddleConfig = updatedPlan.paddleConfig;
       } catch (syncError) {
-        console.error("Failed to create Paddle configuration:", syncError);
         return;
       }
     }
@@ -250,7 +239,6 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
         await paddle.products.update(plan.paddleConfig.productId, {
           description: updatedDescription,
         });
-        console.log(`Activated Paddle product ${plan.paddleConfig.productId}`);
       } else {
         // For deactivation: We need to make the product unavailable for new subscriptions
         // Paddle doesn't have a direct "inactive" status, so we'll:
@@ -267,19 +255,15 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
           // Note: This might not be available in all Paddle SDK versions
           try {
             await paddle.products.archive(plan.paddleConfig.productId);
-            console.log(`Archived Paddle product ${plan.paddleConfig.productId}`);
           } catch (archiveError: any) {
-            console.log(`Archive method not available, using description update only: ${archiveError.message}`);
             // If archive is not available, we'll rely on the description update
           }
           
         } catch (updateError: any) {
-          console.error("Failed to update Paddle product for deactivation:", updateError);
           throw updateError;
         }
       }
       
-      console.log(`Updated Paddle product ${plan.paddleConfig.productId} status to ${statusIndicator}`);
       
       // Log the status change
       await prisma.log.create({
@@ -299,7 +283,6 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
         },
       });
     } catch (err: any) {
-      console.error("Failed to update Paddle product status:", err);
       // Log the error but don't fail the request
       await prisma.log.create({
         data: {
@@ -318,7 +301,6 @@ async function handlePaddleProductStatus(planId: string, isActive: boolean, user
       });
     }
   } catch (err) {
-    console.error("Error handling Paddle product status:", err);
   }
 }
 
@@ -337,7 +319,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async () => {
 
     return NextResponse.json(plans);
   } catch (error) {
-    console.error("Error fetching subscription plans:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 });
@@ -369,13 +350,11 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request) =>
     try {
       await syncPlanToPaddle(plan.id, user!.id);
     } catch (syncError) {
-      console.error("Paddle sync failed:", syncError);
       // Don't fail the entire request if Paddle sync fails
       // The plan creation was successful, just the sync failed
     }
     return NextResponse.json(plan);
   } catch (error) {
-    console.error("Error creating subscription plan:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 });
@@ -420,7 +399,6 @@ export const PATCH = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request) =
     try {
       await syncPlanToPaddle(plan.id, user!.id);
     } catch (syncError) {
-      console.error("Paddle sync failed:", syncError);
       // Don't fail the entire request if Paddle sync fails
       // The plan update was successful, just the sync failed
     }
@@ -430,14 +408,12 @@ export const PATCH = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request) =
       try {
         await handlePaddleProductStatus(plan.id, isActive, user!.id);
       } catch (statusError) {
-        console.error("Paddle status update failed:", statusError);
         // Don't fail the request if status update fails
       }
     }
     
     return NextResponse.json(plan);
   } catch (error) {
-    console.error("Error updating subscription plan:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 });
@@ -471,13 +447,11 @@ export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(async (req: Request) 
     try {
       await handlePaddleProductStatus(id, false, user!.id);
     } catch (paddleError) {
-      console.error("Error handling Paddle deactivation:", paddleError);
       // Don't fail the request if Paddle deactivation fails
     }
     
     return NextResponse.json({ success: true, plan: updatedPlan });
   } catch (error) {
-    console.error("Error deactivating subscription plan:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 });

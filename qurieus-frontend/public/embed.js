@@ -1809,7 +1809,6 @@
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            console.log('🔍 [EMBED] Reader done, breaking loop');
             break;
           }
 
@@ -2179,7 +2178,6 @@
   window.QurieusChat = {
     init: (config) => {
       if (!config.apiKey) {
-        console.error('API key is required');
         return;
       }
 

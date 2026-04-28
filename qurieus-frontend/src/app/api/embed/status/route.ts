@@ -39,7 +39,6 @@ export async function GET(req: NextRequest) {
       hasActiveSubscription: !!subscription,
     });
   } catch (error) {
-    console.error("[embed/status] Error checking subscription:", error);
     return corsResponse({ hasActiveSubscription: false });
   }
 }

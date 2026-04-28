@@ -19,19 +19,10 @@ async function main() {
   });
 
   if (agentChats.length === 0) {
-    console.log('No agent chats found.');
     return;
   }
 
   for (const chat of agentChats) {
-    console.log(`ChatID: ${chat.conversationId}`);
-    console.log(`  Status: ${chat.status}`);
-    console.log(`  Agent: ${chat.agent?.name} (${chat.agent?.email})`);
-    console.log(`  VisitorID: ${chat.conversation.visitorId}`);
-    console.log(`  User: ${chat.conversation.user?.email}`);
-    console.log(`  Conversation Status: ${chat.conversation.status}`);
-    console.log(`  Escalated At: ${chat.conversation.escalatedAt}`);
-    console.log('---');
   }
 }
 

@@ -26,7 +26,6 @@ export async function sendContactEmail(data: {
     });
     return true;
   } catch (error) {
-    console.error("Error sending email:", error);
     return false;
   }
 }

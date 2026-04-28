@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     try:
         generate_postman_collection(app)
     except Exception as e:
-        print(f"Failed to generate Postman collection: {str(e)}")
+        pass
     yield
     # Shutdown: add cleanup logic here if needed
 

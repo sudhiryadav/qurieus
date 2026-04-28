@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
     const apiKey = request.headers.get('x-api-key');
     
     if (!apiKey) {
-      logger.warn("Visitor Info API: Missing API key");
       return corsErrorResponse("API key is required", 401);
     }
 
@@ -26,7 +25,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      logger.warn("Visitor Info API: Invalid API key", { apiKey });
       return corsErrorResponse("Invalid API key", 401);
     }
 
@@ -43,19 +41,16 @@ export async function POST(request: NextRequest) {
     });
 
     if (!visitorId) {
-      logger.warn("Visitor Info API: Missing visitor ID");
       return corsErrorResponse("Visitor ID is required", 400);
     }
 
     if (!name || !email) {
-      logger.warn("Visitor Info API: Missing required fields", { visitorId });
       return corsErrorResponse("Name and email are required", 400);
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      logger.warn("Visitor Info API: Invalid email format", { visitorId, email });
       return corsErrorResponse("Invalid email format", 400);
     }
 
@@ -151,7 +146,6 @@ export async function GET(request: NextRequest) {
     const visitorId = searchParams.get('visitorId');
     
     if (!visitorId) {
-      logger.warn("Visitor Info API: Missing visitor ID in GET request");
       return corsErrorResponse("Visitor ID is required", 400);
     }
 

@@ -30,7 +30,6 @@ export default function EmbedCode() {
           const response = await axiosInstance.get('/api/admin/documents');
           setDocuments(response.data.documents || []);
         } catch (error) {
-          console.error('Error fetching documents:', error);
         } finally {
           setLoading(false);
         }
@@ -176,7 +175,6 @@ export default function EmbedCode() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
     }
   };
 

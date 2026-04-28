@@ -19,7 +19,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (
     userId = session!.user!.id;
     const { id: documentId } = await context.params;
 
-    logger.info("Document Chunks API: Fetching chunks", { userId, documentId });
 
     // Verify document ownership
     const document = await prisma.document.findFirst({
@@ -39,7 +38,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (
     });
 
     if (!document) {
-      logger.warn("Document Chunks API: Document not found", { userId, documentId });
       return NextResponse.json(
         { error: "Document not found" },
         { status: 404 }
@@ -83,7 +81,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (
       stack: error.stack 
     });
     
-    console.error("Error fetching document chunks:", error);
     return NextResponse.json(
       { error: "Failed to fetch document chunks" },
       { status: 500 }

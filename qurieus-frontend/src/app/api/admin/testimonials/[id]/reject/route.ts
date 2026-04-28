@@ -46,7 +46,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN])(
         rejectionReason: rejectionReason || undefined,
       });
     } catch (emailErr) {
-      console.error("Failed to send testimonial rejection email:", emailErr);
       // Don't fail the request - rejection was successful
     }
 

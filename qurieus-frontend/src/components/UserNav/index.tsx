@@ -44,12 +44,10 @@ const UserNav: React.FC<UserNavProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const router = useRouter();
 
-  logger.info("UserNav session", { session, status });
   if (!session?.user) {
     return <div style={{ color: 'red', padding: 16 }}>No user session found</div>;
   }
 
-  logger.info("xxx session", { role: session?.user?.role });
 
   // Don't render anything for agents - they have their own navigation
   if (session?.user?.role === "AGENT") {

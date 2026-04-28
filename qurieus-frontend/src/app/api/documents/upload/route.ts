@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      logger.warn("Document Upload API: No authenticated session found");
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -26,7 +25,6 @@ export async function POST(request: NextRequest) {
     const category = formData.get("category") as string;
 
     if (!file) {
-      logger.warn("Document Upload API: No file provided", { userId });
       return NextResponse.json(
         { error: "No file provided" },
         { status: 400 }

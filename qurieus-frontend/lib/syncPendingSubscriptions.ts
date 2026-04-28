@@ -40,7 +40,6 @@ export async function syncPendingSubscriptions() {
         await prisma.pendingSubscription.delete({ where: { id: record.id } });
       }
     } catch (err) {
-      console.error("Error syncing pending subscription:", err);
     }
   }
 } 

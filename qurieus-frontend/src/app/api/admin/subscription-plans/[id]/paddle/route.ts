@@ -44,7 +44,6 @@ export async function GET(
       },
     );
   } catch (error) {
-    console.error("Error fetching Paddle configuration:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
@@ -105,7 +104,6 @@ export async function PUT(
 
     return NextResponse.json(updatedConfig);
   } catch (error) {
-    console.error("Error updating Paddle configuration:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

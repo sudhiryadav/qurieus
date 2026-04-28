@@ -36,7 +36,6 @@ export async function fetchUserDocuments(options: DocumentFetchOptions) {
     });
 
     if (!targetUser) {
-      logger.warn("Document Service: Target user not found", { targetUserId: userId });
       throw new Error("User not found");
     }
   }
@@ -209,14 +208,12 @@ export async function uploadDocument(params: UploadDocumentParams): Promise<Uplo
       try {
         await prisma.document.delete({ where: { id: createdDocument.id } });
       } catch (e) {
-        logger.error("Document Service: Failed to rollback document", { error: e });
       }
     }
     if (uploadedFileUrl) {
       try {
         await s3Service.deleteDocument(uploadedFileUrl);
       } catch (e) {
-        logger.error("Document Service: Failed to rollback S3 file", { error: e });
       }
     }
     throw error;

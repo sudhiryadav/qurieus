@@ -47,7 +47,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
       stack: error.stack 
     });
     
-    console.error("Error fetching user documents:", error);
     
     // Handle specific error for user not found
     if (error.message === "User not found") {

@@ -38,7 +38,6 @@ export function createRoleGuard(options: RoleGuardOptions = {}): RoleGuardFuncti
       
       if (!session?.user?.id) {
         if (requireAuth) {
-          logger.warn(`${actionName}: Unauthorized access attempt`);
           return errorResponse({ 
             error: "Unauthorized", 
             status: 401,

@@ -80,7 +80,6 @@ export const POST = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(
         newPeriodEnd: newPeriodEnd.toISOString(),
       });
     } catch (error) {
-      console.error("Error extending trial:", error);
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 }

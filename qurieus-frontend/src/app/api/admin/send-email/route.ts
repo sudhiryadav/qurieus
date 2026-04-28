@@ -74,7 +74,6 @@ export const POST = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (
     }
 
     if (failed > 0) {
-      console.error('Some emails failed to send:', errors);
     }
 
     return NextResponse.json({ 
@@ -85,7 +84,6 @@ export const POST = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
-    console.error('Error in send-email route:', error);
     return NextResponse.json({ 
       error: 'Failed to send emails',
       details: error instanceof Error ? error.message : 'Unknown error'

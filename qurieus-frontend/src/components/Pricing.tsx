@@ -18,6 +18,7 @@ import { showToast } from "@/components/Common/Toast";
 import { UserSubscription } from "@prisma/client";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import { logger } from "@/lib/logger";
 
 export default function Pricing({
   onUpdatePlan,
@@ -55,25 +56,96 @@ export default function Pricing({
 
   // Simplified plan upgrade logic
   const handlePlanUpgrade = async (plan: SubscriptionPlanWithPaddle) => {
+    let resolvedPriceId = plan.paddleConfig?.priceId || "";
+    const checkoutAttemptId = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    logger.info("Pricing: Starting paid plan flow", {
+      checkoutAttemptId,
+      planId: plan.id,
+      planName: plan.name,
+      hasInlinePaddleConfig: !!plan.paddleConfig,
+      hasInitialPriceId: !!resolvedPriceId,
+      initialPriceId: resolvedPriceId || null,
+      nodeEnv: process.env.NODE_ENV,
+      hasClientToken: !!process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
+    });
+
     try {
+      if (!resolvedPriceId) {
+        try {
+          logger.info("Pricing: Resolving Paddle price mapping", {
+            checkoutAttemptId,
+            planId: plan.id,
+            planName: plan.name,
+          });
+          const resolved = await axios.post("/api/paddle/resolve-price", {
+            planId: plan.id,
+            checkoutAttemptId,
+          });
+          resolvedPriceId = resolved.data?.priceId || "";
+          logger.info("Pricing: Price mapping resolved", {
+            checkoutAttemptId,
+            resolvedPriceId: resolvedPriceId || null,
+            resolvedProductId: resolved.data?.productId || null,
+          });
+        } catch (resolveError: any) {
+          logger.error("Pricing: Failed to resolve Paddle price", {
+            checkoutAttemptId,
+            planId: plan.id,
+            planName: plan.name,
+            error: resolveError?.response?.data || resolveError?.message || String(resolveError),
+          });
+        }
+      }
+
+      if (!resolvedPriceId) {
+        logger.error("Pricing: Missing resolved price id after resolution attempts", {
+          checkoutAttemptId,
+          planId: plan.id,
+          planName: plan.name,
+        });
+        showToast.error(`Paddle price is not mapped for '${plan.name}'. Please sync Paddle IDs.`);
+        return;
+      }
+
       // Check if user exists in Paddle and has payment methods
+      logger.info("Pricing: Calling check-customer", {
+        checkoutAttemptId,
+        priceId: resolvedPriceId,
+      });
       const customerCheck = await axios.post("/api/paddle/check-customer", {
-        priceId: plan.paddleConfig!.priceId
+        priceId: resolvedPriceId,
+        checkoutAttemptId,
       });
       
-      console.log("Customer check result:", customerCheck.data);
+      logger.info("Pricing: check-customer response", {
+        checkoutAttemptId,
+        hasPaymentMethod: customerCheck.data?.hasPaymentMethod,
+        customerId: customerCheck.data?.customerId || null,
+        hasExistingSubscription: customerCheck.data?.hasExistingSubscription,
+      });
       
       if (customerCheck.data.hasPaymentMethod) {
         // User exists in Paddle, try direct payment
         setOverlayLoading(true);
         
         try {
+          logger.info("Pricing: Attempting direct-payment", {
+            checkoutAttemptId,
+            priceId: resolvedPriceId,
+            planId: plan.id,
+          });
           const directPayment = await axios.post("/api/paddle/direct-payment", {
-            priceId: plan.paddleConfig!.priceId,
-            planId: plan.id
+            priceId: resolvedPriceId,
+            planId: plan.id,
+            checkoutAttemptId,
           });
           
           if (directPayment.data.success) {
+            logger.info("Pricing: direct-payment succeeded", {
+              checkoutAttemptId,
+              responseMessage: directPayment.data?.message,
+            });
             trackPurchaseConversionFromDirectPayment(
               plan,
               session?.user?.id,
@@ -81,31 +153,54 @@ export default function Pricing({
             showToast.success("Payment processed successfully!");
             window.location.reload();
           } else if (directPayment.data.needsCheckout) {
+            logger.warn("Pricing: direct-payment requested checkout fallback", {
+              checkoutAttemptId,
+              responseMessage: directPayment.data?.message,
+            });
             // Fallback to checkout
             setTimeout(() => {
-              paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
+              paddleRef.current?.openCheckout(resolvedPriceId, plan.id, checkoutAttemptId);
             }, 100);
           }
         } catch (error) {
-          console.error("Direct payment failed:", error);
+          logger.error("Pricing: direct-payment failed, fallback to checkout", {
+            checkoutAttemptId,
+            error: (error as any)?.response?.data || (error as any)?.message || String(error),
+          });
           // Fallback to checkout
           setTimeout(() => {
-            paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
+            paddleRef.current?.openCheckout(resolvedPriceId, plan.id, checkoutAttemptId);
           }, 100);
         } finally {
           setOverlayLoading(false);
         }
       } else {
+        logger.info("Pricing: No payment method, opening checkout", {
+          checkoutAttemptId,
+          priceId: resolvedPriceId,
+        });
         // User doesn't exist in Paddle, show checkout
         setTimeout(() => {
-          paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
+          paddleRef.current?.openCheckout(resolvedPriceId, plan.id, checkoutAttemptId);
         }, 100);
       }
     } catch (error) {
-      console.error("Error checking customer:", error);
+      logger.error("Pricing: Paid plan flow outer error, fallback to checkout", {
+        checkoutAttemptId,
+        error: (error as any)?.response?.data || (error as any)?.message || String(error),
+        resolvedPriceId: resolvedPriceId || null,
+      });
       // Fallback to checkout
       setTimeout(() => {
-        paddleRef.current?.openCheckout(plan.paddleConfig!.priceId, plan.id);
+        if (resolvedPriceId) {
+          paddleRef.current?.openCheckout(resolvedPriceId, plan.id, checkoutAttemptId);
+        } else {
+          logger.error("Pricing: Cannot fallback to checkout due to missing priceId", {
+            checkoutAttemptId,
+            planId: plan.id,
+            planName: plan.name,
+          });
+        }
       }, 100);
     }
   };
@@ -185,7 +280,7 @@ export default function Pricing({
       }
       
       // Handle paid plans with Paddle
-      if (selectedPlan?.paddleConfig?.priceId && paddleRef.current) {
+      if (selectedPlan && paddleRef.current) {
         await handlePlanUpgrade(selectedPlan);
       } else {
         showToast.error(
@@ -198,6 +293,11 @@ export default function Pricing({
   const handlePaddleComplete = async (
     data: CheckoutEventsData | undefined,
   ): Promise<void> => {
+    logger.info("Pricing: Paddle checkout completion callback", {
+      selectedPlanId: selectedPlan?.id || null,
+      selectedPlanName: selectedPlan?.name || null,
+      payloadKeys: data ? Object.keys(data as any) : [],
+    });
     if (data?.totals) {
       trackPurchaseConversionFromPaddleCheckout(data, selectedPlan);
     }
@@ -212,7 +312,6 @@ export default function Pricing({
           subscriptionId,
         });
       } catch (err) {
-        console.error("Failed to sync subscription:", err);
         // Don't show error to user since payment was successful
       }
     }
@@ -224,9 +323,62 @@ export default function Pricing({
   };
 
   const handlePaddleError = (data: CheckoutEventError | undefined) => {
-    showToast.error("An error occurred while processing your request");
+    logger.error("Pricing: Paddle error callback", {
+      error: data || null,
+      errorMessage: (data as any)?.message || null,
+    });
+    const rawMessage = (data as any)?.message || "";
+    const message = rawMessage.toLowerCase();
+
+    // Let Paddle surface inline field-level validation (e.g. ZIP/postcode required)
+    // without duplicating it as a background toast.
+    const isInlineValidationError =
+      message.includes("required") ||
+      message.includes("invalid") ||
+      message.includes("postcode") ||
+      message.includes("zip") ||
+      message.includes("field") ||
+      message.includes("checkout could not be completed");
+
+    if (isInlineValidationError) {
+      logger.info("Pricing: Suppressing toast for inline Paddle validation error", {
+        rawMessage: rawMessage || null,
+      });
+      return;
+    }
+
+    const fallbackMessage =
+      rawMessage ||
+      "Paddle checkout failed. If you use an ad-blocker/privacy extension, please disable it for localhost and try again.";
+    showToast.error(fallbackMessage);
   };
   const handlePaddleFailed = (data: CheckoutEventsData | undefined) => {
+    logger.error("Pricing: Paddle failed callback", {
+      eventData: data || null,
+    });
+
+    const rawFailureMessage =
+      (data as any)?.error?.message ||
+      (data as any)?.message ||
+      (data as any)?.reason ||
+      "";
+    const failureMessage = rawFailureMessage.toLowerCase();
+
+    const isInlineValidationError =
+      failureMessage.includes("required") ||
+      failureMessage.includes("invalid") ||
+      failureMessage.includes("postcode") ||
+      failureMessage.includes("zip") ||
+      failureMessage.includes("field") ||
+      failureMessage.includes("checkout could not be completed");
+
+    if (isInlineValidationError || !rawFailureMessage) {
+      logger.info("Pricing: Suppressing toast for Paddle failed validation-style event", {
+        rawFailureMessage: rawFailureMessage || null,
+      });
+      return;
+    }
+
     showToast.error("An error occurred while processing your request");
   };
 
@@ -268,7 +420,7 @@ export default function Pricing({
       }
 
       // Handle paid plans with Paddle
-      if (plan.paddleConfig?.priceId && paddleRef.current) {
+      if (paddleRef.current) {
         await handlePlanUpgrade(plan);
         return;
       } else {
@@ -277,7 +429,6 @@ export default function Pricing({
         );
       }
     } catch (error) {
-      console.error("Error updating plan:", error);
       showToast.error("An error occurred while processing your request");
     } finally {
       setLoading(null);

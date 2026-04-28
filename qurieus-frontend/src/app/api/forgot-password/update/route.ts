@@ -32,7 +32,6 @@ export async function POST(request: Request) {
 		});
 
 		if (!user) {
-			logger.warn("Update Password API: User not found", { email: formatedEmail });
 			throw new Error("Email does not exists");
 		}
 

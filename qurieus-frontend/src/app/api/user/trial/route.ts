@@ -94,7 +94,6 @@ export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_
         max_queries: freeTrialPlan.maxQueriesPerDay || 25,
       });
     } catch (emailError) {
-      console.error("Failed to send trial started email:", emailError);
       // Don't fail the trial creation if email fails
     }
 
@@ -104,7 +103,6 @@ export const POST = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_
       message: `Free trial started successfully. Trial ends in ${trialDays} days.`,
     });
   } catch (error) {
-    console.error("Error starting free trial:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -150,7 +148,6 @@ export const GET = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_A
 
     return NextResponse.json(subscription);
   } catch (error) {
-    console.error("Error fetching trial status:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -3,7 +3,6 @@ import { prisma } from "@/utils/prismaDB";
 // Function to check and expire trials
 export async function checkTrialExpiration() {
   try {
-    console.log("[TRIAL] Checking trial expiration...");
     
     const expiredTrials = await prisma.userSubscription.findMany({
       where: {
@@ -31,12 +30,10 @@ export async function checkTrialExpiration() {
         }
       });
 
-      console.log(`[TRIAL] Trial expired for user: ${trial.user.email}`);
       
       // Check if user has a paid subscription before sending expired email
       const hasPaidSubscription = await checkIfUserHasPaidSubscription(trial.userId);
       if (hasPaidSubscription) {
-        console.log(`[TRIAL] Skipping expired email for ${trial.user.email} - user has paid subscription`);
         continue;
       }
       
@@ -49,23 +46,19 @@ export async function checkTrialExpiration() {
           trial_end_date: trial.currentPeriodEnd.toLocaleDateString(),
         });
       } catch (emailError) {
-        console.error(`[TRIAL] Failed to send expired email to ${trial.user.email}:`, emailError);
       }
     }
 
-    console.log(`[TRIAL] Expired ${expiredTrials.length} trials`);
   } catch (error) {
-    console.error("[TRIAL] Error checking trial expiration:", error);
   }
 }
 
 // Function to send trial expiring warnings
 export async function sendTrialExpiringWarnings() {
   try {
-    console.log("[TRIAL] Checking for trials expiring soon...");
     
-    // Get trials expiring in 1, 3 days, and the day of expiration (0 days)
-    const warningDays = [1, 3, 0];
+    // Product requirement: free trial reminders at 2 days before and on last day.
+    const warningDays = [2, 0];
     
     for (const days of warningDays) {
       let targetDate: Date;
@@ -102,11 +95,9 @@ export async function sendTrialExpiringWarnings() {
         // Check if user has a paid subscription before sending warning email
         const hasPaidSubscription = await checkIfUserHasPaidSubscription(trial.userId);
         if (hasPaidSubscription) {
-          console.log(`[TRIAL] Skipping ${days}-day warning for ${trial.user.email} - user has paid subscription`);
           continue;
         }
 
-        console.log(`[TRIAL] Sending ${days}-day warning to: ${trial.user.email}`);
         
         try {
           const { sendTrialExpiringEmail } = await import("@/lib/email");
@@ -117,12 +108,78 @@ export async function sendTrialExpiringWarnings() {
             trial_end_date: trial.currentPeriodEnd.toLocaleDateString(),
           });
         } catch (emailError) {
-          console.error(`[TRIAL] Failed to send ${days}-day warning to ${trial.user.email}:`, emailError);
         }
       }
     }
   } catch (error) {
-    console.error("[TRIAL] Error sending trial expiring warnings:", error);
+  }
+}
+
+// Function to send paid subscription renewal warnings
+export async function sendPaidSubscriptionRenewalWarnings() {
+  try {
+
+    // Product requirement: paid reminders "few days before" (configurable by super admin)
+    // and on the last day.
+    const configuredDaysBefore = await getPaidRenewalReminderDaysBefore();
+    const reminderDays = [configuredDaysBefore, 0];
+
+    for (const days of reminderDays) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + days);
+      targetDate.setHours(0, 0, 0, 0);
+
+      const expiringPaidSubscriptions = await prisma.userSubscription.findMany({
+        where: {
+          status: "active",
+          plan: {
+            name: {
+              not: "Free Trial"
+            }
+          },
+          currentPeriodEnd: {
+            gte: targetDate,
+            lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
+          }
+        },
+        include: {
+          plan: true,
+          user: true
+        }
+      });
+
+      for (const subscription of expiringPaidSubscriptions) {
+
+        try {
+          const { sendPaidSubscriptionRenewalEmail } = await import("@/lib/email");
+          await sendPaidSubscriptionRenewalEmail({
+            email: subscription.user.email,
+            name: subscription.user.name || subscription.user.email,
+            days_left: days,
+            renewal_date: subscription.currentPeriodEnd.toLocaleDateString(),
+            plan_name: subscription.plan.name
+          });
+        } catch (emailError) {
+        }
+      }
+    }
+  } catch (error) {
+  }
+}
+
+async function getPaidRenewalReminderDaysBefore(): Promise<number> {
+  try {
+    const row = await prisma.siteConfig.findUnique({
+      where: { key: "paid_renewal_reminder_days_before" },
+      select: { value: true },
+    });
+    const parsed = Number(row?.value ?? "3");
+    if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 30) {
+      return parsed;
+    }
+    return 3;
+  } catch (error) {
+    return 3;
   }
 }
 
@@ -144,7 +201,6 @@ async function checkIfUserHasPaidSubscription(userId: string): Promise<boolean> 
 
     return !!paidSubscription;
   } catch (error) {
-    console.error("[TRIAL] Error checking paid subscription:", error);
     return false; // Default to false to ensure emails are sent if there's an error
   }
 } 

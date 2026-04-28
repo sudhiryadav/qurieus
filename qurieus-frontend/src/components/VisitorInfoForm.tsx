@@ -72,7 +72,6 @@ export function VisitorInfoForm({ onSubmit, onCancel }: VisitorInfoFormProps) {
       });
 
     } catch (error) {
-      console.error('Error saving visitor information:', error);
       setErrors({ submit: 'Failed to save information. Please try again.' });
     } finally {
       setIsSubmitting(false);

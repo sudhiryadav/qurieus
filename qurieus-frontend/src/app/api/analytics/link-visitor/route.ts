@@ -18,7 +18,6 @@ export const POST = OptionalAuth("Link Visitor API")(async (request: NextRequest
     });
 
     if (!visitorId) {
-      logger.warn("Link Visitor API: Missing visitor ID", { userId });
       return NextResponse.json(
         { error: "Visitor ID is required" },
         { status: 400 }

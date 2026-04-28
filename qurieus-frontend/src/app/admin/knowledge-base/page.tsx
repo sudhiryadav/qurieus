@@ -104,7 +104,6 @@ export default function AdminKnowledgeBasePage() {
       const response = await axiosInstance.get(`/api/admin/users/${userId}/documents`);
       setDocuments(response.data.documents || []);
     } catch (error) {
-      console.error("Error fetching user documents:", error);
       showToast.error("Failed to fetch user documents");
       setDocuments([]);
     } finally {
@@ -129,7 +128,6 @@ export default function AdminKnowledgeBasePage() {
           user: user
         }));
     } catch (error) {
-      console.error("Error loading users:", error);
       return [];
     }
   }, []);
@@ -167,7 +165,6 @@ export default function AdminKnowledgeBasePage() {
       window.URL.revokeObjectURL(url);
       showToast.success("Document downloaded successfully");
     } catch (error) {
-      console.error('Error downloading document:', error);
       showToast.error('Failed to download document');
     }
   };
@@ -197,7 +194,6 @@ export default function AdminKnowledgeBasePage() {
       // Refresh the documents list
       fetchUserDocuments(selectedUser.user.id);
     } catch (error) {
-      console.error('Error deleting document:', error);
       showToast.error('Failed to delete document');
     }
   };

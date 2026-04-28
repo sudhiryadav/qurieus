@@ -15,12 +15,10 @@ export async function keepQdrantActive(): Promise<{ success: boolean; error?: st
   const config = getQdrantConfig();
 
   if (!config.QDRANT_URL) {
-    logger.warn("keepQdrantActive: QDRANT_URL not set, skipping");
     return { success: false, error: "QDRANT_URL not configured" };
   }
 
   if (!config.QDRANT_COLLECTION) {
-    logger.warn("keepQdrantActive: QDRANT_COLLECTION not set, skipping");
     return { success: false, error: "QDRANT_COLLECTION not configured" };
   }
 
@@ -53,11 +51,9 @@ export async function keepQdrantActive(): Promise<{ success: boolean; error?: st
       };
     }
 
-    logger.info("keepQdrantActive: Qdrant cluster pinged successfully");
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("keepQdrantActive: Error pinging Qdrant", { error: message });
     return { success: false, error: message };
   }
 }

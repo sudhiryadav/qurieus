@@ -62,7 +62,6 @@ export default function AdminEmailBroadcastPage() {
       if (failed > 0) {
         showToast.warning(`Email sent to ${sent} users, but ${failed} failed. Check console for details.`);
         if (errors) {
-          console.error('Failed emails:', errors);
         }
       } else {
         showToast.success(`Email sent successfully to ${sent} users!`);

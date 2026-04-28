@@ -90,7 +90,6 @@ async function trackAnalytics({
       },
     });
   } catch (err) {
-    console.error("Error tracking analytics:", err);
   }
 }
 
@@ -99,12 +98,10 @@ async function queryWithModal(message: string, userId: string, history: any[], c
   const modalApiKey = process.env.MODAL_DOT_COM_X_API_KEY;
   
   if (!modalUrl) {
-    console.error('❌ [QUERY API] Modal.com query URL not configured');
     throw new Error("Modal.com query URL not configured");
   }
   
   if (!modalApiKey) {
-    console.error('❌ [QUERY API] Modal.com API key not configured');
     throw new Error("Modal.com API key not configured");
   }
 
@@ -134,11 +131,6 @@ async function queryWithModal(message: string, userId: string, history: any[], c
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ [QUERY API] Modal.com service error:', {
-      status: response.status,
-      statusText: response.statusText,
-      errorText
-    });
     throw new Error(`Modal.com service error: ${response.status} - ${errorText}`);
   }
 
@@ -179,7 +171,6 @@ export async function POST(request: Request) {
     // Rate Limiting
     const rateKey = `rate:${apiKey}:${ip}`;
     if (await isRateLimited(rateKey)) {
-      logger.warn("Document Query API: Rate limit exceeded", { apiKey, ip, rateKey }, { userId });
       return corsErrorResponse("Rate limit exceeded", 429);
     }
 
@@ -307,7 +298,6 @@ export async function POST(request: Request) {
             controller.close();
             
           } catch (error) {
-            console.error('❌ [DOCUMENT QUERY API] Error processing stream:', error);
             controller.error(error);
           }
         };
@@ -337,7 +327,6 @@ export async function POST(request: Request) {
       stack: error.stack 
     }, { userId });
     
-    console.error("Document query error:", error);
     return corsErrorResponse({ 
       error: "An error occurred while processing your query", 
       errorCode: "QUERY_ERROR"

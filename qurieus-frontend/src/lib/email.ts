@@ -29,12 +29,17 @@ const transporter = nodemailer.createTransport({
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://qurieus.com";
 
+if (!handlebars.helpers.eq) {
+  handlebars.registerHelper("eq", (a: unknown, b: unknown) => a === b);
+}
+
 export const footerData = {
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
   supportAddress: process.env.NEXT_PUBLIC_SUPPORT_ADDRESS,
   supportPhone: process.env.NEXT_PUBLIC_SUPPORT_PHONE,
   year: new Date().getFullYear(),
   appUrl,
+  NEXT_PUBLIC_APP_URL: appUrl,
   privacyPolicyUrl: `${appUrl}/privacy-policy`,
   termsOfServiceUrl: `${appUrl}/terms-of-service`,
   refundPolicyUrl: `${appUrl}/refund-policy`,
@@ -87,9 +92,7 @@ export async function sendEmail({ to, subject, template, context, html,attachmen
       text: htmlContent ? htmlContent.replace(/<[^>]*>/g, '') : '',
     };
     
-    logger.info("Sending email", { to, subject, template: template || 'custom' });
     await transporter.sendMail(mailOptions);
-    logger.info("Email sent successfully", { to, subject });
   } catch (error) {
     logger.error("Failed to send email", { 
       to, 
@@ -102,7 +105,6 @@ export async function sendEmail({ to, subject, template, context, html,attachmen
 }
 
 export async function sendVerificationEmail(email: string, code: string) {
-  logger.info("Sending verification email", { email, code });
   return sendEmail({
     to: email,
     subject: "Verify your email address",
@@ -205,6 +207,26 @@ export async function sendTrialExpiredEmail(data: {
     to: data.email,
     subject: "Your Trial Has Expired",
     template: "trial-expired",
+    context: { ...data, ...footerData },
+  });
+}
+
+export async function sendPaidSubscriptionRenewalEmail(data: {
+  email: string;
+  name: string;
+  days_left: number;
+  renewal_date: string;
+  plan_name: string;
+}) {
+  const subject =
+    data.days_left === 0
+      ? "Your Subscription Renews Today - Please Verify Payment Method"
+      : `Your Subscription Renews in ${data.days_left} Days - Action Recommended`;
+
+  return sendEmail({
+    to: data.email,
+    subject,
+    template: "subscription-renewal-reminder",
     context: { ...data, ...footerData },
   });
 }

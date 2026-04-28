@@ -5,7 +5,6 @@ export const initLogRocket = () => {
   const appId = process.env.NEXT_PUBLIC_LOGROCKET_APP_ID;
   
   if (!appId) {
-    console.warn("LogRocket app ID not found. LogRocket will not be initialized.");
     return;
   }
 
@@ -25,9 +24,7 @@ export const initLogRocket = () => {
       });
     }
     
-    console.log("LogRocket initialized successfully with Sentry integration");
   } catch (error) {
-    console.error("Failed to initialize LogRocket:", error);
   }
 };
 
@@ -36,7 +33,6 @@ export const identifyUser = (userId: string, userInfo?: { name?: string; email?:
   try {
     LogRocket.identify(userId, userInfo);
   } catch (error) {
-    console.error("Failed to identify user in LogRocket:", error);
   }
 };
 
@@ -69,7 +65,6 @@ export const identifyIdentity = (visitorId: string, userId?: string, userInfo?: 
       });
     }
   } catch (error) {
-    console.error("Failed to identify identity in LogRocket:", error);
   }
 };
 
@@ -81,7 +76,6 @@ export const getCurrentSessionURL = (): Promise<string | null> => {
         resolve(sessionURL);
       });
     } catch (error) {
-      console.error("Failed to get LogRocket session URL:", error);
       resolve(null);
     }
   });
@@ -92,7 +86,6 @@ export const trackEvent = (eventName: string, properties?: any) => {
   try {
     LogRocket.track(eventName, properties);
   } catch (error) {
-    console.error("Failed to track event in LogRocket:", error);
   }
 };
 
@@ -101,7 +94,6 @@ export const logRocketLog = (message: string, meta?: any) => {
   try {
     LogRocket.log(message, meta);
   } catch (error) {
-    console.error("Failed to log in LogRocket:", error);
   }
 };
 
@@ -109,7 +101,6 @@ export const logRocketInfo = (message: string, meta?: any) => {
   try {
     LogRocket.info(message, meta);
   } catch (error) {
-    console.error("Failed to log info in LogRocket:", error);
   }
 };
 
@@ -117,7 +108,6 @@ export const logRocketWarn = (message: string, meta?: any) => {
   try {
     LogRocket.warn(message, meta);
   } catch (error) {
-    console.error("Failed to log warning in LogRocket:", error);
   }
 };
 
@@ -125,6 +115,5 @@ export const logRocketError = (message: string, meta?: any) => {
   try {
     LogRocket.error(message, meta);
   } catch (error) {
-    console.error("Failed to log error in LogRocket:", error);
   }
 }; 

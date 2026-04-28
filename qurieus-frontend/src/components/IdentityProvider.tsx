@@ -41,7 +41,6 @@ export function IdentityProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => {
           getCurrentSessionURL().then(sessionURL => {
             if (sessionURL) {
-              console.log('LogRocket Session URL after login:', sessionURL);
             }
           });
         }, 1000);

@@ -14,7 +14,6 @@ export const POST = async (request: Request) => {
     });
 
     if (!token) {
-      logger.warn("Verify Token API: Missing token field");
       return new NextResponse("Missing Fields", { status: 400 });
     }
 
@@ -28,7 +27,6 @@ export const POST = async (request: Request) => {
     });
 
     if (!user) {
-      logger.warn("Verify Token API: Invalid or expired token", { token });
       return new NextResponse("Invalid Token or Token Expired", { status: 400 });
     }
 

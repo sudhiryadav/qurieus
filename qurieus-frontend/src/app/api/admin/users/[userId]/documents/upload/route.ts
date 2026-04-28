@@ -28,7 +28,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
     });
 
     if (!targetUser) {
-      logger.warn("User Document Upload API: Target user not found", { targetUserId });
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
@@ -43,7 +42,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
     const title = formData.get("title") as string;
 
     if (!files || files.length === 0) {
-      logger.warn("User Document Upload API: No files provided", { targetUserId });
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 

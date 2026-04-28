@@ -14,7 +14,6 @@ export async function GET(
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      logger.warn("Admin Document Download API: No authenticated session found");
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -99,7 +98,8 @@ export async function GET(
       headers.set('Content-Length', fileBuffer.length.toString());
 
       // Return the file data
-      return new NextResponse(fileBuffer, {
+      const responseBody = new Uint8Array(fileBuffer);
+      return new NextResponse(responseBody, {
         headers,
       });
     } catch (s3Error: any) {

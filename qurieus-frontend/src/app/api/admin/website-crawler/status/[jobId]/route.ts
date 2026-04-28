@@ -10,13 +10,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   req: NextRequest,
   context: { params: Promise<{ jobId: string }> }
 ) => {
-  console.log("=== Website Crawler Status API Called ===");
-  console.log("Request URL:", req.url);
-  console.log("Request method:", req.method);
-  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
-  console.log("Context:", context);
-  console.log("Context type:", typeof context);
-  console.log("Context params type:", typeof context?.params);
   
   // Add a simple test response to verify this is the frontend API
   if (req.url.includes('test')) {
@@ -30,28 +23,17 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   try {
     // Add validation for context.params
     if (!context || !context.params) {
-      console.log("❌ Context or context.params is null/undefined");
-      console.log("Context:", context);
-      console.log("Context.params:", context?.params);
       return NextResponse.json(
         { error: "Invalid request context" },
         { status: 400 }
       );
     }
 
-    console.log("✅ Context and context.params exist");
-    console.log("About to await context.params...");
     
     const params = await context.params;
-    console.log("✅ Params resolved:", params);
-    console.log("Params type:", typeof params);
-    console.log("Params keys:", Object.keys(params || {}));
     
     // Add validation for jobId
     if (!params || !params.jobId) {
-      console.log("❌ Params or jobId is missing");
-      console.log("Params:", params);
-      console.log("Params.jobId:", params?.jobId);
       return NextResponse.json(
         { error: "Job ID is required" },
         { status: 400 }
@@ -59,20 +41,14 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
     }
 
     const { jobId } = params;
-    console.log("✅ JobId extracted:", jobId);
 
     // Debug: List all jobs before lookup
-    console.log("=== Debug: All jobs before lookup ===");
     await crawlJobManager.debugJobs();
 
     // Get job from storage
-    console.log("Looking up job with ID:", jobId);
     const job = await crawlJobManager.getJob(jobId);
-    console.log("Job lookup result:", job);
     
     if (!job) {
-      console.log("❌ Job not found for ID:", jobId);
-      console.log("=== Debug: All jobs after failed lookup ===");
       await crawlJobManager.debugJobs();
       return NextResponse.json(
         { error: "Job not found" },
@@ -80,11 +56,8 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
       );
     }
 
-    console.log("✅ Job found, returning:", job);
     return NextResponse.json(job);
   } catch (error) {
-    console.error("❌ Error in website crawler status API:", error);
-    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

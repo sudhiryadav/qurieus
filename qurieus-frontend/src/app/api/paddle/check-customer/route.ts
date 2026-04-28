@@ -13,20 +13,21 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      logger.warn("Paddle Check Customer API: Unauthorized access attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     userId = session.user.id;
-    const { priceId } = await req.json();
+    const { priceId, checkoutAttemptId } = await req.json();
     
     logger.info("Paddle Check Customer API: Checking customer status", { 
       userId, 
-      priceId 
+      priceId,
+      checkoutAttemptId: checkoutAttemptId || null,
+      nodeEnv: process.env.NODE_ENV,
+      hasPaddleApiKey: !!process.env.PADDLE_API_KEY,
     });
 
     if (!priceId) {
-      logger.warn("Paddle Check Customer API: Missing price ID", { userId });
       return NextResponse.json(
         { error: "Price ID is required" },
         { status: 400 }
@@ -48,7 +49,6 @@ export async function POST(req: Request) {
 
     // Try to create/get customer from Paddle
     try {
-      logger.info("Paddle Check Customer API: Creating new customer", { userId });
       
       const newCustomer = await paddle.customers.create({
         email: session.user.email || '',
@@ -89,7 +89,8 @@ export async function POST(req: Request) {
           
           logger.info("Paddle Check Customer API: Existing customer found", { 
             userId, 
-            customerId 
+            customerId,
+            checkoutAttemptId: checkoutAttemptId || null,
           });
           
           // Update our database with the existing customer ID
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
       } else {
         logger.error("Paddle Check Customer API: Error creating customer", { 
           userId, 
+          checkoutAttemptId: checkoutAttemptId || null,
           error: error.message 
         });
       }
@@ -114,7 +116,8 @@ export async function POST(req: Request) {
       customerId,
       hasPaymentMethod,
       hasExistingSubscription: !!(userSubscription?.paddleSubscriptionId && !userSubscription.paddleSubscriptionId.startsWith('trial_')),
-      responseTime 
+      responseTime,
+      checkoutAttemptId: checkoutAttemptId || null,
     });
 
     return NextResponse.json({
@@ -132,7 +135,6 @@ export async function POST(req: Request) {
       stack: error.stack 
     });
     
-    console.error("Error checking customer:", error);
     return NextResponse.json(
       { error: "Failed to check customer status" },
       { status: 500 }

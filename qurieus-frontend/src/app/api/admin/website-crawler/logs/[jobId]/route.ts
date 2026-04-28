@@ -25,7 +25,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
     
     return NextResponse.json({ logs });
   } catch (error) {
-    console.error("Error getting crawl logs:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

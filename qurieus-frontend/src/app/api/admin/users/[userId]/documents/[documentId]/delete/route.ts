@@ -10,7 +10,6 @@ import qdrant, { getQdrantConfig } from "@/lib/qdrant";
 async function deleteVectorsFromQdrant(userId: string, docId: string) {
   try {
     const config = getQdrantConfig();
-    logger.info(`Admin Delete API: Attempting to delete vectors for document ${docId} from Qdrant`);
     
     // Check if collection exists first
     try {
@@ -25,9 +24,7 @@ async function deleteVectorsFromQdrant(userId: string, docId: string) {
       }
 
       const collectionInfo = await qdrant.getCollection(config.QDRANT_COLLECTION);
-      logger.info(`Admin Delete API: Collection exists with ${collectionInfo.points_count} points`);
     } catch (collectionError) {
-      logger.info(`Admin Delete API: Collection ${config.QDRANT_COLLECTION} does not exist or is not accessible`);
       // If collection doesn't exist, there's nothing to delete
       return;
     }
@@ -40,9 +37,7 @@ async function deleteVectorsFromQdrant(userId: string, docId: string) {
         ],
       },
     });
-    logger.info(`Admin Delete API: Successfully deleted vectors for document ${docId} from Qdrant`);
   } catch (error) {
-    logger.error(`Admin Delete API: Error deleting vectors from Qdrant for document ${docId}:`, error);
     // Don't throw error, continue with database deletion
   }
 }
@@ -68,7 +63,6 @@ export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(async (
     });
 
     if (!targetUser) {
-      logger.warn("Admin Delete API: Target user not found", { targetUserId: userId });
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }

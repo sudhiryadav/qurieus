@@ -54,7 +54,6 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
 
   // If not found by price ID, try to find by plan name
   if (!plan && paddleSub.items[0]?.price?.name) {
-    logger.info("Plan not found by price ID, trying to find by name:", { priceName: paddleSub.items[0].price.name });
     plan = await prisma.subscriptionPlan.findFirst({
       where: {
         name: paddleSub.items[0].price.name,
@@ -63,11 +62,9 @@ export async function upsertUserSubscriptionFromPaddle(paddleSub: any, userId: s
   }
 
   if (!plan) {
-    logger.error("Plan not found for Paddle subscription", { paddleSub });
     throw new Error(`Plan not found for Paddle subscription. Price ID: ${paddleSub.items[0]?.price?.id}, Price Name: ${paddleSub.items[0]?.price?.name}`);
   }
 
-  logger.info("Found plan", { planName: plan.name });
 
   // Create plan snapshot for new subscriptions
   const planSnapshot = {

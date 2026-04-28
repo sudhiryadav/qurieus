@@ -50,7 +50,6 @@ export const linkVisitorToUser = async (userId: string): Promise<void> => {
       userId,
     });
   } catch (error) {
-    console.warn("Failed to link visitor to user:", error);
   }
 };
 

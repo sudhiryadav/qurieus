@@ -21,7 +21,6 @@ async function fetchProductsManually(): Promise<any[]> {
     }
     return [];
   } catch (error: any) {
-    console.log('Manual product fetch failed:', error?.message);
     return [];
   }
 }
@@ -42,7 +41,6 @@ async function fetchPricesManually(productId: string): Promise<any[]> {
     }
     return [];
   } catch (error: any) {
-    console.log('Manual price fetch failed:', error?.message);
     return [];
   }
 }
@@ -69,11 +67,9 @@ export async function POST(req: NextRequest) {
     const results = [];
 
     for (const plan of plans) {
-      console.log(`Processing plan: ${plan.name}`);
       
       try {
         // Step 1: Search for product by name in Paddle using SDK
-        console.log(`Searching for product with name: "${plan.name}"`);
         
         let matchingProduct = null;
         let matchingPrice = null;
@@ -86,12 +82,10 @@ export async function POST(req: NextRequest) {
             products.push(product);
           }
           
-          console.log(`Found ${products.length} products in Paddle`);
           
           matchingProduct = products.find((p: any) => p.name === plan.name);
           
           if (matchingProduct) {
-            console.log(`Found product in Paddle: ${matchingProduct.id} for plan: ${plan.name}`);
             
             // Step 2: Search for price by description in the product
             try {
@@ -103,7 +97,6 @@ export async function POST(req: NextRequest) {
                 prices.push(price);
               }
               
-              console.log(`Found ${prices.length} prices for product ${matchingProduct.id}`);
               
               matchingPrice = prices.find((p: any) => 
                 p.description === plan.description || 
@@ -112,30 +105,22 @@ export async function POST(req: NextRequest) {
               );
               
               if (matchingPrice) {
-                console.log(`Found price in Paddle: ${matchingPrice.id} for product: ${matchingProduct.id}`);
               } else {
-                console.log(`No price found in Paddle for product: ${matchingProduct.id}`);
               }
             } catch (priceError: any) {
-              console.log(`Error fetching prices for product ${matchingProduct.id}:`, priceError?.message);
               // Continue with just the product
             }
           } else {
-            console.log(`No product found in Paddle for plan: ${plan.name}`);
           }
         } catch (productError: any) {
-          console.log(`Error fetching products with SDK:`, productError?.message);
           
           // Try manual API call as fallback
-          console.log(`Trying manual API call as fallback...`);
           const products = await fetchProductsManually();
           
           if (products.length > 0) {
-            console.log(`Found ${products.length} products via manual API call`);
             matchingProduct = products.find((p: any) => p.name === plan.name);
             
             if (matchingProduct) {
-              console.log(`Found product via manual API: ${matchingProduct.id} for plan: ${plan.name}`);
               
               // Try to fetch prices manually
               const prices = await fetchPricesManually(matchingProduct.id);
@@ -147,7 +132,6 @@ export async function POST(req: NextRequest) {
                 );
                 
                 if (matchingPrice) {
-                  console.log(`Found price via manual API: ${matchingPrice.id} for product: ${matchingProduct.id}`);
                 }
               }
             }
@@ -155,16 +139,13 @@ export async function POST(req: NextRequest) {
           
           // If still no product found, try to create a new one
           if (!matchingProduct) {
-            console.log(`Creating new product for plan: ${plan.name}`);
             try {
               matchingProduct = await paddle.products.create({
                 name: plan.name,
                 description: plan.description,
                 taxCategory: "standard",
               });
-              console.log(`Created new product: ${matchingProduct.id}`);
             } catch (createError: any) {
-              console.log(`Failed to create product:`, createError?.message);
             }
           }
         }
@@ -186,7 +167,6 @@ export async function POST(req: NextRequest) {
             },
           });
 
-          console.log(`Successfully synced Paddle IDs for plan: ${plan.name}`);
           results.push({
             planName: plan.name,
             productId: matchingProduct.id,
@@ -203,7 +183,6 @@ export async function POST(req: NextRequest) {
         }
 
       } catch (error: any) {
-        console.error(`Error processing plan ${plan.name}:`, error?.message || error);
         results.push({
           planName: plan.name,
           status: 'error',
@@ -223,7 +202,6 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in sync-paddle-ids:', error);
     
     await prisma.log.create({
       data: {

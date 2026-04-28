@@ -49,7 +49,6 @@ export async function POST(request: Request) {
       stack: error.stack 
     });
     
-    console.error("Error sending contact message:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to send message" },
       { status: error.response?.status || 500 }

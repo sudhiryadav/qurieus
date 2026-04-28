@@ -31,7 +31,6 @@ export const GET = async (request: Request, context: { params: Promise<{ chatId:
         });
         chatId = chatIdFromUrl;
       } else {
-        logger.error("Chat Transcript API: Missing chatId in params and URL", { params, pathParts });
         return errorResponse({ error: "Missing chat ID", status: 400 });
       }
     } else {

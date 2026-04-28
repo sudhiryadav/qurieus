@@ -41,7 +41,6 @@ export default function AdminSubscriptionsPage() {
       const { data } = await axios.get("/api/admin/subscriptions");
       setSubscriptions(data);
     } catch (error) {
-      console.error("Error fetching subscriptions:", error);
       showToast.error("Failed to fetch subscriptions");
     } finally {
       setLoading(false);
@@ -53,7 +52,6 @@ export default function AdminSubscriptionsPage() {
       const { data } = await axios.get("/api/admin/paddle/webhook-debug");
       setWebhookDebug(data);
     } catch (error) {
-      console.error("Error fetching webhook debug:", error);
     }
   };
 
@@ -79,7 +77,6 @@ export default function AdminSubscriptionsPage() {
       setEditingSubscription(null);
       showToast.success("Subscription updated successfully");
     } catch (error) {
-      console.error("Error updating subscription:", error);
       showToast.error("Failed to update subscription");
     }
   };
@@ -102,7 +99,6 @@ export default function AdminSubscriptionsPage() {
       setSubscriptions(subscriptions.filter(s => s.id !== subscriptionToDelete.id));
       showToast.success("Subscription archived successfully");
     } catch (error) {
-      console.error("Error deleting subscription:", error);
       showToast.error("Failed to archive subscription");
     } finally {
       setDeleteConfirmOpen(false);

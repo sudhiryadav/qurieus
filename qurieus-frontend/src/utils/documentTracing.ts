@@ -84,7 +84,6 @@ export async function traceQdrantResults(
         });
       }
     } catch (error) {
-      console.error('Error tracing Qdrant result:', error);
       // Continue with other results
     }
   }
@@ -133,7 +132,6 @@ export async function getDocumentByQdrantPointId(
       uploadedAt: chunk.document.uploadedAt,
     };
   } catch (error) {
-    console.error('Error getting document by Qdrant point ID:', error);
     return null;
   }
 }
@@ -169,7 +167,6 @@ export async function getDocumentChunks(
 
     return chunks;
   } catch (error) {
-    console.error('Error getting document chunks:', error);
     return [];
   }
 }
@@ -211,7 +208,6 @@ export async function getDocumentStats(
       qdrantDocumentId: document.qdrantDocumentId,
     };
   } catch (error) {
-    console.error('Error getting document stats:', error);
     return null;
   }
 } 

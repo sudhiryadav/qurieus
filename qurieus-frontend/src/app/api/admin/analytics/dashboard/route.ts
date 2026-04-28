@@ -14,7 +14,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (re
   try {
     const session = await getServerSession(authOptions);
     userId = session!.user!.id;
-    logger.info("Analytics Dashboard API: Fetching dashboard data", { userId });
 
     const now = new Date();
     const sevenDaysAgo = subDays(now, 7);

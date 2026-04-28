@@ -16,9 +16,6 @@ const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
 async function main() {
   if (!QDRANT_URL || !QDRANT_COLLECTION) {
-    console.warn(
-      "[keepQdrantActive] QDRANT_URL or QDRANT_COLLECTION not set, skipping"
-    );
     process.exit(0);
   }
 
@@ -37,22 +34,11 @@ async function main() {
 
     if (!response.ok) {
       const text = await response.text();
-      console.error(
-        `[keepQdrantActive] Qdrant request failed: ${response.status} ${response.statusText}`,
-        text.slice(0, 200)
-      );
       process.exit(1);
     }
 
-    console.log(
-      `[keepQdrantActive] Success at ${new Date().toISOString()} - Qdrant cluster pinged`
-    );
     process.exit(0);
   } catch (error) {
-    console.error(
-      "[keepQdrantActive] Error:",
-      error instanceof Error ? error.message : String(error)
-    );
     process.exit(1);
   }
 }

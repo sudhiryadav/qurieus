@@ -150,7 +150,6 @@ export default function AdminUsersPage() {
         }
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
       showToast.error("Failed to fetch users");
       setUsers([]); // Set empty array on error
     } finally {
@@ -171,7 +170,6 @@ export default function AdminUsersPage() {
       setUserToDelete(null);
       fetchUsers();
     } catch (error: any) {
-      console.error("Error deleting user:", error);
       showToast.error(error.response?.data?.error || "Failed to delete user");
     } finally {
       setIsDeleting(false);
@@ -193,7 +191,6 @@ export default function AdminUsersPage() {
       setHardDeleteCode("");
       fetchUsers();
     } catch (error: any) {
-      console.error("Error hard deleting user:", error);
       showToast.error(error.response?.data?.error || "Failed to permanently delete user");
     } finally {
       setIsHardDeleting(false);
@@ -211,7 +208,6 @@ export default function AdminUsersPage() {
       showToast.success("User restored successfully");
       fetchUsers();
     } catch (error: any) {
-      console.error("Error restoring user:", error);
       showToast.error(error.response?.data?.error || "Failed to restore user");
     } finally {
       setRestoringUserId(null);
@@ -282,7 +278,6 @@ export default function AdminUsersPage() {
       
       showToast.success(`User ${currentStatus ? 'deactivated' : 'activated'} successfully`);
     } catch (error) {
-      console.error("Error updating user status:", error);
       showToast.error("Failed to update user status");
     }
   };
@@ -332,7 +327,6 @@ export default function AdminUsersPage() {
       setEditingUser(null);
       showToast.success("User updated successfully");
     } catch (error: any) {
-      console.error("Error updating user:", error);
       const errorMessage = error.response?.data?.error || "Failed to update user";
       showToast.error(errorMessage);
     }
@@ -377,7 +371,6 @@ export default function AdminUsersPage() {
       });
       showToast.success("User created successfully");
     } catch (error: any) {
-      console.error("Error creating user:", error);
       const errorMessage = error.response?.data?.error || "Failed to create user";
       showToast.error(errorMessage);
     }
@@ -1126,7 +1119,6 @@ function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void
       const response = await axiosInstance.get(`/api/admin/users/${user.id}/documents`);
       setDocuments(response.data.documents || []);
     } catch (error) {
-      console.error("Error fetching user documents:", error);
       showToast.error("Failed to fetch user documents");
     } finally {
       setLoading(false);
@@ -1175,7 +1167,6 @@ function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void
               fetchUserDocuments();
               showToast.success('Document deleted successfully');
             } catch (error) {
-              console.error("Error deleting document:", error);
               showToast.error("Failed to delete document");
             }
           } : undefined}
@@ -1195,7 +1186,6 @@ function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void
               window.URL.revokeObjectURL(url);
               showToast.success('Download started');
             } catch (error) {
-              console.error("Error downloading document:", error);
               showToast.error("Failed to download document");
             }
           }}

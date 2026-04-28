@@ -47,7 +47,6 @@ export async function POST(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
-    console.error("Resend verification error:", error);
     return NextResponse.json(
       { error: "Failed to resend verification code" },
       { status: 500 }

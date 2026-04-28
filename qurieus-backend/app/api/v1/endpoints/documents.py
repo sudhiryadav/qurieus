@@ -41,9 +41,7 @@ OCR_CONFIG = getattr(settings, "OCR_CONFIG", "--oem 3 --psm 6")  # Tesseract con
 # Initialize the embedding model with the same model as query service
 try:
     embedding_model = SentenceTransformer("BAAI/bge-small-en-v1.5", device="cpu")
-    print("✅ Embedding model initialized successfully")
 except Exception as e:
-    print(f"Warning: Could not initialize SentenceTransformer: {str(e)}")
     embedding_model = None
 
 # Processing status tracking
@@ -69,12 +67,8 @@ try:
         )
 
     qdrant_collection = settings.QDRANT_COLLECTION
-    print(
-        f"✅ Qdrant client initialized successfully for collection: {qdrant_collection}"
-    )
 
 except Exception as e:
-    print(f"Warning: Could not initialize Qdrant client: {str(e)}")
     qdrant_client = None
 
 
@@ -105,16 +99,12 @@ def get_processing_status(document_id: str) -> Dict[str, Any]:
 def ensure_qdrant_collection_exists():
     """Ensure Qdrant collection exists, create if it doesn't."""
     if not qdrant_client:
-        print("Warning: Qdrant client not available")
         return False
 
     try:
-        print(f"Checking if Qdrant collection '{qdrant_collection}' exists...")
         qdrant_client.get_collection(qdrant_collection)
-        print(f"✅ Collection '{qdrant_collection}' already exists")
         return True
     except Exception as e:
-        print(f"❌ Collection '{qdrant_collection}' does not exist. Creating it now...")
         try:
             # Create collection if it doesn't exist
             qdrant_client.create_collection(
@@ -123,7 +113,6 @@ def ensure_qdrant_collection_exists():
                     size=384, distance=Distance.COSINE
                 ),  # BAAI/bge-small-en-v1.5 has 384 dimensions
             )
-            print(f"✅ Successfully created collection '{qdrant_collection}'")
 
             # Create payload indexes for filtering
             try:
@@ -132,30 +121,20 @@ def ensure_qdrant_collection_exists():
                     field_name="user_id",
                     field_schema="keyword",
                 )
-                print(
-                    f"✅ Created payload index for user_id in collection {qdrant_collection}"
-                )
             except Exception as e:
-                print(f"⚠️  Warning: Could not create payload index for user_id: {e}")
 
+                pass
             try:
                 qdrant_client.create_payload_index(
                     collection_name=qdrant_collection,
                     field_name="document_id",
                     field_schema="keyword",
                 )
-                print(
-                    f"✅ Created payload index for document_id in collection {qdrant_collection}"
-                )
             except Exception as e:
-                print(
-                    f"⚠️  Warning: Could not create payload index for document_id: {e}"
-                )
 
-            print(f"🎉 Collection '{qdrant_collection}' setup completed successfully!")
+                pass
             return True
         except Exception as e:
-            print(f"❌ Failed to create collection: {e}")
             return False
 
 
@@ -168,18 +147,12 @@ def get_cached_embedding(text: str) -> List[float]:
 
 def optimize_chunk_size(text: str, target_size: int = 800) -> List[str]:
     """Optimize text into chunks of approximately target_size characters."""
-    print(f"🔧 optimize_chunk_size called:")
-    print(f"  Input text length: {len(text)}")
-    print(f"  Target size: {target_size}")
-    print(f"  Text is empty after strip: {not text.strip()}")
 
     if not text.strip():
-        print(f"  ⚠️ Returning empty chunks - text is empty after strip")
         return []
 
     # Split by sentences first
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
-    print(f"  Split into {len(sentences)} sentences")
 
     chunks = []
     current_chunk = ""
@@ -202,32 +175,21 @@ def optimize_chunk_size_with_pages(
     text: str, file_extension: str, file_content: bytes
 ) -> List[Dict[str, Any]]:
     """Optimize text into chunks with page tracking for better search results."""
-    print(f"🔧 optimize_chunk_size_with_pages called:")
-    print(f"  Input text length: {len(text)}")
-    print(f"  Input text preview: {text[:100]}...")
-    print(f"  File extension: {file_extension}")
-    print(f"  Text is empty after strip: {not text.strip()}")
 
     if not text.strip():
-        print(f"  ⚠️ Returning empty chunks - text is empty after strip")
         return []
 
     chunks = []
 
     if file_extension.lower() == ".pdf":
         # For PDFs, we can track page numbers
-        print(f"  📄 Processing as PDF file")
         try:
             doc = fitz.open(stream=file_content, filetype="pdf")
-            print(f"  📄 PDF opened successfully, {len(doc)} pages")
             current_pos = 0
 
             for page_num in range(len(doc)):
                 page = doc[page_num]
                 page_text = page.get_text()
-                print(
-                    f"  📄 Page {page_num + 1}: {len(page_text)} characters from native text"
-                )
 
                 # Always try OCR to get additional text from images
                 ocr_text = ""
@@ -244,34 +206,23 @@ def optimize_chunk_size_with_pages(
                             img, lang=OCR_LANGUAGE, config=OCR_CONFIG
                         )
                         if ocr_text.strip():
-                            print(
-                                f"  📄 Page {page_num + 1}: OCR extracted {len(ocr_text)} characters from images"
-                            )
+                            pass
                         else:
-                            print(f"  📄 Page {page_num + 1}: No text found in images")
+                            pass
                     except Exception as ocr_error:
-                        print(f"  📄 Page {page_num + 1}: OCR failed: {ocr_error}")
 
                 # Combine native text and OCR text
+                        pass
                 combined_text = page_text.strip()
                 if ocr_text.strip():
                     if combined_text:
                         # If both exist, combine them with a separator
                         combined_text += f"\n\n[Image Content]:\n{ocr_text.strip()}"
-                        print(
-                            f"  📄 Page {page_num + 1}: Combined {len(page_text)} native + {len(ocr_text)} OCR characters"
-                        )
                     else:
                         # If only OCR text exists, use it
                         combined_text = ocr_text.strip()
-                        print(
-                            f"  📄 Page {page_num + 1}: Using {len(ocr_text)} OCR characters only"
-                        )
 
                 if not combined_text:
-                    print(
-                        f"  📄 Page {page_num + 1}: Skipping (no text from any source)"
-                    )
                     continue
 
                 # Use combined_text for chunking
@@ -282,21 +233,14 @@ def optimize_chunk_size_with_pages(
                 if page_start == -1:
                     # Fallback: approximate page boundaries
                     page_start = current_pos
-                    print(f"  📄 Page {page_num + 1}: Using fallback position")
 
                 page_end = page_start + len(page_text)
                 current_pos = page_end
-                print(f"  📄 Page {page_num + 1}: Position {page_start}-{page_end}")
 
                 # Split page text into chunks
-                print(f"  📄 Page {page_num + 1}: Calling optimize_chunk_size")
                 page_chunks = optimize_chunk_size(page_text, 800)
-                print(f"  📄 Page {page_num + 1}: Generated {len(page_chunks)} chunks")
 
                 for chunk_idx, chunk_text in enumerate(page_chunks):
-                    print(
-                        f"  📄 Page {page_num + 1}, Chunk {chunk_idx + 1}: {len(chunk_text)} chars"
-                    )
                     # Find chunk position within page
                     chunk_start = page_text.find(chunk_text)
                     if chunk_start != -1:
@@ -315,18 +259,12 @@ def optimize_chunk_size_with_pages(
                             "chunk_in_page": chunk_idx,
                         }
                     )
-                    print(
-                        f"  📄 Page {page_num + 1}, Chunk {chunk_idx + 1}: Added to chunks list"
-                    )
 
             doc.close()
-            print(f"  📄 PDF processing completed, total chunks: {len(chunks)}")
 
             # If no chunks were generated, use fallback
             if len(chunks) == 0:
-                print(f"  📄 No chunks generated from PDF pages, using fallback")
                 simple_chunks = optimize_chunk_size(text, 800)
-                print(f"  📄 Fallback generated {len(simple_chunks)} chunks")
                 for chunk in simple_chunks:
                     chunks.append(
                         {
@@ -338,11 +276,8 @@ def optimize_chunk_size_with_pages(
                     )
 
         except Exception as e:
-            print(f"  📄 PDF processing failed: {e}")
             # Fallback to simple chunking if page tracking fails
-            print(f"  📄 Using fallback simple chunking")
             simple_chunks = optimize_chunk_size(text, 800)
-            print(f"  📄 Fallback generated {len(simple_chunks)} chunks")
             for chunk in simple_chunks:
                 chunks.append(
                     {
@@ -365,7 +300,6 @@ def optimize_chunk_size_with_pages(
                 }
             )
 
-    print(f"  📄 Final result: returning {len(chunks)} chunks")
     return chunks
 
 
@@ -641,7 +575,6 @@ def process_file_with_progress(
                 # Perform financial analysis on the first sheet only
                 financial_analysis = analyze_financial_data(df)
             except Exception as e:
-                print(f"Error processing file: {str(e)}")
                 raise ValueError(f"Error processing file: {str(e)}")
 
         elif file_extension.lower() in [
@@ -702,10 +635,6 @@ def process_file_with_progress(
         cleaned_text_content = clean_text_content(text_content)
 
         # Debug: Check text content before chunking
-        print(f"🔍 Text content before chunking:")
-        print(f"  Content length: {len(cleaned_text_content)}")
-        print(f"  Content preview: {cleaned_text_content[:200]}...")
-        print(f"  Content is empty: {not cleaned_text_content.strip()}")
 
         # Use the provided document ID for vector storage
         document_id_for_storage = document_id
@@ -716,16 +645,12 @@ def process_file_with_progress(
         )
         total_chunks = len(chunks_with_pages)
 
-        print(f"📊 Chunking results:")
-        print(f"  Total chunks generated: {total_chunks}")
         if total_chunks > 0:
             for i, chunk in enumerate(chunks_with_pages[:3]):  # Show first 3 chunks
-                print(
-                    f"  Chunk {i + 1}: {len(chunk['text'])} chars - {chunk['text'][:50]}..."
-                )
+                pass
         else:
-            print(f"  ⚠️ No chunks generated!")
 
+            pass
         update_processing_status(
             document_id, "PROCESSING", "Storing in vector database...", None, 90
         )
@@ -735,23 +660,16 @@ def process_file_with_progress(
                 points = []
                 for idx, chunk_data in enumerate(chunks_with_pages):
                     # Debug: Check chunk data
-                    print(f"Processing chunk {idx + 1}/{len(chunks_with_pages)}")
-                    print(f"  Text length: {len(chunk_data['text'])}")
-                    print(f"  Text preview: {chunk_data['text'][:50]}...")
 
                     # Generate embedding with error handling
                     try:
                         embedding = get_cached_embedding(chunk_data["text"])
-                        print(f"  ✅ Embedding generated: {len(embedding)} dimensions")
-                        print(f"  Embedding type: {type(embedding)}")
 
                         # Ensure embedding is a list
                         if hasattr(embedding, "tolist"):
                             embedding = embedding.tolist()
-                        print(f"  Final embedding type: {type(embedding)}")
 
                     except Exception as embed_error:
-                        print(f"  ❌ Embedding generation failed: {embed_error}")
                         continue
 
                     # Create point with error handling
@@ -772,30 +690,21 @@ def process_file_with_progress(
                             },
                         )
                         points.append(point)
-                        print(f"  ✅ Point created successfully")
 
                     except Exception as point_error:
-                        print(f"  ❌ Point creation failed: {point_error}")
                         continue
 
                 # Upsert with error handling
                 if points:
-                    print(f"Attempting to upsert {len(points)} points to Qdrant...")
                     qdrant_client.upsert(
                         collection_name=qdrant_collection, points=points
                     )
-                    print(
-                        f"✅ Successfully upserted {len(points)} chunks to Qdrant for document {document_id_for_storage}"
-                    )
                 else:
-                    print("⚠️ No valid points to upsert")
 
+                    pass
             except Exception as e:
-                print(f"❌ Failed to upsert to Qdrant: {str(e)}")
-                print(f"Error type: {type(e)}")
                 import traceback
 
-                print(f"Traceback: {traceback.format_exc()}")
                 # Continue processing even if Qdrant fails
 
         return {
@@ -958,7 +867,6 @@ def process_file(
                 # Perform financial analysis on the first sheet only
                 financial_analysis = analyze_financial_data(df)
             except Exception as e:
-                print(f"Error processing file: {str(e)}")
                 raise ValueError(f"Error processing file: {str(e)}")
         elif file_extension.lower() in [
             ".png",
@@ -1011,10 +919,6 @@ def process_file(
         cleaned_text_content = clean_text_content(text_content)
 
         # Debug: Check text content before chunking
-        print(f"🔍 Text content before chunking:")
-        print(f"  Content length: {len(cleaned_text_content)}")
-        print(f"  Content preview: {cleaned_text_content[:200]}...")
-        print(f"  Content is empty: {not cleaned_text_content.strip()}")
 
         # Generate a unique document ID for vector storage
         document_id = str(uuid.uuid4())
@@ -1025,38 +929,27 @@ def process_file(
         )
         total_chunks = len(chunks_with_pages)
 
-        print(f"📊 Chunking results:")
-        print(f"  Total chunks generated: {total_chunks}")
         if total_chunks > 0:
             for i, chunk in enumerate(chunks_with_pages[:3]):  # Show first 3 chunks
-                print(
-                    f"  Chunk {i + 1}: {len(chunk['text'])} chars - {chunk['text'][:50]}..."
-                )
+                pass
         else:
-            print(f"  ⚠️ No chunks generated!")
 
+            pass
         if qdrant_client:
             try:
                 points = []
                 for idx, chunk_data in enumerate(chunks_with_pages):
                     # Debug: Check chunk data
-                    print(f"Processing chunk {idx + 1}/{len(chunks_with_pages)}")
-                    print(f"  Text length: {len(chunk_data['text'])}")
-                    print(f"  Text preview: {chunk_data['text'][:50]}...")
 
                     # Generate embedding with error handling
                     try:
                         embedding = get_cached_embedding(chunk_data["text"])
-                        print(f"  ✅ Embedding generated: {len(embedding)} dimensions")
-                        print(f"  Embedding type: {type(embedding)}")
 
                         # Ensure embedding is a list
                         if hasattr(embedding, "tolist"):
                             embedding = embedding.tolist()
-                        print(f"  Final embedding type: {type(embedding)}")
 
                     except Exception as embed_error:
-                        print(f"  ❌ Embedding generation failed: {embed_error}")
                         continue
 
                     # Create point with error handling
@@ -1077,30 +970,21 @@ def process_file(
                             },
                         )
                         points.append(point)
-                        print(f"  ✅ Point created successfully")
 
                     except Exception as point_error:
-                        print(f"  ❌ Point creation failed: {point_error}")
                         continue
 
                 # Upsert with error handling
                 if points:
-                    print(f"Attempting to upsert {len(points)} points to Qdrant...")
                     qdrant_client.upsert(
                         collection_name=qdrant_collection, points=points
                     )
-                    print(
-                        f"✅ Successfully upserted {len(points)} chunks to Qdrant for document {document_id}"
-                    )
                 else:
-                    print("⚠️ No valid points to upsert")
 
+                    pass
             except Exception as e:
-                print(f"❌ Failed to upsert to Qdrant: {str(e)}")
-                print(f"Error type: {type(e)}")
                 import traceback
 
-                print(f"Traceback: {traceback.format_exc()}")
                 # Continue processing even if Qdrant fails
 
         return {
@@ -1175,8 +1059,6 @@ def decrypt_token(token: str) -> dict:
         return json.loads(plaintext)
 
     except Exception as e:
-        print(f"Error decrypting token: {str(e)}")
-        print(traceback.format_exc())
         raise
 
 
@@ -1186,25 +1068,15 @@ async def get_current_user(
     """Get current user from Next.js session token."""
     try:
         token = credentials.credentials
-        print(f"Received token: {token[:20]}...")
 
         # Enhanced debugging
-        print(f"Token length: {len(token)}")
-        print(f"Token parts: {len(token.split('.'))}")
-        print(
-            f"Token format: {'JWE' if len(token.split('.')) == 5 else 'JWT' if len(token.split('.')) == 3 else 'Unknown'}"
-        )
 
         # Print NEXTAUTH_SECRET for debugging
         secret = settings.NEXTAUTH_SECRET
-        print(f"Using NEXTAUTH_SECRET: {secret[:5] if secret else 'Not set'}...")
-        print(f"NEXTAUTH_SECRET length: {len(secret) if secret else 0}")
 
         # Decrypt the token
         try:
             payload = decrypt_token(token)
-            print("Successfully decrypted token")
-            print(f"Decoded payload: {json.dumps(payload, indent=2)}")
 
             # Check if user is active
             user_id = payload.get("id")
@@ -1214,12 +1086,9 @@ async def get_current_user(
 
             return payload
         except Exception as e:
-            print(f"Token decryption error: {str(e)}")
             raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
     except Exception as e:
-        print(f"Authentication error: {str(e)}")
-        print(traceback.format_exc())
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
 

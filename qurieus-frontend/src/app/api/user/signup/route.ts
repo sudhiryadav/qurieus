@@ -41,7 +41,6 @@ export async function POST(req: Request) {
         });
 
         // Send new verification email
-        logger.info("User Signup API: Sending verification email", { email, verificationCode });
         await sendVerificationEmail(email, verificationCode);
 
         const responseTime = Date.now() - startTime;
@@ -58,14 +57,12 @@ export async function POST(req: Request) {
       }
 
       // If user is already verified, return conflict status
-      logger.warn("User Signup API: Attempted signup with existing verified email", { email });
       return NextResponse.json(
         { error: "User with this email already exists" },
         { status: 409 }
       );
     }
 
-    logger.info("User Signup API: Creating new user", { email, name });
 
     // Generate verification code for new user
     const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -109,7 +106,6 @@ export async function POST(req: Request) {
       stack: error.stack 
     });
     
-    console.error("Registration error:", error);
     return NextResponse.json(
       { error: "Registration failed. Please try again." },
       { status: 500 }

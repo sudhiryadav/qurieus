@@ -75,7 +75,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (re
     const session = await getServerSession(authOptions);
     const userId = session!.user!.id;
 
-    logger.info("Documents API: Fetching documents", { userId });
 
     // Only fetch documents from the local database
     const documents = await prisma.document.findMany({
@@ -124,7 +123,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (re
       stack: error.stack 
     });
     
-    console.error("Error fetching documents:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to fetch documents" },
       { status: error.response?.status || 500 },
@@ -137,7 +135,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (r
   let userId: string | undefined;
   
   try {
-    logger.info("Documents API: Processing file upload request");
     const session = await getServerSession(authOptions);
 
     userId = session!.user!.id;
@@ -154,7 +151,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (r
     });
 
     if (!files || files.length === 0) {
-      logger.warn("Documents API: No files provided", { userId });
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
@@ -242,11 +238,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (r
       stack: error.stack 
     });
     
-    console.error("Error uploading files:", {
-      error: error.message,
-      stack: error.stack,
-      cause: error.cause,
-    });
 
     return NextResponse.json(
       {
@@ -303,12 +294,6 @@ async function processWithBackend(files: File[], description: string, category: 
       errorDetail = backendResponse.statusText;
     }
 
-    console.error("Upload error details:", {
-      status: backendResponse.status,
-      statusText: backendResponse.statusText,
-      errorDetail,
-      headers: Object.fromEntries(backendResponse.headers.entries()),
-    });
 
     return NextResponse.json(
       {

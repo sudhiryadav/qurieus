@@ -12,7 +12,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest)
     const jobs = await crawlJobManager.getAllJobs();
     return NextResponse.json(jobs);
   } catch (error) {
-    console.error("Error getting crawl jobs:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -80,7 +80,6 @@ export default function UserLayoutContent({
           }
         }
       } catch (error) {
-        console.error("Error checking subscription:", error);
         showToast.error("Error checking subscription status.");
       } finally {
         setIsSubscriptionChecked(true);

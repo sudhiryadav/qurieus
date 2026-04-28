@@ -10,7 +10,6 @@ export async function fixAgentChatCounts(): Promise<{ fixed: number; errors: num
   let errors = 0;
 
   try {
-    logger.info('Agent Chat Recovery: Starting automatic chat count fix');
 
     // Get all agents
     const agents = await prisma.agent.findMany({
@@ -78,7 +77,6 @@ export async function fixAgentChatCounts(): Promise<{ fixed: number; errors: num
  */
 export async function handleUserDisconnect(conversationId: string): Promise<boolean> {
   try {
-    logger.info('Agent Chat Recovery: Handling user disconnect', { conversationId });
 
     // Find the agent chat for this conversation
     const agentChat = await prisma.agentChat.findUnique({
@@ -91,7 +89,6 @@ export async function handleUserDisconnect(conversationId: string): Promise<bool
     });
 
     if (!agentChat) {
-      logger.info('Agent Chat Recovery: No agent chat found for conversation', { conversationId });
       return false;
     }
 
@@ -158,7 +155,6 @@ export async function cleanupOrphanedAgentChats(): Promise<{ cleaned: number; er
   let errors = 0;
 
   try {
-    logger.info('Agent Chat Recovery: Starting orphaned chat cleanup');
 
     // Find agent chats where the conversation no longer exists
     // We'll do this by checking if the conversation exists for each agent chat
@@ -235,7 +231,6 @@ export async function runAgentChatRecovery(): Promise<{
   orphanedCleaned: number;
   errors: number;
 }> {
-  logger.info('Agent Chat Recovery: Starting comprehensive recovery');
 
   const [chatCountsResult, orphanedResult] = await Promise.all([
     fixAgentChatCounts(),

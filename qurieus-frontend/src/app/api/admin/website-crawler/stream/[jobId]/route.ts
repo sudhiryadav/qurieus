@@ -7,16 +7,13 @@ export async function GET(
 ) {
   const { jobId } = await params;
   
-  console.log(`[SSE] Starting stream for job: ${jobId}`);
   
   try {
     // Verify job exists before starting stream
     const initialJob = await crawlJobManager.getJob(jobId);
     if (!initialJob) {
-      console.error(`[SSE] Job ${jobId} not found in initial lookup`);
       return new Response('Job not found', { status: 404 });
     }
-    console.log(`[SSE] Job ${jobId} found, status: ${initialJob.status}, pages: ${initialJob.crawledPages}/${initialJob.totalPages}`);
     
     // Set up SSE response
     const encoder = new TextEncoder();
@@ -26,14 +23,12 @@ export async function GET(
         let lastCrawledPages = initialJob.crawledPages;
         let consecutiveNotFound = 0;
         
-        console.log(`[SSE] Stream started for job: ${jobId}, initial pages: ${lastCrawledPages}`);
         
         // Function to send logs
         const sendLogs = async () => {
           try {
             // Check if controller is still open
             if (controller.desiredSize === null) {
-              console.log(`[SSE] Controller closed, stopping log updates for job: ${jobId}`);
               return;
             }
 
@@ -41,11 +36,7 @@ export async function GET(
             if (logs.length > lastLogCount) {
               // Send only new logs
               const newLogs = logs.slice(lastLogCount);
-              console.log(`[SSE] Sending ${newLogs.length} new logs for job: ${jobId}`);
               for (const log of newLogs) {
-                console.log(`[SSE] Sending log:`, log);
-                console.log(`[SSE] Log type:`, typeof log.type, log.type);
-                console.log(`[SSE] Log message:`, typeof log.message, log.message);
                 const logData = JSON.stringify({
                   type: 'log',
                   message: log.message,
@@ -53,16 +44,13 @@ export async function GET(
                   url: log.url,
                   timestamp: log.timestamp
                 });
-                console.log(`[SSE] Log data being sent:`, logData);
                 controller.enqueue(encoder.encode(`data: ${logData}\n\n`));
               }
               lastLogCount = logs.length;
             }
           } catch (error) {
-            console.error('Error sending logs:', error);
             // If there's an error with the controller, close the stream
             if (error instanceof Error && (error.message?.includes('Controller is already closed') || (error as any).code === 'ERR_INVALID_STATE')) {
-              console.log(`[SSE] Controller error detected in sendLogs, closing stream for job: ${jobId}`);
               clearInterval(interval);
               return;
             }
@@ -74,7 +62,6 @@ export async function GET(
           try {
             // Check if controller is still open
             if (controller.desiredSize === null) {
-              console.log(`[SSE] Controller closed, stopping status updates for job: ${jobId}`);
               return;
             }
 
@@ -82,11 +69,9 @@ export async function GET(
             if (job) {
               consecutiveNotFound = 0; // Reset counter
               
-              console.log(`[SSE] Job ${jobId} status check: current=${job.crawledPages}, last=${lastCrawledPages}, changed=${job.crawledPages > lastCrawledPages}`);
               
               // Send progress as a log if pages have changed
               if (job.crawledPages > lastCrawledPages) {
-                console.log(`[SSE] Progress update for job ${jobId}: ${lastCrawledPages} -> ${job.crawledPages}`);
                 const progressLogData = JSON.stringify({
                   type: 'log',
                   message: `Progress: ${job.crawledPages}/${job.totalPages} pages crawled (${Math.round((job.crawledPages / job.totalPages) * 100)}%)`,
@@ -108,7 +93,6 @@ export async function GET(
               
               // If job is completed or failed, close the stream
               if (job.status === 'completed' || job.status === 'failed') {
-                console.log(`[SSE] Job ${jobId} completed with status: ${job.status}`);
                 const completionData = JSON.stringify({
                   type: 'completed',
                   jobId,
@@ -123,11 +107,9 @@ export async function GET(
               }
             } else {
               consecutiveNotFound++;
-              console.warn(`[SSE] Job ${jobId} not found (attempt ${consecutiveNotFound})`);
               
               // If job is consistently not found, close the stream
               if (consecutiveNotFound >= 10) {
-                console.error(`[SSE] Job ${jobId} consistently not found, closing stream`);
                 const errorData = JSON.stringify({
                   type: 'log',
                   message: `Error: Job not found in database after ${consecutiveNotFound} attempts`,
@@ -141,10 +123,8 @@ export async function GET(
               }
             }
           } catch (error) {
-            console.error('Error sending status:', error);
             // If there's an error with the controller, close the stream
             if (error instanceof Error && (error.message?.includes('Controller is already closed') || (error as any).code === 'ERR_INVALID_STATE')) {
-              console.log(`[SSE] Controller error detected, closing stream for job: ${jobId}`);
               clearInterval(interval);
               return;
             }
@@ -160,7 +140,6 @@ export async function GET(
             await sendLogs();
             await sendStatus();
           } catch (error) {
-            console.error('Error in SSE polling:', error);
             clearInterval(interval);
             controller.close();
           }
@@ -168,7 +147,6 @@ export async function GET(
         
         // Clean up interval when stream is closed
         request.signal.addEventListener('abort', () => {
-          console.log(`[SSE] Stream aborted for job: ${jobId}`);
           clearInterval(interval);
           controller.close();
         });
@@ -186,7 +164,6 @@ export async function GET(
     });
     
   } catch (error) {
-    console.error('Error in SSE stream:', error);
     return new Response('Error', { status: 500 });
   }
 } 

@@ -57,7 +57,6 @@ export default function DocumentProgressTracker({
           }
         }
       } catch (error) {
-        console.error("Error polling document status:", error);
         // Continue polling even if there's an error
       }
     };

@@ -4,7 +4,6 @@ const path = require('path');
 // This script would typically use a library like Puppeteer or Sharp
 // to convert SVG to PNG. For now, we'll create a placeholder script.
 
-console.log('🚀 Generating Open Graph Images...');
 
 const ogImageContent = `
 <!-- Open Graph Image Generator -->
@@ -40,9 +39,6 @@ To generate PNG versions of the Open Graph images:
 const scriptPath = path.join(__dirname, 'og-image-generator.js');
 fs.writeFileSync(scriptPath, ogImageContent);
 
-console.log('✅ Open Graph image generator script created!');
-console.log('📁 Location: scripts/og-image-generator.js');
-console.log('📋 Follow the instructions in the script to generate PNG images');
 
 // Create a simple HTML file for testing OG images
 const testHTML = `
@@ -106,14 +102,4 @@ const testHTML = `
 const testHTMLPath = path.join(__dirname, '..', 'public', 'test-og.html');
 fs.writeFileSync(testHTMLPath, testHTML);
 
-console.log('✅ Test HTML file created!');
-console.log('📁 Location: public/test-og.html');
-console.log('🌐 Access at: http://localhost:8000/test-og.html');
-console.log('🔗 Use this page to test social media sharing');
 
-console.log('\n📋 Next Steps:');
-console.log('1. Run the development server: yarn dev');
-console.log('2. Visit http://localhost:8000/test-og.html');
-console.log('3. Test sharing on social media platforms');
-console.log('4. Use the debugging tools listed on the test page');
-console.log('5. Generate PNG versions of the OG images for better compatibility'); 

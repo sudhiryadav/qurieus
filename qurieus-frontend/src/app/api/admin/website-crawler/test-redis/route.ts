@@ -11,16 +11,13 @@ export async function GET(request: NextRequest) {
     
     // Write test data
     await redis.set(testKey, JSON.stringify(testValue));
-    console.log('Test data written to Redis');
     
     // Read test data
     const stored = await redis.get(testKey);
     const parsed = stored ? JSON.parse(stored) : null;
-    console.log('Test data read from Redis:', parsed);
     
     // Test crawl jobs key
     const crawlJobs = await redis.get('crawlJobs');
-    console.log('Crawl jobs in Redis:', crawlJobs ? JSON.parse(crawlJobs) : 'none');
     
     return NextResponse.json({
       success: true,
@@ -34,7 +31,6 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Redis test error:', error);
     return NextResponse.json(
       { error: 'Redis test failed', details: error },
       { status: 500 }

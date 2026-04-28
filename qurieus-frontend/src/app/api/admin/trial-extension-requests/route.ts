@@ -35,7 +35,6 @@ export const GET = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(async ()
 
     return NextResponse.json({ requests: sorted });
   } catch (error) {
-    console.error("Error fetching trial extension requests:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

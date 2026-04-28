@@ -2,7 +2,6 @@
 const puppeteer = require('puppeteer');
 
 async function testSmartwebCrawling() {
-    console.log('Testing smartweb.in crawling...');
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -40,7 +39,6 @@ async function testSmartwebCrawling() {
             }
         });
 
-        console.log('Navigating to https://www.smartweb.in/...');
 
         // Navigate to the page
         await page.goto('https://www.smartweb.in/', {
@@ -48,7 +46,6 @@ async function testSmartwebCrawling() {
             timeout: 30000
         });
 
-        console.log('Navigation completed');
 
         // Wait for content
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -58,28 +55,20 @@ async function testSmartwebCrawling() {
         for (const selector of selectors) {
             const element = await page.$(selector);
             if (element) {
-                console.log(`Found selector: ${selector}`);
                 const text = await page.$eval(selector, el => el.textContent);
-                console.log(`Text length: ${text.length}`);
-                console.log(`First 200 chars: ${text.substring(0, 200)}`);
             }
         }
 
         // Get full HTML
         const html = await page.content();
-        console.log(`Total HTML length: ${html.length}`);
 
         // Get page title
         const title = await page.title();
-        console.log(`Page title: ${title}`);
 
         // Check if page has any text content
         const bodyText = await page.$eval('body', el => el.textContent);
-        console.log(`Body text length: ${bodyText.length}`);
-        console.log(`Body text preview: ${bodyText.substring(0, 300)}`);
 
     } catch (error) {
-        console.error('Error during test:', error);
     } finally {
         await browser.close();
     }

@@ -63,12 +63,10 @@ async function getUserWithCache(userId: string) {
     // Try to get from cache first
     const cachedUser = await cacheGet(cacheKey);
     if (cachedUser) {
-      logger.info(`User cache hit for ${userId}`);
       return JSON.parse(cachedUser);
     }
     
     // Cache miss, fetch from database
-    logger.info(`User cache miss for ${userId}, fetching from database`);
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { 
@@ -92,12 +90,10 @@ async function getUserWithCache(userId: string) {
     if (user) {
       // Cache the user data
       await cacheSet(cacheKey, JSON.stringify(user), USER_CACHE_TTL);
-      logger.info(`User cached for ${userId} with TTL ${USER_CACHE_TTL}s`);
     }
     
     return user;
   } catch (error) {
-    logger.error(`Error in getUserWithCache for ${userId}:`, error);
     // Fallback to database query if cache fails
     return await prisma.user.findUnique({
       where: { id: userId },
@@ -134,7 +130,6 @@ function RequireRoles(roles: UserRole[], actionName?: string) {
         const session = await getServerSession(authOptions);
         
         if (!session?.user?.id) {
-          logger.warn(`${guardName}: Unauthorized access attempt`);
           return errorResponse({ 
             error: "Unauthorized", 
             status: 401,
@@ -321,9 +316,7 @@ export async function invalidateUserCache(userId: string) {
     const cacheKey = generateUserCacheKey(userId);
     const redis = getRedis();
     await redis.del(cacheKey);
-    logger.info(`User cache invalidated for ${userId}`);
   } catch (error) {
-    logger.error(`Error invalidating user cache for ${userId}:`, error);
   }
 }
 
@@ -334,9 +327,7 @@ export async function invalidateAllUserCaches() {
     const keys = await redis.keys(`${USER_CACHE_PREFIX}*`);
     if (keys.length > 0) {
       await redis.del(...keys);
-      logger.info(`Invalidated ${keys.length} user caches`);
     }
   } catch (error) {
-    logger.error('Error invalidating all user caches:', error);
   }
 } 

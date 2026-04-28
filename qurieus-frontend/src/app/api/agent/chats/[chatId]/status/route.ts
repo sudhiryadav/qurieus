@@ -41,7 +41,6 @@ export const PUT = RequireRoles([UserRole.AGENT])(async (request: Request, conte
         });
         chatId = chatIdFromUrl;
       } else {
-        logger.error("Agent Status API: Missing chatId in params and URL", { params, pathParts });
         return errorResponse({ error: "Missing chat ID", status: 400 });
       }
     } else {
@@ -65,7 +64,6 @@ export const PUT = RequireRoles([UserRole.AGENT])(async (request: Request, conte
     });
 
     if (!agentChat || agentChat.agentId !== agentId) {
-      logger.warn("Agent Status API: Agent not assigned to chat", { agentId, chatId });
       return errorResponse({ error: "Access denied - Not assigned to this chat", status: 403 });
     }
 

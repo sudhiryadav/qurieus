@@ -52,7 +52,6 @@ export default function KnowledgeBase() {
       const response = await axiosInstance.get("/api/documents");
       setDocuments(response.data.documents || []);
     } catch (error) {
-      console.error("Error fetching documents:", error);
       showToast.error("Failed to fetch documents");
       setDocuments([]);
     } finally {
@@ -142,20 +141,15 @@ export default function KnowledgeBase() {
               window.URL.revokeObjectURL(url);
               showToast.success('Download started');
             } catch (error) {
-              console.error("Error downloading document:", error);
               showToast.error("Failed to download document");
             }
           }}
           onDelete={async (documentId: string) => {
-            console.log('🗑️ KnowledgeBase: onDelete called for document:', documentId);
             try {
-              console.log('📡 KnowledgeBase: Making DELETE request to API');
               await axiosInstance.delete(`/api/documents/${documentId}`);
-              console.log('✅ KnowledgeBase: DELETE request successful');
               showToast.success('Document deleted successfully');
               fetchDocuments(); // Refresh the list
             } catch (error) {
-              console.error("❌ KnowledgeBase: Error deleting document:", error);
               showToast.error("Failed to delete document");
             }
           }}

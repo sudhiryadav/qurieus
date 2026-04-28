@@ -30,7 +30,6 @@ export async function ensureSingleActiveSubscription(
     },
   });
 
-  logger.info(`Deactivated ${result.count} other active subscriptions for user ${userId}`);
   return result;
 }
 

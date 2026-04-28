@@ -75,7 +75,6 @@ export default function AdminPlansPage() {
         const { data } = await axios.get("/api/admin/subscription-plans");
         setPlans(data);
       } catch (error) {
-        console.error("Error fetching plans:", error);
         showToast.error("Failed to load plans");
       } finally {
         setLoading(false);
@@ -143,10 +142,8 @@ export default function AdminPlansPage() {
       });
     } catch (error) {
       if (editingPlan) {
-        console.error("Error updating subscription plan:", error);
         showToast.error("Failed to update subscription plan");
       } else {
-      console.error("Error creating plan:", error);
       showToast.error("Failed to create plan");
       }
     }
@@ -172,7 +169,6 @@ export default function AdminPlansPage() {
       setIsDeactivateModalOpen(false);
       setPlanToDeactivate(null);
     } catch (error) {
-      console.error("Error deactivating plan:", error);
               showToast.error("Failed to archive plan");
     } finally {
       setDeactivatingPlanId(null);
@@ -192,7 +188,6 @@ export default function AdminPlansPage() {
       ));
               showToast.success("Plan unarchived successfully");
     } catch (error) {
-      console.error("Error reactivating plan:", error);
               showToast.error("Failed to unarchive plan");
     } finally {
       setReactivatingPlanId(null);

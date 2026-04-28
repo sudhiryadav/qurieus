@@ -74,7 +74,4 @@ if not settings.NEXTAUTH_SECRET:
 
 # Print debug information in development
 if settings.DEBUG:
-    print(f"Environment: {settings.ENVIRONMENT}")
-    print(f"Debug mode: {settings.DEBUG}")
-    print(f"Frontend URL: {settings.FRONTEND_URL}")
-    print(f"NEXTAUTH_SECRET set: {'Yes' if settings.NEXTAUTH_SECRET else 'No'}")
+    pass

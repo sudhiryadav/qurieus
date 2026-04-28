@@ -121,7 +121,6 @@ export const PATCH = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextReques
     return NextResponse.json(userWithoutPassword);
     
   } catch (error: any) {
-    console.error("Error updating user:", error);
     return NextResponse.json(
       { 
         error: "Failed to update user",
@@ -187,7 +186,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest
     return NextResponse.json(userWithoutPassword);
     
   } catch (error: any) {
-    console.error("Error creating user:", error);
     return NextResponse.json(
       { 
         error: "Failed to create user",

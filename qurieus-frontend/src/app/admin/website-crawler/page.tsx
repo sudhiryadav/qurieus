@@ -76,7 +76,6 @@ export default function WebsiteCrawlerPage() {
       setExtractedContent('');
       setCurrentJobId(null);
 
-      console.log('Starting crawl...');
 
       // Send the crawl request via POST
       const response = await fetch('/api/admin/website-crawler/start', {
@@ -100,24 +99,18 @@ export default function WebsiteCrawlerPage() {
       const eventSource = new EventSource(`/api/admin/website-crawler/stream/${jobId}`);
       eventSourceRef.current = eventSource;
 
-      console.log('EventSource created for job:', jobId);
 
       // Handle SSE events
       eventSource.onopen = (event) => {
-        console.log('EventSource connection opened:', event);
       };
 
       eventSource.onmessage = (event) => {
         try {
           const data: StreamEvent = JSON.parse(event.data);
-          console.log('SSE Event received:', data);
-          console.log('SSE Event data type:', typeof data);
-          console.log('SSE Event data keys:', Object.keys(data));
 
           switch (data.type) {
             case 'log':
               if (data.message) {
-                console.log('Adding log to UI:', data.message);
                 // Ensure we're creating a proper log object with string values
                 const newLog: CrawlLog = {
                   message: typeof data.message === 'string' ? data.message : String(data.message),
@@ -126,16 +119,13 @@ export default function WebsiteCrawlerPage() {
                   url: typeof data.url === 'string' ? data.url : undefined,
                   timestamp: typeof data.timestamp === 'string' ? data.timestamp : new Date().toISOString()
                 };
-                console.log('Created log object:', newLog);
                 // Ensure all properties are strings before adding to state
                 if (typeof newLog.message === 'string' && typeof newLog.logType === 'string' && typeof newLog.timestamp === 'string') {
                   setLogs(prev => [...prev, newLog]);
                 } else {
-                  console.error('Invalid log object created:', newLog);
                 }
               } else if (typeof data === 'object' && data !== null) {
                 // Fallback: if we receive an object without a message, try to extract info
-                console.warn('Received log object without message:', data);
                 const fallbackLog: CrawlLog = {
                   message: JSON.stringify(data),
                   logType: 'warning',
@@ -147,7 +137,6 @@ export default function WebsiteCrawlerPage() {
 
             case 'status':
               if (data.current !== undefined && data.total !== undefined) {
-                console.log('Updating progress:', data.current, data.total, data.percentage);
                 setProgress({
                   current: data.current,
                   total: data.total,
@@ -166,16 +155,11 @@ export default function WebsiteCrawlerPage() {
                 // Fetch the final content
                 if (data.jobId) {
                   (async () => {
-                    console.log('Fetching job data for:', data.jobId);
                     const jobResponse = await fetch(`/api/admin/website-crawler/status/${data.jobId}`);
-                    console.log('Job response status:', jobResponse.status);
                     if (jobResponse.ok) {
                       const jobData = await jobResponse.json();
-                      console.log('Job data received:', jobData);
-                      console.log('Extracted content length:', jobData.extractedContent?.length || 0);
                       setExtractedContent(jobData.extractedContent || '');
                     } else {
-                      console.error('Failed to fetch job data:', jobResponse.status, jobResponse.statusText);
                     }
                   })();
                 }
@@ -185,20 +169,16 @@ export default function WebsiteCrawlerPage() {
               break;
           }
         } catch (error) {
-          console.error('Error parsing SSE event:', error);
         }
       };
 
       eventSource.onerror = (error) => {
-        console.error('SSE Error:', error);
-        console.error('EventSource readyState:', eventSource.readyState);
         setIsCrawling(false);
         eventSource.close();
         showToast.error('Connection lost');
       };
 
     } catch (error) {
-      console.error('Error starting crawl:', error);
       setIsCrawling(false);
       showToast.error('Failed to start crawl');
     }

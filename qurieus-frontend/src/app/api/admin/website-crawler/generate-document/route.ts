@@ -48,7 +48,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest
     });
 
   } catch (error) {
-    logger.error("Error generating document:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

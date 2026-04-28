@@ -139,13 +139,6 @@ export const POST = RequireRoles([UserRole.USER])(async (req: Request) => {
       stack: error.stack 
     });
     
-    console.error("Error updating subscription:", error);
-    console.error("Error details:", {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      config: error.config
-    });
     
     // Return more specific error messages
     if (error.response?.status === 405) {

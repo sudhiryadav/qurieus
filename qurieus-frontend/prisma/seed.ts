@@ -102,12 +102,10 @@ async function main() {
     });
   }
 
-  logger.info('Seeded admin and plans', { admin, plansSeeded: plans.length });
 }
 
 main()
   .catch((e) => {
-    logger.error(e);
     process.exit(1);
   })
   .finally(async () => {

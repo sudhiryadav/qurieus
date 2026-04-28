@@ -72,13 +72,11 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
           
           if (document.status === 'PROCESSED' || document.isProcessed) {
             // Processing completed
-            console.log('🎉 UploadDialog: Processing completed, showing completion message');
             showToast.success(`${fileName} processing completed!`);
             onUploadSuccess();
             return true; // Stop monitoring
           } else if (document.status === 'FAILED') {
             // Processing failed
-            console.log('❌ UploadDialog: Processing failed, showing error message');
             showToast.error(`${fileName} processing failed!`);
             return true; // Stop monitoring
           }
@@ -86,7 +84,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
         
         return false; // Continue monitoring
       } catch (error) {
-        console.error('Status check error:', error);
         return false; // Continue monitoring
       }
     };
@@ -143,7 +140,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
       if (selectedFiles.some(sf => sf.file.name === file.name) || 
           filesToAdd.some(nf => nf.file.name === file.name)) {
         errorMsg = `File "${file.name}" is already selected.`;
-        logger.warn("UploadDialog: Duplicate file detected", { fileName: file.name });
       }
       // Check file size (only for non-super-admin users)
       else if (!isSuperAdmin && file.size > MAX_FILE_SIZE_BYTES) {
@@ -224,7 +220,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
   };
 
   const handleReset = () => {
-    logger.info("UploadDialog: Resetting form");
     setSelectedFiles([]);
     setDescription("");
     setCategory("");
@@ -282,7 +277,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
     });
 
     if (validFiles.length === 0) {
-      logger.warn("UploadDialog: No valid files to upload");
       showToast.error("Please select at least one valid file to upload");
       return;
     }
@@ -316,7 +310,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
           
           if (document.status === 'PROCESSING' && !document.isProcessed) {
             // Background processing - show upload success without processing message
-            console.log('📤 UploadDialog: Showing upload success message for background processing');
             showToast.success(`${validFiles[0].file.name} uploaded successfully`);
             
             // Refresh list immediately so the new document (PROCESSING) appears
@@ -326,7 +319,6 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
             monitorProcessingStatus(document.id, document.aiDocumentId, validFiles[0].file.name);
           } else {
             // Processing completed immediately
-            console.log('✅ UploadDialog: Showing immediate success message');
             showToast.success(`${validFiles[0].file.name} uploaded and processed successfully!`);
             onUploadSuccess();
           }

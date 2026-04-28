@@ -14,17 +14,19 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      logger.warn("Paddle Direct Payment API: Unauthorized access attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     userId = session.user.id;
-    const { priceId, planId } = await req.json();
+    const { priceId, planId, checkoutAttemptId } = await req.json();
     
     logger.info("Paddle Direct Payment API: Processing direct payment", { 
       userId, 
       priceId, 
-      planId 
+      planId,
+      checkoutAttemptId: checkoutAttemptId || null,
+      nodeEnv: process.env.NODE_ENV,
+      hasPaddleApiKey: !!process.env.PADDLE_API_KEY,
     });
 
     if (!priceId || !planId) {
@@ -51,7 +53,6 @@ export async function POST(req: Request) {
     ]);
 
     if (!userSubscription?.paddleCustomerId) {
-      logger.warn("Paddle Direct Payment API: No payment method found", { userId });
       return NextResponse.json(
         { error: "No payment method found. Please use checkout." },
         { status: 400 }
@@ -59,7 +60,6 @@ export async function POST(req: Request) {
     }
 
     if (!plan) {
-      logger.warn("Paddle Direct Payment API: Plan not found", { userId, planId });
       return NextResponse.json({ error: "Plan not found" }, { status: 404 });
     }
 
@@ -67,7 +67,8 @@ export async function POST(req: Request) {
     if (userSubscription.paddleSubscriptionId && !userSubscription.paddleSubscriptionId.startsWith('trial_')) {
       logger.info("Paddle Direct Payment API: Updating existing subscription", { 
         userId, 
-        subscriptionId: userSubscription.paddleSubscriptionId 
+        subscriptionId: userSubscription.paddleSubscriptionId,
+        checkoutAttemptId: checkoutAttemptId || null,
       });
       
       try {
@@ -97,7 +98,8 @@ export async function POST(req: Request) {
         logger.info("Paddle Direct Payment API: Subscription updated successfully", { 
           userId, 
           subscriptionId: userSubscription.paddleSubscriptionId,
-          responseTime 
+          responseTime,
+          checkoutAttemptId: checkoutAttemptId || null,
         });
 
         return NextResponse.json({
@@ -111,10 +113,10 @@ export async function POST(req: Request) {
           userId, 
           subscriptionId: userSubscription.paddleSubscriptionId,
           error: error instanceof Error ? error.message : String(error),
-          responseTime 
+          responseTime,
+          checkoutAttemptId: checkoutAttemptId || null,
         });
         
-        console.error("Subscription update failed:", error);
         return NextResponse.json({
           success: false,
           needsCheckout: true,
@@ -124,7 +126,10 @@ export async function POST(req: Request) {
     }
 
     // Case 2: User exists in Paddle but no subscription - use checkout
-    logger.info("Paddle Direct Payment API: No existing subscription, redirecting to checkout", { userId });
+    logger.info("Paddle Direct Payment API: No existing subscription, redirecting to checkout", {
+      userId,
+      checkoutAttemptId: checkoutAttemptId || null,
+    });
     
     return NextResponse.json({
       success: false,
@@ -141,7 +146,6 @@ export async function POST(req: Request) {
       stack: error.stack 
     });
     
-    console.error("Error processing direct payment:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

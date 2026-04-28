@@ -7,7 +7,6 @@ import { UserRole } from "@prisma/client";
 
 export const POST = RequireRoles([UserRole.ADMIN])(async (request: NextRequest) => {
   try {
-    logger.info("Admin API: Manual agent chat recovery requested");
 
     const result = await manualAgentChatRecovery();
 

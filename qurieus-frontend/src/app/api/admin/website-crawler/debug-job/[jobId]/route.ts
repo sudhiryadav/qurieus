@@ -10,25 +10,21 @@ export async function GET(
     const { jobId } = await params;
     const redis = getRedis();
     
-    console.log(`[Debug] Testing job ${jobId}`);
     
     // Test 1: Direct Redis read
     const crawlJobsData = await redis.get('crawlJobs');
     const allJobs = crawlJobsData ? JSON.parse(crawlJobsData) : {};
     const jobInRedis = allJobs[jobId];
     
-    console.log(`[Debug] Job ${jobId} in Redis:`, jobInRedis);
     
     // Test 2: CrawlJobManager read
     const jobInManager = await crawlJobManager.getJob(jobId);
     
-    console.log(`[Debug] Job ${jobId} in Manager:`, jobInManager);
     
     // Test 3: Force reload and check again
     await crawlJobManager['initialize']();
     const jobAfterReload = await crawlJobManager.getJob(jobId);
     
-    console.log(`[Debug] Job ${jobId} after reload:`, jobAfterReload);
     
     // Test 4: Write a test value and read it back
     const testKey = `test:job:${jobId}`;
@@ -43,7 +39,6 @@ export async function GET(
     const testRead = await redis.get(testKey);
     const testParsed = testRead ? JSON.parse(testRead) : null;
     
-    console.log(`[Debug] Test write/read for job ${jobId}:`, testParsed);
     
     return NextResponse.json({
       jobId,
@@ -69,7 +64,6 @@ export async function GET(
     });
     
   } catch (error) {
-    console.error('Debug job error:', error);
     return NextResponse.json(
       { error: 'Debug failed', details: error },
       { status: 500 }

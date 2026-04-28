@@ -50,7 +50,6 @@ export default function Dashboard() {
       const response = await axiosInstance.get('/api/admin/analytics/dashboard');
       setDashboardData(response.data);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }

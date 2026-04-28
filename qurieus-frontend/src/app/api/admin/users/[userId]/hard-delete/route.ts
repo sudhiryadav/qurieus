@@ -148,7 +148,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(
               must: [{ key: "user_id", match: { value: userId } }],
             },
           });
-          logger.info("Hard delete: Qdrant user_id sweep completed", { targetUserId: userId });
         } catch (sweepError: unknown) {
           logger.warn("Hard delete: Qdrant user_id sweep failed", {
             targetUserId: userId,

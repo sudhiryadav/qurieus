@@ -140,7 +140,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN, UserRole.USER])(async (re
       stack: error.stack 
     });
     
-    console.error("Error fetching analytics:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to fetch analytics" },
       { status: error.response?.status || 500 }
@@ -179,7 +178,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (req: NextRequest
       stack: error.stack 
     });
     
-    console.error('Error updating analytics:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }); 

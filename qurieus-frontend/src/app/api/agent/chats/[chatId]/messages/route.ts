@@ -46,7 +46,6 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
         });
         chatId = chatIdFromUrl;
       } else {
-        logger.error("Agent Message API: Missing chatId in params and URL", { params, pathParts });
         return errorResponse({ error: "Missing chat ID", status: 400 });
       }
     } else {
@@ -65,7 +64,6 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
     });
     
     if (!conversation) {
-      logger.error("Agent Message API: Conversation not found", { chatId });
       return errorResponse({ error: "Conversation not found", status: 404 });
     }
 
@@ -75,7 +73,6 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
       select: { agentId: true, status: true, conversationId: true }
     });
     if (!agentChat || agentChat.agentId !== agentId) {
-      logger.warn("Agent Message API: Agent not assigned to chat", { agentId, chatId });
       return errorResponse({ error: "Access denied - Not assigned to this chat", status: 403 });
     }
     if (agentChat.status === "RESOLVED" || agentChat.status === "CLOSED") {
@@ -89,12 +86,10 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
     });
     
     if (!agentUser) {
-      logger.error("Agent Message API: Agent user not found", { agentId });
       return errorResponse({ error: "Agent not found", status: 404 });
     }
     
     if (agentUser.role !== "AGENT") {
-      logger.error("Agent Message API: User is not an agent", { agentId, role: agentUser.role });
       return errorResponse({ error: "User is not an agent", status: 403 });
     }
 
@@ -152,7 +147,6 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
           });
         }
       } else {
-        logger.warn("Agent Message API: Socket.IO not available");
       }
     } catch (socketError) {
       logger.warn("Agent Message API: Failed to emit Socket.IO event", { 
@@ -160,7 +154,6 @@ export const POST = RequireRoles([UserRole.AGENT])(async (request: Request, cont
       });
     }
 
-    logger.info("Agent Message API: Agent posted message", { agentId, chatId, messageId: message.id });
     return NextResponse.json({ success: true, message });
   } catch (error) {
     logger.error("Agent Message API: Error posting message", { 

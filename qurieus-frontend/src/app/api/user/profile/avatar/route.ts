@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
       message: "Avatar updated successfully",
     });
   } catch (error: any) {
-    console.error("Avatar upload error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to upload avatar" },
       { status: 500 }

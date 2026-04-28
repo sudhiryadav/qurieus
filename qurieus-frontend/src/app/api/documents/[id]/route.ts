@@ -34,11 +34,10 @@ async function deleteVectorsForDocument(userId: string, qdrantDocumentId: string
       const info = await qdrant.getCollection(config.QDRANT_COLLECTION);
       logger.info("deleteVectorsForDocument: Collection info", {
         collection: config.QDRANT_COLLECTION,
-        vectorCount: info.vectors_count,
+        vectorCount: info.indexed_vectors_count,
         pointsCount: info.points_count
       });
     } catch (infoError) {
-      logger.warn("deleteVectorsForDocument: Could not get collection info", { error: infoError });
     }
     
     const filter = {
@@ -55,9 +54,7 @@ async function deleteVectorsForDocument(userId: string, qdrantDocumentId: string
     
     await qdrant.delete(config.QDRANT_COLLECTION, { filter });
     
-    logger.info(`Deleted vectors for document ${qdrantDocumentId} from Qdrant`);
   } catch (error) {
-    logger.error(`Error deleting vectors from Qdrant for document ${qdrantDocumentId}:`, error);
     throw error;
   }
 }
@@ -67,19 +64,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('🚀 Document Delete API: Route called');
     const { id } = await params;
-    console.log('📝 Document Delete API: Document ID:', id);
     const session = await getServerSession(authOptions);
-    console.log('👤 Document Delete API: Session:', session?.user?.id ? 'Found' : 'Not found');
     
     // Debug: Log environment variables at the start
     const config = getQdrantConfig();
-    console.log('🔧 Document Delete API: Environment variables:', {
-      QDRANT_URL: config.QDRANT_URL ? 'SET' : 'NOT_SET',
-      QDRANT_COLLECTION: config.QDRANT_COLLECTION ? 'SET' : 'NOT_SET',
-      QDRANT_API_KEY: config.QDRANT_API_KEY ? 'SET' : 'NOT_SET'
-    });
     
     logger.info("Document Delete API: Environment check", {
       QDRANT_URL: config.QDRANT_URL ? 'SET' : 'NOT_SET',
@@ -88,7 +77,6 @@ export async function DELETE(
     });
     
     if (!session?.user?.id) {
-      logger.warn("Document Delete API: No authenticated session found");
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -97,7 +85,6 @@ export async function DELETE(
 
     // Check if user is admin (can delete any document) or regular user (can only delete own documents)
     const isAdmin = session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN';
-    console.log('🔐 Document Delete API: User role:', session.user.role, 'Is admin:', isAdmin);
 
     logger.info("Document Delete API: Processing delete request", { 
       userId: session.user.id,

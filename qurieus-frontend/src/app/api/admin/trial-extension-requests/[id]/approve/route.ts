@@ -78,7 +78,6 @@ export const POST = RequireRoles([UserRole.ADMIN, UserRole.SUPER_ADMIN])(
         message: `Trial extended by ${extensionDays} days. New end date: ${newPeriodEnd.toLocaleDateString()}`,
       });
     } catch (error) {
-      console.error("Error approving trial extension:", error);
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 }

@@ -33,7 +33,6 @@ ${content}
 
     return response;
   } catch (error) {
-    console.error("Error downloading crawled content:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

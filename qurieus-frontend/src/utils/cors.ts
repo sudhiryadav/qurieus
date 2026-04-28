@@ -82,7 +82,6 @@ export function withCors<T extends any[]>(
       const response = await handler(...args);
       return addCorsHeaders(response, customHeaders);
     } catch (error) {
-      console.error('API Error:', error);
       return corsErrorResponse(
         'Internal server error', 
         500, 

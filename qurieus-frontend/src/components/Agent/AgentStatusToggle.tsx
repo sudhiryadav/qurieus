@@ -56,27 +56,21 @@ export default function AgentStatusToggle({
   };
 
   const handleLogout = async () => {
-    console.log('Logout initiated...');
     try {
       // Set agent status to offline before logging out
-      console.log('Setting agent status to offline...');
       await axiosInstance.put('/api/agent/status', {
         isOnline: false,
         isAvailable: false
       });
-      console.log('Agent status updated successfully');
       
       // Sign out and redirect to frontend
-      console.log('Signing out...');
       const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
       await signOut({ 
         callbackUrl: frontendUrl,
         redirect: true 
       });
     } catch (error) {
-      console.error('Error during logout:', error);
       // Still sign out even if status update fails
-      console.log('Attempting fallback logout...');
       try {
         const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
         await signOut({ 
@@ -84,7 +78,6 @@ export default function AgentStatusToggle({
           redirect: true 
         });
       } catch (fallbackError) {
-        console.error('Fallback logout also failed:', fallbackError);
         // Force redirect as last resort
         const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
         window.location.href = frontendUrl;

@@ -33,7 +33,6 @@ export async function GET() {
       })),
     });
   } catch (error: unknown) {
-    console.error("User testimonials fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch your feedback history" },
       { status: 500 }

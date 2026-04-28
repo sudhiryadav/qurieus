@@ -45,7 +45,6 @@ export const GET = RequireRoles([UserRole.USER])(async (request: Request, user?:
 
     return NextResponse.json(subscription);
   } catch (error) {
-    console.error("Error fetching subscription:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

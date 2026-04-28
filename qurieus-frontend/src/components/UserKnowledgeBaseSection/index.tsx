@@ -62,7 +62,6 @@ export default function UserKnowledgeBaseSection({
       const response = await axiosInstance.get(`/api/admin/users/${userId}/documents`);
       setDocuments(response.data.documents || []);
     } catch (error) {
-      console.error("Error fetching user documents:", error);
       showToast.error("Failed to fetch documents");
       setDocuments([]);
     } finally {
@@ -129,7 +128,6 @@ export default function UserKnowledgeBaseSection({
                     handleUploadComplete();
                     showToast.success("Document deleted");
                   } catch (error) {
-                    console.error("Error deleting document:", error);
                     showToast.error("Failed to delete document");
                   }
                 }
@@ -152,7 +150,6 @@ export default function UserKnowledgeBaseSection({
               window.URL.revokeObjectURL(url);
               showToast.success("Download started");
             } catch (error) {
-              console.error("Error downloading:", error);
               showToast.error("Failed to download");
             }
           }}

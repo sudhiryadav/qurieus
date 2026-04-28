@@ -76,7 +76,6 @@ export default function SubscriptionPage() {
         showToast.info(response.data === null ? "No subscription found" : "Subscription details updated");
       }
     } catch (error) {
-      logger.error("Error fetching subscription:", error);
       showToast.error("Failed to load subscription details");
     } finally {
       setLoading(false);

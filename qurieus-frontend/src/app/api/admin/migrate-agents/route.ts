@@ -7,11 +7,9 @@ import { logger } from "@/lib/logger";
 export const POST = RequireRoles([UserRole.SUPER_ADMIN])(
   async (request: Request) => {
     try {
-      logger.info("Starting agent migration");
       
       const result = await createMissingAgentRecords();
       
-      logger.info("Agent migration completed", result);
       
       return NextResponse.json({
         success: true,
@@ -20,7 +18,6 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(
       });
       
     } catch (error) {
-      logger.error("Agent migration failed", { error });
       
       return NextResponse.json({
         success: false,

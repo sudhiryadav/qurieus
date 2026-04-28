@@ -105,7 +105,6 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
           setPreviousMessageCount(response.data.messages?.length || 0);
         }
       } catch (error) {
-        console.error('Error loading chat history:', error);
         toast.error('Failed to load chat history');
       }
     };
@@ -167,7 +166,6 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
       // This prevents duplication since the API endpoint emits the Socket.IO event
       
     } catch (error: any) {
-      console.error('Error sending message:', error);
       toast.error(error.response?.data?.error || 'Failed to send message');
       // Restore message if sending failed
       setMessage(messageToSend);
@@ -198,7 +196,6 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
         }
       }
     } catch (error: any) {
-      console.error('Error updating chat status:', error);
       toast.error(error.response?.data?.error || 'Failed to update chat status');
     } finally {
       setResolving(false);

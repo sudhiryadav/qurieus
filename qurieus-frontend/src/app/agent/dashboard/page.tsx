@@ -88,7 +88,6 @@ export default function AgentDashboard() {
         // Set agent status to online and available by default when they first load the dashboard
         await setDefaultAgentStatus();
       } catch (error) {
-        console.error('Error verifying agent role:', error);
         router.push('/dashboard');
         toast.error('Error verifying agent role.');
       }
@@ -108,10 +107,8 @@ export default function AgentDashboard() {
       if (response.data.success) {
         setIsOnline(true);
         setIsAvailable(true);
-        console.log('Agent status set to online and available');
       }
     } catch (error) {
-      console.error('Error setting default agent status:', error);
       // Don't show error toast as this is not critical for dashboard functionality
     }
   };
@@ -122,7 +119,6 @@ export default function AgentDashboard() {
       const response = await axiosInstance.get('/api/agent/chats');
       setChats(response.data.chats);
     } catch (error) {
-      console.error('Error loading assigned chats:', error);
       toast.error('Failed to load assigned chats');
     }
   };
@@ -136,7 +132,6 @@ export default function AgentDashboard() {
         setIsAvailable(response.data.status.isAvailable);
       }
     } catch (error) {
-      console.error('Error loading agent status:', error);
       // Don't show error toast for status loading as it's not critical
     }
   };
@@ -167,7 +162,6 @@ export default function AgentDashboard() {
       setIsAvailable(available);
       toast.success(`Status updated: ${online ? 'Online' : 'Offline'}, ${available ? 'Available' : 'Busy'}`);
     } catch (error) {
-      console.error('Error updating status:', error);
       toast.error('Failed to update status');
     }
   };
@@ -181,7 +175,6 @@ export default function AgentDashboard() {
       // Sign out from NextAuth
       await signOut({ callbackUrl: '/auth/signin' });
     } catch (error) {
-      console.error('Error during logout:', error);
       // Still sign out even if status update fails
       await signOut({ callbackUrl: '/auth/signin' });
     }
@@ -201,7 +194,6 @@ export default function AgentDashboard() {
         toast.success('Status updated successfully');
       }
     } catch (error: any) {
-      console.error('Error updating agent status:', error);
       toast.error(error.response?.data?.error || 'Failed to update status');
     }
   };
@@ -215,7 +207,6 @@ export default function AgentDashboard() {
           isAvailable: isAvailable
         });
       } catch (error) {
-        console.error('Error sending activity update:', error);
       }
     };
 

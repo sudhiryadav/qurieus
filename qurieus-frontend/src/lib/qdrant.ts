@@ -7,11 +7,6 @@ const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
 // Debug: Log Qdrant configuration
-console.log('🔧 Qdrant Configuration:', {
-  QDRANT_URL: QDRANT_URL ? 'SET' : 'NOT_SET',
-  QDRANT_COLLECTION: QDRANT_COLLECTION ? 'SET' : 'NOT_SET',
-  QDRANT_API_KEY: QDRANT_API_KEY ? 'SET' : 'NOT_SET'
-});
 
 // Initialize Qdrant client with API key if available
 export const qdrant = new QdrantClient({ 

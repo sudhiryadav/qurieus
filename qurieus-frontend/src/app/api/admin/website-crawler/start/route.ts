@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
   try {
     const { url, settings: partialSettings } = await request.json();
     
-    console.log('Starting crawl for:', url);
     
     // Merge with default settings
     const settings: CrawlSettings = {
@@ -35,7 +34,6 @@ export async function POST(request: NextRequest) {
     // Create a new crawl job
     const job = await crawlJobManager.createJob(url, settings.maxPages);
     
-    console.log('Created job:', job.id);
     
     // Start crawling in background
     (async () => {
@@ -63,10 +61,8 @@ export async function POST(request: NextRequest) {
           crawledPages: results.length
         });
         
-        console.log('Crawl completed for job:', job.id);
         
       } catch (error) {
-        console.error('Crawl error:', error);
         
         // Update job status
         await crawlJobManager.updateJob(job.id, {
@@ -86,7 +82,6 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error starting crawl:', error);
     return NextResponse.json(
       { error: 'Failed to start crawl' },
       { status: 500 }

@@ -33,8 +33,26 @@ export type PaddleCheckoutProps = {
   onUpdatePlan?: (subscriptionId: string, priceId: string) => void;
 };
 
+function getCheckoutErrorDetails(event: PaddleEventData): { message: string; raw: any } {
+  const eventAny = event as any;
+  const rawError =
+    eventAny?.error ||
+    eventAny?.data?.error ||
+    eventAny?.data?.errors?.[0] ||
+    eventAny?.data ||
+    null;
+
+  const message =
+    rawError?.message ||
+    rawError?.detail ||
+    rawError?.title ||
+    "Checkout could not be completed.";
+
+  return { message, raw: rawError };
+}
+
 export type PaddleCheckoutRef = {
-  openCheckout: (priceId: string, planId: string) => void;
+  openCheckout: (priceId: string, planId: string, checkoutAttemptId?: string) => void;
   redirectToCustomerPortal: (customerId: string) => void;
   closeCheckout: () => void;
   updatePlan: (subscriptionId: string, priceId: string) => void;
@@ -82,32 +100,30 @@ export const PaddleCheckout = forwardRef<
           });
           
           if (event.name === CheckoutEventNames.CHECKOUT_COMPLETED) {
-            logger.info("PaddleCheckout: Checkout completed, closing immediately");
             onComplete?.(event.data);
             // Close checkout immediately when payment is completed
             paddle?.Checkout.close();
           }
           if (event.name === CheckoutEventNames.CHECKOUT_CLOSED) {
-            logger.info("PaddleCheckout: Checkout closed");
             onClose?.(event.data);
           }
           if (event.name === CheckoutEventNames.CHECKOUT_ERROR) {
-            logger.error("PaddleCheckout: Checkout error", { error: event.error });
-            onError?.(event.error);
-            paddle?.Checkout.close();
+            const details = getCheckoutErrorDetails(event);
+            logger.error("PaddleCheckout: Checkout error", {
+              error: details.raw,
+              message: details.message,
+              eventData: event.data,
+            });
+            onError?.((details.raw || { message: details.message }) as CheckoutEventError);
           }
           if (event.name === CheckoutEventNames.CHECKOUT_FAILED) {
-            logger.error("PaddleCheckout: Checkout failed", { eventData: event.data });
             onFailed?.(event.data);
-            paddle?.Checkout.close();
           }
         },
       }).then((paddleInstance: Paddle | undefined) => {
         if (paddleInstance) {
-          logger.info("PaddleCheckout: Paddle initialized successfully");
           setPaddle(paddleInstance);
         } else {
-          logger.error("PaddleCheckout: Failed to initialize Paddle");
         }
       });
     }, [onComplete, onClose, onError, onFailed, paddle]);
@@ -122,9 +138,8 @@ export const PaddleCheckout = forwardRef<
       updatePlan,
     }));  
 
-    function openCheckout(priceId: string, planId: string) {
+    function openCheckout(priceId: string, planId: string, checkoutAttemptId?: string) {
       if (!paddle) {
-        logger.warn("PaddleCheckout: Attempted to open checkout without Paddle instance");
         return;
       }
       
@@ -138,37 +153,66 @@ export const PaddleCheckout = forwardRef<
         return;
       }
       
-      logger.info("PaddleCheckout: Opening checkout", {
-        userId: applicationCustomerId,
-        email: email,
-        name: name,
-        priceId: priceId,
-        planId: planId
-      });
-      
       const settings: CheckoutSettings = {
         theme: theme === "dark" ? "dark" : "light",
         displayMode: mode,
       };
+
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL || "";
+      const successUrl = `${origin}/user/subscription?checkout=success`;
+      const cancelUrl = `${origin}/pricing?checkout=cancelled`;
+
+      logger.info("PaddleCheckout: Opening checkout", {
+        checkoutAttemptId: checkoutAttemptId || null,
+        userId: applicationCustomerId,
+        email: email,
+        name: name,
+        priceId: priceId,
+        planId: planId,
+        mode,
+        theme: settings.theme,
+        displayMode: settings.displayMode,
+        successUrl,
+        cancelUrl,
+        hasClientToken: !!process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
+        clientTokenPrefix: (process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "").slice(0, 8),
+        locationOrigin: typeof window !== "undefined" ? window.location.origin : null,
+      });
       
+      const customData = buildPaddleCustomData({
+        application_customer_id: applicationCustomerId,
+        application_customer_email: email,
+        application_customer_name: name,
+        application_plan_id: planId,
+        session_id: session?.user?.id,
+        timestamp: Date.now().toString(),
+        tenantId: applicationCustomerId,
+        practiceId: applicationCustomerId,
+        orderId: `checkout_${applicationCustomerId}_${Date.now()}`,
+        plan: planId,
+        checkoutAttemptId: checkoutAttemptId || null,
+      });
+
+      logger.info("PaddleCheckout: Final checkout payload", {
+        checkoutAttemptId: checkoutAttemptId || null,
+        priceId,
+        planId,
+        customData,
+      });
+
       paddle.Checkout.open({
-        settings,
+        settings: {
+          ...settings,
+          successUrl,
+        } as CheckoutSettings,
         items: [{ priceId }],
         customer: { 
           email: email,
         },
-        customData: buildPaddleCustomData({
-          application_customer_id: applicationCustomerId,
-          application_customer_email: email,
-          application_customer_name: name,
-          application_plan_id: planId,
-          session_id: session?.user?.id,
-          timestamp: Date.now().toString(),
-          tenantId: applicationCustomerId,
-          practiceId: applicationCustomerId,
-          orderId: `checkout_${applicationCustomerId}_${Date.now()}`,
-          plan: planId,
-        }),
+        customData,
       });
     }
 
@@ -217,7 +261,6 @@ export const PaddleCheckout = forwardRef<
           priceId, 
           error: error.message 
         });
-        console.error("Error updating plan:", error);
         toast.error("Error updating plan. Please try again.");
       } finally {
         setIsUpdatingPlan(false);
@@ -227,11 +270,9 @@ export const PaddleCheckout = forwardRef<
     // New function to redirect to Paddle Customer Portal
     async function redirectToCustomerPortal(paddleCustomerId: string) {
       if (!paddleCustomerId) {
-        logger.error("PaddleCheckout: Paddle Customer ID is required to redirect to portal");
         return;
       }
 
-      logger.info("PaddleCheckout: Redirecting to customer portal", { paddleCustomerId });
 
       try {
         // Call your backend API to get the Customer Portal URL
@@ -241,17 +282,14 @@ export const PaddleCheckout = forwardRef<
         const { portalUrl } = response.data;
 
         if (portalUrl) {
-          logger.info("PaddleCheckout: Customer portal URL received", { paddleCustomerId });
           window.location.href = portalUrl; // Redirect the user
         } else {
-          logger.error("PaddleCheckout: No portal URL received from backend", { paddleCustomerId });
         }
       } catch (error: any) {
         logger.error("PaddleCheckout: Error redirecting to customer portal", { 
           paddleCustomerId, 
           error: error.message 
         });
-        console.error("Error redirecting to customer portal:", error);
         // Handle error, e.g., show a toast message
       }
     }

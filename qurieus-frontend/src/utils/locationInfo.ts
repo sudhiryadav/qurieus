@@ -38,7 +38,6 @@ export async function getLocationInfo() {
       coordinates,
     };
   } catch (error) {
-    console.error('Error getting location info:', error);
     return {
       timezone: 'unknown',
       language: 'unknown',

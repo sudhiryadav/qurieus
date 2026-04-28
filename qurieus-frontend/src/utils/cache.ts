@@ -43,7 +43,6 @@ export async function cacheGet(key: string): Promise<string | null> {
   try {
     return await redisClient.get(key);
   } catch (error) {
-    logger.error('Error getting from cache', error);
     return null;
   }
 }
@@ -52,7 +51,6 @@ export async function cacheSet(key: string, value: string, ttlSeconds: number = 
   try {
     await redisClient.set(key, value, ttlSeconds);
   } catch (error) {
-    logger.error('Error setting cache', error);
   }
 }
 
@@ -67,6 +65,5 @@ export async function invalidateAnalyticsCache(userId: string) {
       await redisClient.del(...keys);
     }
   } catch (error) {
-    logger.error('Error invalidating analytics cache', error);
   }
 } 

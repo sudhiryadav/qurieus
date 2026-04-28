@@ -13,11 +13,8 @@ export async function POST(req: NextRequest) {
     // Forward to Sentry/LogRocket using logger utility (do not log to backend again)
     const loggerOptions = { logToSentry: false, logToLogRocket: false, logToBackend: true };
     if (level === 'error') {
-      logger.error(message, meta, loggerOptions);
     } else if (level === 'warn') {
-      logger.warn(message, meta, loggerOptions);
     } else {
-      logger.info(message, meta, loggerOptions);
     }
 
     return NextResponse.json({ success: true }, { status: 201 });

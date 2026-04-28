@@ -27,7 +27,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
     });
 
     if (!targetUser) {
-      logger.warn("Admin Download API: Target user not found", { targetUserId: userId });
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
@@ -96,7 +95,8 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
       fileName: document.originalName || document.fileName,
     });
 
-    return new NextResponse(fileBuffer, { headers });
+    const responseBody = new Uint8Array(fileBuffer);
+    return new NextResponse(responseBody, { headers });
   } catch (error: any) {
     logger.error("Admin Download API: Error downloading document", {
       error: error.message,

@@ -7,7 +7,6 @@ async function fixAgentChatCounts() {
   let errors = 0;
 
   try {
-    console.log('🔧 Starting automatic chat count fix...');
 
     // Get all agents
     const agents = await prisma.agent.findMany({
@@ -18,7 +17,6 @@ async function fixAgentChatCounts() {
       }
     });
 
-    console.log(`Found ${agents.length} agents`);
 
     for (const agent of agents) {
       try {
@@ -39,22 +37,17 @@ async function fixAgentChatCounts() {
             data: { currentChats: actualOpenChats }
           });
 
-          console.log(`✅ Fixed agent ${agent.displayName}: ${agent.currentChats} → ${actualOpenChats}`);
           fixed++;
         } else {
-          console.log(`✅ Agent ${agent.displayName}: count is correct (${actualOpenChats})`);
         }
       } catch (error) {
-        console.error(`❌ Error fixing agent ${agent.displayName}:`, error.message);
         errors++;
       }
     }
 
-    console.log(`\n🎉 Recovery completed: ${fixed} fixed, ${errors} errors`);
 
     return { fixed, errors };
   } catch (error) {
-    console.error('❌ Error in fixAgentChatCounts:', error.message);
     return { fixed, errors: errors + 1 };
   } finally {
     await prisma.$disconnect();
@@ -64,10 +57,8 @@ async function fixAgentChatCounts() {
 // Run the recovery
 fixAgentChatCounts()
   .then(() => {
-    console.log('✅ Recovery script completed');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('❌ Recovery script failed:', error);
     process.exit(1);
   }); 

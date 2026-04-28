@@ -40,7 +40,6 @@ export async function GET() {
 
     return NextResponse.json({ testimonials: data });
   } catch (error: any) {
-    console.error("Testimonials fetch error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to fetch testimonials" },
       { status: 500 }
@@ -97,7 +96,6 @@ export async function POST(req: NextRequest) {
       message: "Thank you! Your testimonial has been submitted for review.",
     });
   } catch (error: any) {
-    console.error("Testimonial submit error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to submit testimonial" },
       { status: 500 }

@@ -51,7 +51,6 @@ export const DELETE = RequireRoles([UserRole.SUPER_ADMIN])(
       });
 
       if (!superAdmins.length) {
-        logger.warn("No active super admins found; hard-delete email not sent", { targetUserId: userId });
       } else {
         const emailPromises = superAdmins.map(async (admin) => {
           if (!admin.email) return;

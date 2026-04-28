@@ -11,7 +11,6 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      logger.warn("Documents API: No authenticated session found");
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -19,7 +18,6 @@ export async function GET(request: Request) {
     }
 
     const userId = session.user.id;
-    logger.info("Documents API: Fetching documents for user", { userId });
 
     // Fetch documents for the current user
     const { documents } = await fetchUserDocuments({ userId });
@@ -40,7 +38,6 @@ export async function GET(request: Request) {
       stack: error.stack 
     });
     
-    console.error("Error fetching documents:", error);
     return NextResponse.json(
       { error: "Failed to fetch documents" },
       { status: 500 }

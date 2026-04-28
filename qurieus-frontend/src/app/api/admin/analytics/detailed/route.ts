@@ -198,7 +198,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (request: Request)
       stack: error.stack 
     });
     
-    console.error("Error fetching detailed analytics:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to fetch detailed analytics" },
       { status: error.response?.status || 500 }

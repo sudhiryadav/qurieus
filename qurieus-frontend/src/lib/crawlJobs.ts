@@ -36,9 +36,7 @@ class CrawlJobManager {
     try {
       // Get Redis instance and store it
       this.redisInstance = getRedis();
-      console.log(`[CrawlJobManager] Using Redis instance:`, this.redisInstance.options.host, this.redisInstance.options.port);
     } catch (error) {
-      console.warn('Failed to initialize Redis:', error);
     }
   }
 
@@ -53,24 +51,18 @@ class CrawlJobManager {
     try {
       const redis = await this.getRedisInstance();
       if (!redis) {
-        console.error('Redis instance not available');
         return new Map();
       }
       
-      console.log(`Loading jobs from Redis key: ${this.redisKey}`);
       const stored = await redis.get(this.redisKey);
       if (stored) {
         const jobs = JSON.parse(stored);
         const jobsMap = new Map(Object.entries(jobs)) as Map<string, CrawlJob>;
-        console.log(`Loaded ${jobsMap.size} jobs from Redis`);
-        console.log(`Job IDs loaded:`, Array.from(jobsMap.keys()));
         return jobsMap;
       } else {
-        console.log(`No jobs found in Redis for key: ${this.redisKey}`);
         return new Map();
       }
     } catch (error) {
-      console.warn('Failed to load crawl jobs from Redis:', error);
       return new Map();
     }
   }
@@ -79,16 +71,12 @@ class CrawlJobManager {
     try {
       const redis = await this.getRedisInstance();
       if (!redis) {
-        console.error('Redis instance not available');
         return;
       }
       const jobsObject = Object.fromEntries(jobs);
       const jobsJson = JSON.stringify(jobsObject);
-      console.log(`Saving ${jobs.size} jobs to Redis, data size: ${jobsJson.length} bytes`);
       await redis.set(this.redisKey, jobsJson);
-      console.log(`Successfully saved jobs to Redis`);
     } catch (error) {
-      console.warn('Failed to save crawl jobs to Redis:', error);
     }
   }
 
@@ -105,7 +93,6 @@ class CrawlJobManager {
       updatedAt: new Date().toISOString()
     };
 
-    console.log(`Creating new job ${job.id} for URL: ${url}`);
     
     // Load current jobs from Redis
     const jobs = await this.loadJobsFromRedis();
@@ -116,41 +103,34 @@ class CrawlJobManager {
     // Save back to Redis
     await this.saveJobsToRedis(jobs);
     
-    console.log(`Job ${job.id} created and saved to Redis`);
     return job;
   }
 
   async getJob(jobId: string): Promise<CrawlJob | null> {
     try {
-      console.log(`Looking up job ${jobId}: starting Redis lookup`);
       
       // Always read from Redis (stateless)
       const jobs = await this.loadJobsFromRedis();
       const job = jobs.get(jobId);
       
       if (job) {
-        console.log(`Job ${jobId} details: status=${job.status}, pages=${job.crawledPages}/${job.totalPages}`);
         return job;
       } else {
-        console.log(`Job ${jobId} not found in Redis`);
         return null;
       }
     } catch (error) {
-      console.error(`Error getting job ${jobId}:`, error);
       return null;
     }
   }
 
   async updateJob(jobId: string, updates: Partial<CrawlJob>): Promise<void> {
     try {
-      console.log(`About to save job ${jobId} to Redis with ${updates.crawledPages} pages`);
       
       // Load current jobs from Redis
       const jobs = await this.loadJobsFromRedis();
       const job = jobs.get(jobId);
       
       if (!job) {
-        console.warn(`Job ${jobId} not found for update`);
         return;
       }
 
@@ -158,8 +138,6 @@ class CrawlJobManager {
       const updatedJob = { ...job, ...updates, updatedAt: new Date().toISOString() };
       jobs.set(jobId, updatedJob);
       
-      console.log(`Updated job ${jobId}:`, { crawledPages: updatedJob.crawledPages, totalPages: updatedJob.totalPages });
-      console.log(`Job ${jobId} now has ${updatedJob.crawledPages}/${updatedJob.totalPages} pages`);
       
       // Save back to Redis
       await this.saveJobsToRedis(jobs);
@@ -167,10 +145,8 @@ class CrawlJobManager {
       // Verify the save worked by reading it back
       const verificationJobs = await this.loadJobsFromRedis();
       const verificationJob = verificationJobs.get(jobId);
-      console.log(`Verification: Job ${jobId} in Redis has ${verificationJob?.crawledPages} pages`);
       
     } catch (error) {
-      console.error(`Error updating job ${jobId}:`, error);
     }
   }
 
@@ -181,13 +157,11 @@ class CrawlJobManager {
       const job = jobs.get(jobId);
       
       if (!job) {
-        console.warn(`Job ${jobId} not found for log addition`);
         return;
       }
 
       // Ensure message is a string
       const messageStr = typeof message === 'string' ? message : String(message);
-      console.log(`[CrawlJobManager] Adding log for job ${jobId}:`, { message: messageStr, type: logType });
 
       const log = {
         message: messageStr,
@@ -207,7 +181,6 @@ class CrawlJobManager {
       await this.saveJobsToRedis(jobs);
       
     } catch (error) {
-      console.error(`Error adding log to job ${jobId}:`, error);
     }
   }
 
@@ -217,7 +190,6 @@ class CrawlJobManager {
       const job = jobs.get(jobId);
       return job?.logs || [];
     } catch (error) {
-      console.error('Error getting logs for job:', error);
       return [];
     }
   }
@@ -227,7 +199,6 @@ class CrawlJobManager {
       const jobs = await this.loadJobsFromRedis();
       return Array.from(jobs.values());
     } catch (error) {
-      console.error('Error getting all jobs:', error);
       return [];
     }
   }
@@ -241,7 +212,6 @@ class CrawlJobManager {
       }
       return deleted;
     } catch (error) {
-      console.error(`Error deleting job ${jobId}:`, error);
       return false;
     }
   }
@@ -266,10 +236,8 @@ class CrawlJobManager {
       
       if (cleanedCount > 0) {
         await this.saveJobsToRedis(jobs);
-        console.log(`Cleaned up ${cleanedCount} old jobs`);
       }
     } catch (error) {
-      console.error('Error cleaning up old jobs:', error);
     }
   }
 
@@ -277,14 +245,9 @@ class CrawlJobManager {
   async debugJobs(): Promise<void> {
     try {
       const jobs = await this.loadJobsFromRedis();
-      console.log('=== Crawl Jobs Debug ===');
-      console.log(`Total jobs: ${jobs.size}`);
       Array.from(jobs.entries()).forEach(([id, job]) => {
-        console.log(`Job ${id}: ${job.status} - ${job.baseUrl}`);
       });
-      console.log('========================');
     } catch (error) {
-      console.error('Error debugging jobs:', error);
     }
   }
 }

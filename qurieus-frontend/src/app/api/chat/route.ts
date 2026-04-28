@@ -20,7 +20,6 @@ export const POST = RequireUser("Chat API")(async (request: Request, user: any) 
     });
 
     if (!message) {
-      logger.warn("Chat API: Missing message in request", { userId });
       return NextResponse.json(
         { error: "Message is required" },
         { status: 400 }
@@ -62,7 +61,6 @@ export const POST = RequireUser("Chat API")(async (request: Request, user: any) 
       stack: error.stack 
     });
     
-    console.error("Error in chat:", error);
     return NextResponse.json(
       { error: error.response?.data?.error || "Failed to process chat message" },
       { status: error.response?.status || 500 }
