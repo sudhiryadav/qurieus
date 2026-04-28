@@ -15,7 +15,7 @@
     "test": "npm run lint"
   },
   "engines": {
-    "node": ">=18 <25"
+    "node": ">=24 <25"
   },
   "author": "Sudhir Yadav <er.sudhir.yadav@gmail.com>",
   "license": "MIT",
