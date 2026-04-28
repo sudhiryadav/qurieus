@@ -53,6 +53,7 @@ function getCheckoutErrorDetails(event: PaddleEventData): { message: string; raw
 
 export type PaddleCheckoutRef = {
   openCheckout: (priceId: string, planId: string, checkoutAttemptId?: string) => void;
+  openRecoveryCheckout: (transactionId: string) => boolean;
   redirectToCustomerPortal: (customerId: string) => void;
   closeCheckout: () => void;
   updatePlan: (subscriptionId: string, priceId: string) => void;
@@ -130,6 +131,7 @@ export const PaddleCheckout = forwardRef<
 
     useImperativeHandle(ref, () => ({
       openCheckout,
+      openRecoveryCheckout,
       redirectToCustomerPortal,
       closeCheckout: () => {
         if (!paddle) return;
@@ -214,6 +216,39 @@ export const PaddleCheckout = forwardRef<
         },
         customData,
       });
+    }
+
+    function openRecoveryCheckout(transactionId: string): boolean {
+      if (!paddle || !transactionId) {
+        return false;
+      }
+
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL || "";
+      const successUrl = `${origin}/user/subscription?checkout=success`;
+
+      const settings: CheckoutSettings = {
+        theme: theme === "dark" ? "dark" : "light",
+        displayMode: mode,
+      };
+
+      logger.info("PaddleCheckout: Opening recovery checkout", {
+        transactionId,
+        successUrl,
+        mode,
+        theme: settings.theme,
+      });
+
+      paddle.Checkout.open({
+        transactionId,
+        settings: {
+          ...settings,
+          successUrl,
+        } as CheckoutSettings,
+      });
+      return true;
     }
 
     async function updatePlan(subscriptionId: string, priceId: string) {

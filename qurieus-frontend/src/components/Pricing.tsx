@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import AuthModal from "@/components/Auth/AuthModal";
 import { PaddleCheckout, PaddleCheckoutRef } from "@/components/PaddleCheckout";
@@ -29,6 +29,7 @@ export default function Pricing({
   hideFreeTrialWhenExpired?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState<string | null>(null);
   const [loadingPricing, setLoadingPricing] = useState(false);
   const { data: session } = useSession();
@@ -46,6 +47,45 @@ export default function Pricing({
     useState<UserSubscription | null>(null);
   const { subscriptionPlan, setSubscriptionPlan } = useSubscription();
   const [overlayLoading, setOverlayLoading] = useState(false);
+  const hasTriggeredRecoveryRef = useRef(false);
+
+  useEffect(() => {
+    const paddleAction = searchParams?.get("_paction");
+    const transactionId = searchParams?.get("_ptxn");
+
+    if (paddleAction !== "recovery" || !transactionId) {
+      return;
+    }
+    if (hasTriggeredRecoveryRef.current) {
+      return;
+    }
+    hasTriggeredRecoveryRef.current = true;
+
+    logger.info("Pricing: Detected Paddle recovery params", {
+      paddleAction,
+      transactionId,
+    });
+    showToast.info("Resuming your previous checkout...");
+
+    // Paddle is initialized asynchronously. Retry briefly until it is ready.
+    let attempts = 0;
+    const maxAttempts = 8;
+    const intervalId = setInterval(() => {
+      attempts += 1;
+      const opened = paddleRef.current?.openRecoveryCheckout(transactionId) ?? false;
+      if (opened) {
+        clearInterval(intervalId);
+        router.replace("/pricing?checkout=recovery");
+      } else if (attempts >= maxAttempts) {
+        clearInterval(intervalId);
+        showToast.error("Unable to resume checkout automatically. Please try selecting your plan again.");
+      }
+    }, 300);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [searchParams, router]);
 
   function purchaseTypeForZeroPricePlan(
     plan: SubscriptionPlanWithPaddle,
