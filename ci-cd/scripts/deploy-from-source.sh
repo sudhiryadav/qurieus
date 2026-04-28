@@ -71,10 +71,10 @@ install_nvm_if_missing() {
   ensure_nvm_loaded
 }
 
-use_repo_node_version() {
-  local nvmrc="$REPO_DIR/.nvmrc"
+use_node_version_from_nvmrc() {
+  local nvmrc="$1"
   if [ ! -f "$nvmrc" ]; then
-    echo "❌ No .nvmrc found in repo. Refusing to continue without an explicit Node version."
+    echo "❌ No .nvmrc found at $nvmrc. Refusing to continue without an explicit Node version."
     return 1
   fi
 
@@ -90,7 +90,7 @@ use_repo_node_version() {
     return 1
   }
 
-  echo "🟢 Using Node $node_version from .nvmrc"
+  echo "🟢 Using Node $node_version from $(dirname "$nvmrc")/.nvmrc"
   nvm install "$node_version"
   nvm use "$node_version"
 
@@ -103,6 +103,20 @@ use_repo_node_version() {
 
   echo "✅ Active Node version: $active_node"
   return 0
+}
+
+use_repo_node_version() {
+  use_node_version_from_nvmrc "$REPO_DIR/.nvmrc"
+}
+
+use_app_node_version() {
+  local app_dir="$1"
+  local app_nvmrc="$REPO_DIR/$app_dir/.nvmrc"
+  if [ -f "$app_nvmrc" ]; then
+    use_node_version_from_nvmrc "$app_nvmrc"
+  else
+    use_repo_node_version
+  fi
 }
 
 use_repo_node_version || exit 1
@@ -181,6 +195,7 @@ grep -q '^AUTH_TRUST_HOST=' "$REPO_DIR/qurieus-frontend/.env" 2>/dev/null || ech
 # Deploy Frontend
 if [ "$FRONTEND_CHANGED" = "true" ]; then
   echo "📦 Deploying Frontend..."
+  use_app_node_version "qurieus-frontend" || exit 1
   cd "$REPO_DIR/qurieus-frontend"
   PKG_CHANGED=$(packages_changed "qurieus-frontend")
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile
@@ -215,6 +230,7 @@ fi
 # Deploy Bot
 if [ "$BOT_CHANGED" = "true" ]; then
   echo "📦 Deploying MSTeams Bot..."
+  use_app_node_version "qurieus-bot-teams" || exit 1
   cd "$REPO_DIR/qurieus-bot-teams"
   PKG_CHANGED=$(packages_changed "qurieus-bot-teams")
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile
