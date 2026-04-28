@@ -4,6 +4,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
+  serverExternalPackages: ["handlebars"],
   productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [

@@ -2,6 +2,9 @@
   "name": "qurieus-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "dev": "PORT=8000 NODE_NO_WARNINGS=1 NEXTAUTH_URL=http://localhost:8000 NEXT_PUBLIC_BUILD_TIME=dev node server.js",
     "build": "next build",

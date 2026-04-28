@@ -48,6 +48,65 @@ else
   PREV_HEAD=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD")
 fi
 
+ensure_nvm_loaded() {
+  [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" --no-use
+  command -v nvm >/dev/null 2>&1
+}
+
+install_nvm_if_missing() {
+  if ensure_nvm_loaded; then
+    return 0
+  fi
+
+  echo "📦 nvm not found. Installing nvm..."
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+  else
+    echo "❌ Neither curl nor wget is available to install nvm."
+    return 1
+  fi
+
+  ensure_nvm_loaded
+}
+
+use_repo_node_version() {
+  local nvmrc="$REPO_DIR/.nvmrc"
+  if [ ! -f "$nvmrc" ]; then
+    echo "❌ No .nvmrc found in repo. Refusing to continue without an explicit Node version."
+    return 1
+  fi
+
+  local node_version
+  node_version=$(tr -d '[:space:]' < "$nvmrc")
+  if [ -z "$node_version" ]; then
+    echo "❌ .nvmrc is empty. Refusing to continue."
+    return 1
+  fi
+
+  install_nvm_if_missing || {
+    echo "❌ Unable to install/load nvm; cannot guarantee Node version."
+    return 1
+  }
+
+  echo "🟢 Using Node $node_version from .nvmrc"
+  nvm install "$node_version"
+  nvm use "$node_version"
+
+  local active_node
+  active_node=$(node -v 2>/dev/null || true)
+  if [ -z "$active_node" ]; then
+    echo "❌ Node is not available even after nvm use."
+    return 1
+  fi
+
+  echo "✅ Active Node version: $active_node"
+  return 0
+}
+
+use_repo_node_version || exit 1
+
 packages_changed() {
   local app_path=$1
   git diff --name-only $PREV_HEAD HEAD -- "$app_path/package.json" "$app_path/yarn.lock" 2>/dev/null | grep -q . && echo "yes" || echo "no"

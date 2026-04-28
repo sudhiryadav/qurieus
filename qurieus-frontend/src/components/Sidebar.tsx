@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, User, Upload, BarChart3, Code, CreditCard, X, Users as UsersIcon, MessageSquare, Globe, Clock, Star, Activity } from "lucide-react";
+import { LayoutDashboard, User, Upload, BarChart3, Code, CreditCard, X, Users as UsersIcon, MessageSquare, Globe, Clock, Star, Activity, Settings } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -27,6 +27,7 @@ const adminNav = [
   { name: "Email Broadcast", href: "/admin/email-broadcast", icon: <MessageSquare className="h-4 w-4 mr-2" /> },
   { name: "Testimonials", href: "/admin/testimonials", icon: <Star className="h-4 w-4 mr-2" /> },
   { name: "Services", href: "/admin/services", icon: <Activity className="h-4 w-4 mr-2" /> },
+  { name: "Settings", href: "/admin/settings", icon: <Settings className="h-4 w-4 mr-2" />, superAdminOnly: true },
 ];
 
 const Sidebar = () => {
@@ -81,6 +82,9 @@ const Sidebar = () => {
               </p>
               <div className="space-y-0.5">
                 {adminNav.map((item) => {
+                  if (item.superAdminOnly && session?.user?.role !== "SUPER_ADMIN") {
+                    return null;
+                  }
                   const isActive = pathname === item.href;
                   return (
                     <Link
