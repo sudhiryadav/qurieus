@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 # Now we can import using absolute paths
 from app.core.config import settings
 from app.api.v1.endpoints import documents
-from generate_postman import generate_postman_collection
 from contextlib import asynccontextmanager
 import os
 
@@ -13,11 +12,6 @@ import os
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application."""
-    # Startup: generate Postman collection
-    try:
-        generate_postman_collection(app)
-    except Exception as e:
-        pass
     yield
     # Shutdown: add cleanup logic here if needed
 
@@ -28,9 +22,9 @@ app = FastAPI(
     version=settings.VERSION,
     lifespan=lifespan,
     # Enable OpenAPI documentation
-    docs_url="/api/v1/docs",
-    redoc_url="/api/v1/redoc",
-    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/v1/docs" if settings.DEBUG else None,
+    redoc_url="/api/v1/redoc" if settings.DEBUG else None,
+    openapi_url="/api/v1/openapi.json" if settings.DEBUG else None,
 )
 
 # CORS middleware with proper settings for handling credentials
@@ -38,8 +32,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
     expose_headers=["Content-Disposition"],
 )
 

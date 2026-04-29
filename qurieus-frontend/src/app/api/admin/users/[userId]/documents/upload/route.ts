@@ -12,6 +12,7 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
   context: { params: Promise<{ userId: string }> }
 ) => {
   const startTime = Date.now();
+  const maxFilesPerRequest = 10;
 
   try {
     const session = await getServerSession(authOptions);
@@ -43,6 +44,12 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
 
     if (!files || files.length === 0) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    }
+    if (files.length > maxFilesPerRequest) {
+      return NextResponse.json(
+        { error: `Too many files in one request. Maximum is ${maxFilesPerRequest}.` },
+        { status: 400 }
+      );
     }
 
     const results: Array<{ document: any }> = [];

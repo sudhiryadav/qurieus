@@ -4,8 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
  * CORS configuration for API routes that need to be accessible from external domains
  */
 export const corsConfig = {
-  // Allow all origins for external API access
-  allowOrigin: '*',
+  // Default to explicit allowed origin; do not use wildcard by default.
+  allowOrigin:
+    process.env.FRONTEND_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://qurieus.com",
   // Allowed HTTP methods
   allowMethods: 'GET, POST, PUT, DELETE, OPTIONS',
   // Allowed headers including API key for authentication

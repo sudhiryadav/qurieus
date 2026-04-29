@@ -1,5 +1,6 @@
 import base64
 import datetime
+import hmac
 import io
 import json
 import os
@@ -1005,6 +1006,16 @@ def process_file(
 
 router = APIRouter()
 security = HTTPBearer()
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".doc", ".docx", ".txt", ".csv", ".xls", ".xlsx", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif"}
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+MAX_FILES_PER_REQUEST = 10
+
+
+def verify_internal_api_key(api_key: str) -> None:
+    if not settings.AI_SERVICE_API_KEY:
+        raise HTTPException(status_code=500, detail="Service API key not configured")
+    if not hmac.compare_digest(api_key or "", settings.AI_SERVICE_API_KEY):
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 def derive_encryption_key(secret: str) -> bytes:
@@ -1086,10 +1097,10 @@ async def get_current_user(
 
             return payload
         except Exception as e:
-            raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+            raise HTTPException(status_code=401, detail="Invalid token")
 
     except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+        raise HTTPException(status_code=401, detail="Authentication failed")
 
 
 @router.post("/upload")
@@ -1103,9 +1114,7 @@ async def upload_files(
 ):
     """Upload one or more documents (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX) for processing."""
     try:
-        # Validate API key
-        if api_key != settings.AI_SERVICE_API_KEY:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        verify_internal_api_key(api_key)
 
         # For now, we'll need to get user ID from the request or use a default
         # You might want to pass user ID in the form data or header
@@ -1137,6 +1146,11 @@ async def upload_files(
 
         # Handle both single file and list of files
         file_list = files if isinstance(files, list) else [files]
+        if len(file_list) > MAX_FILES_PER_REQUEST:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Too many files. Maximum files per request is {MAX_FILES_PER_REQUEST}.",
+            )
         uploaded_documents = []
 
         for i, file in enumerate(file_list):
@@ -1165,7 +1179,7 @@ async def upload_files(
                 )
 
             # Check file size limit (50MB)
-            if len(content) > 50 * 1024 * 1024:
+            if len(content) > MAX_UPLOAD_BYTES:
                 raise HTTPException(
                     status_code=400,
                     detail=f"File '{file.filename}' is too large. Maximum file size is 50MB.",
@@ -1173,6 +1187,11 @@ async def upload_files(
 
             # Get file extension
             _, ext = os.path.splitext(file.filename)
+            if ext.lower() not in ALLOWED_UPLOAD_EXTENSIONS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported file type: {ext}",
+                )
 
             # Validate PDF files have proper header
             if ext.lower() == ".pdf":
@@ -1260,9 +1279,7 @@ async def get_document_status(
 ):
     """Get processing status for a document."""
     try:
-        # Validate API key
-        if api_key != settings.AI_SERVICE_API_KEY:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        verify_internal_api_key(api_key)
 
         status = get_processing_status(document_id)
 
@@ -1294,9 +1311,7 @@ async def generate_embedding(
 ):
     """Generate embedding for text using the same model as document processing."""
     try:
-        # Validate API key
-        if api_key != settings.AI_SERVICE_API_KEY:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        verify_internal_api_key(api_key)
 
         if not embedding_model:
             raise HTTPException(status_code=500, detail="Embedding model not available")

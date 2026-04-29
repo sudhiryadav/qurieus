@@ -3,14 +3,20 @@ import { prisma } from '@/utils/prismaDB';
 import { logger } from '@/lib/logger';
 import { sendEmail } from '@/lib/email';
 import { corsResponse, corsErrorResponse, createOptionsHandler } from '@/utils/cors';
+import { checkRateLimit, getClientIp } from '@/utils/rateLimit';
 
 // Handle OPTIONS request for CORS preflight
 export const OPTIONS = createOptionsHandler();
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const ip = getClientIp(request);
   
   try {
+    if (!checkRateLimit(`visitor-info:${ip}`, 30, 10 * 60 * 1000)) {
+      return corsErrorResponse("Too many requests", 429);
+    }
+
     // Get API key from headers
     const apiKey = request.headers.get('x-api-key');
     
@@ -140,8 +146,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
+  const ip = getClientIp(request);
   
   try {
+    if (!checkRateLimit(`visitor-info-read:${ip}`, 60, 10 * 60 * 1000)) {
+      return corsErrorResponse("Too many requests", 429);
+    }
+
     const { searchParams } = new URL(request.url);
     const visitorId = searchParams.get('visitorId');
     

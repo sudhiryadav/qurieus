@@ -6,6 +6,8 @@ import { uploadDocument } from "@/lib/documentService";
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const maxUploadBytes =
+    (parseInt(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || "50", 10) + 1) * 1024 * 1024;
 
   try {
     const session = await getServerSession(authOptions);
@@ -18,6 +20,11 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id;
+    const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
+    if (contentLength > maxUploadBytes) {
+      return NextResponse.json({ error: "Request payload too large" }, { status: 413 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const title = formData.get("title") as string;

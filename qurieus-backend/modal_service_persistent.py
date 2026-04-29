@@ -20,10 +20,12 @@ from sentence_transformers import SentenceTransformer
 # Initialize Modal app with unique identifier to force rebuild
 app = modal.App("qurieus-app-v58")  # Increment version for rebuild
 
-API_KEY = os.environ.get("API_KEY")
+# Standardized auth key name used by frontend/backend callers.
+MODAL_DOT_COM_X_API_KEY = os.environ.get("MODAL_DOT_COM_X_API_KEY")
 
-# Hugging Face token (no longer directly used for llama-cpp-python wheel download, but kept if other HF models/data are used later)
-HF_TOKEN = "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"
+# Optional Hugging Face token from environment.
+# Never hardcode secrets in source control.
+HF_TOKEN = os.environ.get("HF_TOKEN")
 
 # Create a custom Modal image with all dependencies installed at deployment time
 cuda_version = "12.1.0"
@@ -169,7 +171,7 @@ web_app = FastAPI(title="Qurieus GPU Service with Persistent Storage", version="
 
 
 def verify_api_key(x_api_key: str = Header(...)):
-    if x_api_key != API_KEY:
+    if x_api_key != MODAL_DOT_COM_X_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
 

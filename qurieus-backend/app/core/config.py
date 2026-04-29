@@ -32,10 +32,6 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "uploaded_docs")
 
-    # Postman Settings
-    POSTMAN_API_KEY: Optional[str] = os.getenv("POSTMAN_API_KEY")
-    POSTMAN_COLLECTION_ID: Optional[str] = os.getenv("POSTMAN_COLLECTION_ID")
-
     # Ollama settings
     OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL").strip()  # Default to mistral:latest

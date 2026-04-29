@@ -3,11 +3,17 @@ import { hash } from "bcryptjs";
 import { prisma } from "@/utils/prismaDB";
 import { sendVerificationEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, getClientIp } from "@/utils/rateLimit";
 
 export async function POST(req: Request) {
   const startTime = Date.now();
+  const ip = getClientIp(req);
   
   try {
+    if (!checkRateLimit(`signup:${ip}`, 10, 15 * 60 * 1000)) {
+      return NextResponse.json({ error: "Too many signup attempts. Please try later." }, { status: 429 });
+    }
+
     const { name, email, password } = await req.json();
 
     logger.info("User Signup API: Processing signup request", { 
@@ -82,8 +88,7 @@ export async function POST(req: Request) {
     // Send verification email
     logger.info("User Signup API: Sending verification email to new user", { 
       email, 
-      userId: user.id, 
-      verificationCode 
+      userId: user.id
     });
     await sendVerificationEmail(email, verificationCode);
 

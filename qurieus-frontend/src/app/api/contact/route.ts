@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import axios from "@/lib/axios";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, getClientIp } from "@/utils/rateLimit";
 
 export async function POST(request: Request) {
   const startTime = Date.now();
+  const ip = getClientIp(request);
   
   try {
+    if (!checkRateLimit(`contact:${ip}`, 15, 10 * 60 * 1000)) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    }
+
     const body = await request.json();
     const { name, email, message } = body;
 
