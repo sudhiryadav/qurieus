@@ -1,12 +1,20 @@
 import { NextRequest } from 'next/server';
 import { crawlJobManager } from '@/lib/crawlJobs';
-import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { getCurrentUser } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
-export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
-) => {
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  if (user.role !== UserRole.SUPER_ADMIN) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
   const { jobId } = await params;
   
   
@@ -167,4 +175,4 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   } catch (error) {
     return new Response('Error', { status: 500 });
   }
-});
+}
