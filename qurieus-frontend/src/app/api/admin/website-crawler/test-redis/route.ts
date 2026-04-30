@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedis } from '@/utils/redis';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(request: NextRequest) {
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (request: NextRequest) => {
   try {
     const redis = getRedis();
     
@@ -36,4 +38,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+});

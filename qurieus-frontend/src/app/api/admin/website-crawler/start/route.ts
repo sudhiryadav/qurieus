@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { crawlJobManager } from '@/lib/crawlJobs';
 import { WebsiteCrawler } from '@/lib/websiteCrawler';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
 interface CrawlSettings {
   maxDepth: number;
@@ -13,10 +15,52 @@ interface CrawlSettings {
   extractMainContent: boolean;
 }
 
-export async function POST(request: NextRequest) {
+const PRIVATE_IPV4_PATTERNS = [
+  /^127\./,
+  /^10\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^172\.(1[6-9]|2\d|3[0-1])\./
+];
+
+function isBlockedHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  if (
+    normalized === 'localhost' ||
+    normalized === '::1' ||
+    normalized.endsWith('.local') ||
+    normalized.endsWith('.internal')
+  ) {
+    return true;
+  }
+
+  return PRIVATE_IPV4_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (request: NextRequest) => {
   try {
     const { url, settings: partialSettings } = await request.json();
-    
+    if (!url || typeof url !== 'string') {
+      return NextResponse.json({ error: 'Valid URL is required' }, { status: 400 });
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return NextResponse.json({ error: 'Only HTTP/HTTPS URLs are allowed' }, { status: 400 });
+    }
+
+    if (isBlockedHostname(parsedUrl.hostname)) {
+      return NextResponse.json(
+        { error: 'Local/private network URLs are not allowed' },
+        { status: 400 }
+      );
+    }
     
     // Merge with default settings
     const settings: CrawlSettings = {
@@ -87,4 +131,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+});

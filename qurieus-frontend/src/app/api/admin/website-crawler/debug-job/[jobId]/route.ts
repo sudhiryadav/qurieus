@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedis } from '@/utils/redis';
 import { crawlJobManager } from '@/lib/crawlJobs';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
-) {
+) => {
   try {
     const { jobId } = await params;
     const redis = getRedis();
@@ -69,4 +71,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+});

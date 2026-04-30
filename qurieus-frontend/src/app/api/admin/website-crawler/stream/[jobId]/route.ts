@@ -1,10 +1,12 @@
 import { NextRequest } from 'next/server';
 import { crawlJobManager } from '@/lib/crawlJobs';
+import { RequireRoles } from '@/utils/roleGuardsDecorator';
+import { UserRole } from '@prisma/client';
 
-export async function GET(
+export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
-) {
+) => {
   const { jobId } = await params;
   
   
@@ -158,7 +160,6 @@ export async function GET(
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Cache-Control'
       }
     });
@@ -166,4 +167,4 @@ export async function GET(
   } catch (error) {
     return new Response('Error', { status: 500 });
   }
-} 
+});
