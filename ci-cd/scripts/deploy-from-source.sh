@@ -134,46 +134,6 @@ requirements_changed() {
 ENV_DIR="${ENV_DIR:-/home/ubuntu}"
 ENV_PREFIX="$([ "$ENV" = "prod" ] && echo "prod" || echo "staging").qurieus"
 
-# Sync .env.prod from repo to ENV_DIR (committed; deployed automatically on prod)
-# Paddle keys are injected from GitLab CI/CD variables (not in repo)
-if [ "$ENV" = "prod" ]; then
-  if [ -f "$REPO_DIR/qurieus-frontend/.env.prod" ]; then
-    cp "$REPO_DIR/qurieus-frontend/.env.prod" "$ENV_DIR/prod.qurieus.frontend.env"
-    # Inject Paddle vars: from CI/CD env first, else from server-side file (masked/protected vars may not pass through SSH)
-    if [ -n "$PADDLE_API_KEY" ] || [ -n "$NEXT_PUBLIC_PADDLE_CLIENT_TOKEN" ] || [ -n "$PADDLE_WEBHOOK_SIGNING_KEY" ]; then
-      {
-        echo ""
-        echo "# Paddle (from CI/CD variables)"
-        [ -n "$PADDLE_API_KEY" ] && echo "PADDLE_API_KEY=$PADDLE_API_KEY"
-        [ -n "$NEXT_PUBLIC_PADDLE_CLIENT_TOKEN" ] && echo "NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=$NEXT_PUBLIC_PADDLE_CLIENT_TOKEN"
-        [ -n "$PADDLE_WEBHOOK_SIGNING_KEY" ] && echo "PADDLE_WEBHOOK_SIGNING_KEY=$PADDLE_WEBHOOK_SIGNING_KEY"
-        [ -n "$BYPASS_WEBHOOK_VERIFICATION" ] && echo "BYPASS_WEBHOOK_VERIFICATION=$BYPASS_WEBHOOK_VERIFICATION"
-      } >> "$ENV_DIR/prod.qurieus.frontend.env"
-      echo "   Injected Paddle vars from CI/CD"
-    elif [ -f "$ENV_DIR/prod.paddle.env" ]; then
-      echo "" >> "$ENV_DIR/prod.qurieus.frontend.env"
-      echo "# Paddle (from server-side prod.paddle.env)" >> "$ENV_DIR/prod.qurieus.frontend.env"
-      cat "$ENV_DIR/prod.paddle.env" >> "$ENV_DIR/prod.qurieus.frontend.env"
-      echo "   Injected Paddle vars from prod.paddle.env"
-    fi
-    echo "   Synced frontend .env.prod from repo"
-  else
-    echo "⚠️  Missing qurieus-frontend/.env.prod - expected in repo for prod"
-    exit 1
-  fi
-  if [ -f "$REPO_DIR/qurieus-backend/.env.prod" ]; then
-    cp "$REPO_DIR/qurieus-backend/.env.prod" "$ENV_DIR/prod.qurieus.backend.env"
-    echo "   Synced backend .env.prod from repo"
-  else
-    echo "⚠️  Missing qurieus-backend/.env.prod - expected in repo for prod"
-    exit 1
-  fi
-  if [ -f "$REPO_DIR/qurieus-bot-teams/.env.prod" ]; then
-    cp "$REPO_DIR/qurieus-bot-teams/.env.prod" "$ENV_DIR/prod.qurieus.bot.env"
-    echo "   Synced bot .env.prod from repo"
-  fi
-fi
-
 copy_app_env() {
   local app_dir=$1
   local app_name=$2   # frontend | backend | bot

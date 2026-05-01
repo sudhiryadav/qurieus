@@ -32,13 +32,12 @@ Or: `./ci-cd/scripts/setup-ec2.sh https://gitlab.com/frontslash/apps/qurieus.git
 
 The deploy script copies each app's env file to its `.env` before build/run.
 
-**Prod env (automated):**
-- Set GitLab CI/CD **File** variables and CI uploads them on each prod deploy:
-  - `FRONTEND_ENV_PROD_FILE` -> `qurieus-frontend/.env.prod`
-  - `BACKEND_ENV_PROD_FILE` -> `qurieus-backend/.env.prod`
-  - `BOT_ENV_PROD_FILE` -> `qurieus-bot-teams/.env.prod`
-
-On prod deploy, the script syncs app `.env.prod` into server env files (`prod.qurieus.*.env`) and then copies to each app's `.env`.
+**Prod env (source of truth):**
+- Keep production secrets only in server-side files:
+  - `/home/ubuntu/prod.qurieus.frontend.env`
+  - `/home/ubuntu/prod.qurieus.backend.env`
+  - `/home/ubuntu/prod.qurieus.bot.env`
+- Deploy copies these files into each app's runtime `.env`.
 
 **Setup on server:**
 ```bash
@@ -55,7 +54,7 @@ See `ci-cd/env.template` for required vars (no secrets).
 
 ## Deployment
 
-Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && git push github prod`. The repo contains `.env.prod` with secrets; allow them in GitHub push protection (one-time) to push to GitHub.
+Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && git push github prod`. Secrets stay in server-side env files and are not uploaded as deploy artifacts.
 
 ## GitLab CI/CD variables
 
@@ -82,13 +81,6 @@ PADDLE_WEBHOOK_SIGNING_KEY=pdl_ntfset_...
 BYPASS_WEBHOOK_VERIFICATION=false
 ```
 Deploy script appends this file when CI/CD vars are not available (e.g. masked/protected)
-
-**Required (File variables for prod deploy):**
-- `FRONTEND_ENV_PROD_FILE` – file content for `qurieus-frontend/.env.prod`
-- `BACKEND_ENV_PROD_FILE` – file content for `qurieus-backend/.env.prod`
-- `BOT_ENV_PROD_FILE` – file content for `qurieus-bot-teams/.env.prod`
-
-`deploy_production` fails fast if any of these File variables are missing.
 
 **Optional (scalar/masked variables):**
 - `PROD_REPO_DIR`, `STAGING_REPO_DIR` – if repo is not at `/home/ubuntu/qurieus`

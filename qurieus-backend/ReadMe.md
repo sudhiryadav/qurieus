@@ -65,14 +65,14 @@ This is the backend service for Qurieus, a document querying and chat applicatio
 
 The app uses **Qdrant Cloud** for document embeddings. The same cluster is used for dev and prod; collections are separate (`qurieus_dev` for development, `qurieus` for production).
 
-1. **Cluster URL** (already set in `.env` / `.env.prod`):
+1. **Cluster URL** (already set in environment files):
    - `https://e530d574-0a13-497f-88e3-9c9ca52a8e20.sa-east-1-0.aws.cloud.qdrant.io:6333`
 
 2. **API key:** Set `QDRANT_API_KEY` in each `.env` file (get from [Qdrant Cloud](https://cloud.qdrant.io) → your cluster → API Keys).
 
 3. Collections are created automatically by the app on first use:
    - **Development** (`.env`): `QDRANT_COLLECTION=qurieus_dev`
-   - **Production** (`.env.prod`): `QDRANT_COLLECTION=qurieus`
+   - **Production** (`prod.qurieus.backend.env` on server): `QDRANT_COLLECTION=qurieus`
 
 4. **Optional – local Qdrant:** To run Qdrant locally instead, use `docker compose up -d` in `qurieus-backend` and set `QDRANT_URL=http://localhost:6333` and `QDRANT_API_KEY=` in your `.env`.
 
