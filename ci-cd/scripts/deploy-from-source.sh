@@ -130,6 +130,31 @@ requirements_changed() {
   git diff --name-only $PREV_HEAD HEAD -- "qurieus-backend/requirements.txt" 2>/dev/null | grep -q . && echo "yes" || echo "no"
 }
 
+run_frontend_prisma_migrations() {
+  local migrate_log
+  migrate_log=$(mktemp)
+
+  set +e
+  yarn prisma migrate deploy 2>&1 | tee "$migrate_log"
+  local migrate_exit=${PIPESTATUS[0]}
+  set -e
+
+  if [ "$migrate_exit" -eq 0 ]; then
+    rm -f "$migrate_log"
+    return 0
+  fi
+
+  if grep -q 'extension "vector" is not available' "$migrate_log"; then
+    echo "⚠️  Prisma migration skipped: PostgreSQL extension 'vector' is not available on this server."
+    echo "   Deploy continues, but install pgvector on DB host to run pending migrations."
+    rm -f "$migrate_log"
+    return 0
+  fi
+
+  rm -f "$migrate_log"
+  return "$migrate_exit"
+}
+
 # Copy app-specific env files from server (prod.qurieus.{app}.env or staging.qurieus.{app}.env)
 ENV_DIR="${ENV_DIR:-/home/ubuntu}"
 ENV_PREFIX="$([ "$ENV" = "prod" ] && echo "prod" || echo "staging").qurieus"
@@ -204,7 +229,7 @@ if [ "$FRONTEND_CHANGED" = "true" ]; then
   PKG_CHANGED=$(packages_changed "qurieus-frontend")
   [ ! -d "node_modules" ] || [ "$PKG_CHANGED" = "yes" ] && yarn install --frozen-lockfile
   yarn prisma generate
-  yarn prisma migrate deploy
+  run_frontend_prisma_migrations
   # Inject build time for header display (user can verify latest deploy)
   export NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M UTC")
   yarn build
