@@ -168,6 +168,10 @@ if [ "$ENV" = "prod" ]; then
     echo "⚠️  Missing qurieus-backend/.env.prod - expected in repo for prod"
     exit 1
   fi
+  if [ -f "$REPO_DIR/qurieus-bot-teams/.env.prod" ]; then
+    cp "$REPO_DIR/qurieus-bot-teams/.env.prod" "$ENV_DIR/prod.qurieus.bot.env"
+    echo "   Synced bot .env.prod from repo"
+  fi
 fi
 
 copy_app_env() {

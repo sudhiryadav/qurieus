@@ -83,7 +83,6 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts 
-.env
-.env.stage
-# .env.prod - frontend and backend .env.prod are committed; bot stays local
-qurieus-bot-teams/.env.prod
+# Ignore all local env files across apps (keep only in CI File variables / server)
+**/.env
+**/.env.*

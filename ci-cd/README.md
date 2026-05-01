@@ -32,7 +32,13 @@ Or: `./ci-cd/scripts/setup-ec2.sh https://gitlab.com/frontslash/apps/qurieus.git
 
 The deploy script copies each app's env file to its `.env` before build/run.
 
-**Prod env (automated):** `qurieus-frontend/.env.prod` and `qurieus-backend/.env.prod` are committed. On prod deploy, the script syncs them from the repo to the server's `prod.qurieus.frontend.env` and `prod.qurieus.backend.env`, then copies to each app's `.env`. No manual sync needed.
+**Prod env (automated):**
+- Set GitLab CI/CD **File** variables and CI uploads them on each prod deploy:
+  - `FRONTEND_ENV_PROD_FILE` -> `qurieus-frontend/.env.prod`
+  - `BACKEND_ENV_PROD_FILE` -> `qurieus-backend/.env.prod`
+  - `BOT_ENV_PROD_FILE` -> `qurieus-bot-teams/.env.prod`
+
+On prod deploy, the script syncs app `.env.prod` into server env files (`prod.qurieus.*.env`) and then copies to each app's `.env`.
 
 **Setup on server:**
 ```bash
@@ -53,9 +59,12 @@ Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && gi
 
 ## GitLab CI/CD variables
 
-**Required:**
+**Required (scalar/masked variables):**
 - `STAGING_SSH_PRIVATE_KEY`, `STAGING_SSH_USER`, `STAGING_SERVER_IP`
 - `PROD_SSH_PRIVATE_KEY`, `PROD_SSH_USER`, `PROD_SERVER_IP`
+
+Use these as normal CI/CD variables (masked/protected), **not** File variables.
+`*_SSH_PRIVATE_KEY` should be base64-encoded one-line private key content.
 
 **Paddle (prod frontend):** Injected into `prod.qurieus.frontend.env` on deploy.
 
@@ -74,7 +83,14 @@ BYPASS_WEBHOOK_VERIFICATION=false
 ```
 Deploy script appends this file when CI/CD vars are not available (e.g. masked/protected)
 
-**Optional:**
+**Required (File variables for prod deploy):**
+- `FRONTEND_ENV_PROD_FILE` – file content for `qurieus-frontend/.env.prod`
+- `BACKEND_ENV_PROD_FILE` – file content for `qurieus-backend/.env.prod`
+- `BOT_ENV_PROD_FILE` – file content for `qurieus-bot-teams/.env.prod`
+
+`deploy_production` fails fast if any of these File variables are missing.
+
+**Optional (scalar/masked variables):**
 - `PROD_REPO_DIR`, `STAGING_REPO_DIR` – if repo is not at `/home/ubuntu/qurieus`
 
 The runner clones the repo with `CI_JOB_TOKEN` and rsyncs to the server – the server does not need GitLab access.

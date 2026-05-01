@@ -1,5 +1,10 @@
 # GitLab CI/CD - No Docker. Push to prod/dev → SSH → git pull, build, PM2 restart.
 # PROD_SERVER_IP must be the server with /home/ubuntu/qurieus (may be same as STAGING_SERVER_IP).
+#
+# Variable type guidance:
+# - Scalar/Masked variables: STAGING_SSH_PRIVATE_KEY, STAGING_SSH_USER, STAGING_SERVER_IP,
+#   PROD_SSH_PRIVATE_KEY, PROD_SSH_USER, PROD_SERVER_IP, PROD_REPO_DIR, STAGING_REPO_DIR
+# - File variables (prod env upload): FRONTEND_ENV_PROD_FILE, BACKEND_ENV_PROD_FILE, BOT_ENV_PROD_FILE
 
 variables:
   RUN_PIPELINE: "false"
@@ -73,11 +78,28 @@ deploy_production:
     - |
       REPO_DIR="${PROD_REPO_DIR:-/home/ubuntu/qurieus}"
       BRANCH="prod"
+      if [ -z "${FRONTEND_ENV_PROD_FILE:-}" ] || [ ! -f "$FRONTEND_ENV_PROD_FILE" ]; then
+        echo "Missing GitLab CI/CD File variable FRONTEND_ENV_PROD_FILE (qurieus-frontend/.env.prod)."
+        exit 1
+      fi
+      if [ -z "${BACKEND_ENV_PROD_FILE:-}" ] || [ ! -f "$BACKEND_ENV_PROD_FILE" ]; then
+        echo "Missing GitLab CI/CD File variable BACKEND_ENV_PROD_FILE (qurieus-backend/.env.prod)."
+        exit 1
+      fi
+      if [ -z "${BOT_ENV_PROD_FILE:-}" ] || [ ! -f "$BOT_ENV_PROD_FILE" ]; then
+        echo "Missing GitLab CI/CD File variable BOT_ENV_PROD_FILE (qurieus-bot-teams/.env.prod)."
+        exit 1
+      fi
       F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
       git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
       rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' --rsync-path="mkdir -p ${REPO_DIR} && rsync" -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
+      ssh -o StrictHostKeyChecking=no "${SSH_USER}@${SERVER_IP}" "mkdir -p '${REPO_DIR}/qurieus-frontend' '${REPO_DIR}/qurieus-backend' '${REPO_DIR}/qurieus-bot-teams'"
+      scp -o StrictHostKeyChecking=no "$FRONTEND_ENV_PROD_FILE" "${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-frontend/.env.prod"
+      scp -o StrictHostKeyChecking=no "$BACKEND_ENV_PROD_FILE" "${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-backend/.env.prod"
+      scp -o StrictHostKeyChecking=no "$BOT_ENV_PROD_FILE" "${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-bot-teams/.env.prod"
+      echo "Uploaded .env.prod files for frontend, backend, and bot from GitLab CI File variables"
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
         "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 \
          PADDLE_API_KEY='${PADDLE_API_KEY}' \
