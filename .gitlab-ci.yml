@@ -1,4 +1,4 @@
-# GitLab CI/CD - No Docker. Push to prod/dev → SSH → git pull, build, PM2 restart.
+# GitLab CI/CD - No Docker. Push to prod → SSH → git pull, build, PM2 restart.
 # PROD_SERVER_IP must be the server with /home/ubuntu/qurieus.
 #
 # Variable type guidance:
@@ -31,8 +31,7 @@ check_changes:
     reports:
       dotenv: changes.env
   rules:
-    - if: '$RUN_PIPELINE == "true"'
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "prod"'
+    - if: '$CI_COMMIT_BRANCH == "prod" || $RUN_PIPELINE == "true"'
 
 .deploy_base:
   image: alpine:latest
@@ -68,5 +67,4 @@ deploy_production:
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
         "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "prod"'
-    - if: '$RUN_PIPELINE == "true"'
+    - if: '$CI_COMMIT_BRANCH == "prod" || $RUN_PIPELINE == "true"'
