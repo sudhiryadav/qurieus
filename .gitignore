@@ -86,3 +86,5 @@ next-env.d.ts
 # Ignore all local env files across apps (keep only in CI File variables / server)
 **/.env
 **/.env.*
+**/.env.stage
+**/.env.state
