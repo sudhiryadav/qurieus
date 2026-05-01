@@ -4,6 +4,9 @@
 # Variable type guidance:
 # - Scalar/Masked variables: STAGING_SSH_PRIVATE_KEY, STAGING_SSH_USER, STAGING_SERVER_IP,
 #   PROD_SSH_PRIVATE_KEY, PROD_SSH_USER, PROD_SERVER_IP, PROD_REPO_DIR, STAGING_REPO_DIR
+# - File variables:
+#   STAGING_FRONTEND_ENV_FILE, STAGING_BACKEND_ENV_FILE, STAGING_BOT_ENV_FILE,
+#   PROD_FRONTEND_ENV_FILE, PROD_BACKEND_ENV_FILE, PROD_BOT_ENV_FILE
 
 variables:
   RUN_PIPELINE: "false"
@@ -57,8 +60,14 @@ deploy_staging:
       F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+      [ -f "$STAGING_FRONTEND_ENV_FILE" ] || (echo "Missing File var: STAGING_FRONTEND_ENV_FILE" && exit 1)
+      [ -f "$STAGING_BACKEND_ENV_FILE" ] || (echo "Missing File var: STAGING_BACKEND_ENV_FILE" && exit 1)
+      [ -f "$STAGING_BOT_ENV_FILE" ] || (echo "Missing File var: STAGING_BOT_ENV_FILE" && exit 1)
       git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
       rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' --rsync-path="mkdir -p ${REPO_DIR} && rsync" -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
+      scp -o StrictHostKeyChecking=no "$STAGING_FRONTEND_ENV_FILE" ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-frontend/.env
+      scp -o StrictHostKeyChecking=no "$STAGING_BACKEND_ENV_FILE" ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-backend/.env
+      scp -o StrictHostKeyChecking=no "$STAGING_BOT_ENV_FILE" ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-bot-teams/.env
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
         "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh staging dev $F $B $O"
   rules:
@@ -80,15 +89,16 @@ deploy_production:
       F=$([ "$FRONTEND_CHANGED" = "true" ] || [ "$FORCE_FRONTEND" = "true" ] && echo "true" || echo "false")
       B=$([ "$BACKEND_CHANGED" = "true" ] || [ "$FORCE_BACKEND" = "true" ] && echo "true" || echo "false")
       O=$([ "$BOT_CHANGED" = "true" ] || [ "$FORCE_BOT" = "true" ] && echo "true" || echo "false")
+      [ -f "$PROD_FRONTEND_ENV_FILE" ] || (echo "Missing File var: PROD_FRONTEND_ENV_FILE" && exit 1)
+      [ -f "$PROD_BACKEND_ENV_FILE" ] || (echo "Missing File var: PROD_BACKEND_ENV_FILE" && exit 1)
+      [ -f "$PROD_BOT_ENV_FILE" ] || (echo "Missing File var: PROD_BOT_ENV_FILE" && exit 1)
       git clone --depth 50 --branch "$BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/frontslash/apps/qurieus.git" /tmp/qurieus-deploy
       rsync -avz --exclude=node_modules --exclude=.venv --exclude=.next --exclude=dist --exclude='*.env' --rsync-path="mkdir -p ${REPO_DIR} && rsync" -e "ssh -o StrictHostKeyChecking=no" /tmp/qurieus-deploy/ ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/
+      scp -o StrictHostKeyChecking=no "$PROD_FRONTEND_ENV_FILE" ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-frontend/.env
+      scp -o StrictHostKeyChecking=no "$PROD_BACKEND_ENV_FILE" ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-backend/.env
+      scp -o StrictHostKeyChecking=no "$PROD_BOT_ENV_FILE" ${SSH_USER}@${SERVER_IP}:${REPO_DIR}/qurieus-bot-teams/.env
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
-        "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 \
-         PADDLE_API_KEY='${PADDLE_API_KEY}' \
-         NEXT_PUBLIC_PADDLE_CLIENT_TOKEN='${NEXT_PUBLIC_PADDLE_CLIENT_TOKEN}' \
-         PADDLE_WEBHOOK_SIGNING_KEY='${PADDLE_WEBHOOK_SIGNING_KEY}' \
-         BYPASS_WEBHOOK_VERIFICATION='${BYPASS_WEBHOOK_VERIFICATION:-false}' \
-         && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
+        "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
     - if: '$CI_COMMIT_BRANCH == "prod"'
     - if: '$RUN_PIPELINE == "true"'

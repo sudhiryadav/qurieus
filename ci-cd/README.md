@@ -5,8 +5,6 @@ Push to `prod` or `dev` → GitLab CI SSHs to server → git pull, yarn/pip inst
 ## Server layout
 
 - `/home/ubuntu/qurieus` – Git repo (source)
-- `/home/ubuntu/prod/` – `.env` files for prod (qurieus-frontend, qurieus-backend, qurieus-bot-teams)
-- `/home/ubuntu/staging/` – same for staging
 
 ## One-time setup
 
@@ -17,44 +15,28 @@ curl -fsSL https://gitlab.com/frontslash/apps/qurieus/-/raw/prod/ci-cd/scripts/s
 
 Or: `./ci-cd/scripts/setup-ec2.sh https://gitlab.com/frontslash/apps/qurieus.git`
 
-## Env files (on server)
+## Env files (GitLab File variables)
 
-**App-specific env files** in `/home/ubuntu/` (or `ENV_DIR`):
+Store each app env as a **GitLab CI/CD File variable**. During deploy, CI uploads each file directly to:
 
-| File | App |
-|------|-----|
-| `prod.qurieus.frontend.env` | qurieus-frontend (prod) |
-| `prod.qurieus.backend.env` | qurieus-backend (prod) |
-| `prod.qurieus.bot.env` | qurieus-bot-teams (prod) |
-| `staging.qurieus.frontend.env` | qurieus-frontend (staging) |
-| `staging.qurieus.backend.env` | qurieus-backend (staging) |
-| `staging.qurieus.bot.env` | qurieus-bot-teams (staging) |
+- `qurieus-frontend/.env`
+- `qurieus-backend/.env`
+- `qurieus-bot-teams/.env`
 
-The deploy script copies each app's env file to its `.env` before build/run.
+Required File variables:
 
-**Prod env (source of truth):**
-- Keep production secrets only in server-side files:
-  - `/home/ubuntu/prod.qurieus.frontend.env`
-  - `/home/ubuntu/prod.qurieus.backend.env`
-  - `/home/ubuntu/prod.qurieus.bot.env`
-- Deploy copies these files into each app's runtime `.env`.
+- `STAGING_FRONTEND_ENV_FILE`
+- `STAGING_BACKEND_ENV_FILE`
+- `STAGING_BOT_ENV_FILE`
+- `PROD_FRONTEND_ENV_FILE`
+- `PROD_BACKEND_ENV_FILE`
+- `PROD_BOT_ENV_FILE`
 
-**Setup on server:**
-```bash
-# SSH to server, create the files
-nano /home/ubuntu/prod.qurieus.frontend.env
-nano /home/ubuntu/prod.qurieus.backend.env
-nano /home/ubuntu/prod.qurieus.bot.env
-nano /home/ubuntu/staging.qurieus.frontend.env
-nano /home/ubuntu/staging.qurieus.backend.env
-nano /home/ubuntu/staging.qurieus.bot.env
-```
-
-See `ci-cd/env.template` for required vars (no secrets).
+See `ci-cd/env.template` for variable shape (no secrets).
 
 ## Deployment
 
-Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && git push github prod`. Secrets stay in server-side env files and are not uploaded as deploy artifacts.
+Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && git push github prod`. Secrets stay in GitLab CI/CD File variables and are uploaded only at deploy time.
 
 ## GitLab CI/CD variables
 
@@ -65,22 +47,7 @@ Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && gi
 Use these as normal CI/CD variables (masked/protected), **not** File variables.
 `*_SSH_PRIVATE_KEY` should be base64-encoded one-line private key content.
 
-**Paddle (prod frontend):** Injected into `prod.qurieus.frontend.env` on deploy.
-
-**Option A – CI/CD variables** (masked/protected vars may not pass through SSH; if Paddle stays "not configured", use Option B):
-- `PADDLE_API_KEY` – Paddle API key for server-side calls (Paddle Dashboard → Developer Tools → Authentication → API keys)
-- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` – Paddle client token for checkout (Developer Tools → Client-side tokens)
-- `PADDLE_WEBHOOK_SIGNING_KEY` – Webhook signing secret (Developer Tools → Notifications → webhook → Signing secret)
-- `BYPASS_WEBHOOK_VERIFICATION` – (optional) `false` by default; set `true` to skip webhook verification
-
-**Option B – Server-side file** (recommended if CI/CD injection fails): Create `/home/ubuntu/prod.paddle.env` on the server:
-```
-PADDLE_API_KEY=pdl_live_apikey_...
-NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=live_...
-PADDLE_WEBHOOK_SIGNING_KEY=pdl_ntfset_...
-BYPASS_WEBHOOK_VERIFICATION=false
-```
-Deploy script appends this file when CI/CD vars are not available (e.g. masked/protected)
+**Paddle:** keep Paddle keys directly inside the frontend env File variable content (`*_FRONTEND_ENV_FILE`).
 
 **Optional (scalar/masked variables):**
 - `PROD_REPO_DIR`, `STAGING_REPO_DIR` – if repo is not at `/home/ubuntu/qurieus`

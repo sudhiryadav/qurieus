@@ -72,7 +72,7 @@ The app uses **Qdrant Cloud** for document embeddings. The same cluster is used 
 
 3. Collections are created automatically by the app on first use:
    - **Development** (`.env`): `QDRANT_COLLECTION=qurieus_dev`
-   - **Production** (`prod.qurieus.backend.env` on server): `QDRANT_COLLECTION=qurieus`
+   - **Production** (deploy `.env` from GitLab File variable): `QDRANT_COLLECTION=qurieus`
 
 4. **Optional – local Qdrant:** To run Qdrant locally instead, use `docker compose up -d` in `qurieus-backend` and set `QDRANT_URL=http://localhost:6333` and `QDRANT_API_KEY=` in your `.env`.
 

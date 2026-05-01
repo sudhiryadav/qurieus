@@ -6,9 +6,10 @@
 #   branch: dev | prod
 #
 # Prerequisites: Node, Python 3.11+, PM2, repo at $REPO_DIR.
-# On server: app-specific env files in ENV_DIR (default /home/ubuntu):
-#   prod.qurieus.frontend.env, prod.qurieus.backend.env, prod.qurieus.bot.env
-#   staging.qurieus.frontend.env, staging.qurieus.backend.env, staging.qurieus.bot.env
+# CI is expected to place app-specific .env files at:
+#   $REPO_DIR/qurieus-frontend/.env
+#   $REPO_DIR/qurieus-backend/.env
+#   $REPO_DIR/qurieus-bot-teams/.env
 
 set -e
 
@@ -130,28 +131,20 @@ requirements_changed() {
   git diff --name-only $PREV_HEAD HEAD -- "qurieus-backend/requirements.txt" 2>/dev/null | grep -q . && echo "yes" || echo "no"
 }
 
-# Copy app-specific env files from server (prod.qurieus.{app}.env or staging.qurieus.{app}.env)
-ENV_DIR="${ENV_DIR:-/home/ubuntu}"
-ENV_PREFIX="$([ "$ENV" = "prod" ] && echo "prod" || echo "staging").qurieus"
-
-copy_app_env() {
+ensure_app_env_exists() {
   local app_dir=$1
-  local app_name=$2   # frontend | backend | bot
-  local src="$ENV_DIR/${ENV_PREFIX}.${app_name}.env"
-  local dest="$REPO_DIR/$app_dir/.env"
-  if [ -f "$src" ]; then
-    cp "$src" "$dest"
-    echo "   $app_dir: ${ENV_PREFIX}.${app_name}.env -> .env"
-  else
-    echo "⚠️  No $src on server - create it for $ENV deployment"
+  local env_path="$REPO_DIR/$app_dir/.env"
+  if [ ! -f "$env_path" ]; then
+    echo "❌ Missing $env_path"
+    echo "   CI must upload File variable content to this path before deploy."
     exit 1
   fi
 }
 
-echo "📋 Copying env files for $ENV..."
-copy_app_env "qurieus-frontend" "frontend"
-copy_app_env "qurieus-backend" "backend"
-copy_app_env "qurieus-bot-teams" "bot"
+echo "📋 Validating app env files..."
+ensure_app_env_exists "qurieus-frontend"
+ensure_app_env_exists "qurieus-backend"
+ensure_app_env_exists "qurieus-bot-teams"
 
 # Ensure AUTH_TRUST_HOST for NextAuth behind nginx (session persistence after login)
 grep -q '^AUTH_TRUST_HOST=' "$REPO_DIR/qurieus-frontend/.env" 2>/dev/null || echo "AUTH_TRUST_HOST=true" >> "$REPO_DIR/qurieus-frontend/.env"

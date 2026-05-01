@@ -57,6 +57,6 @@ fi
 
 echo ""
 echo "✅ Setup complete!"
-echo "1. Add .env in $DEPLOY_BASE/prod/{qurieus-frontend,qurieus-backend,qurieus-bot-teams}/"
+echo "1. Configure GitLab File vars: PROD/STAGING_{FRONTEND,BACKEND,BOT}_ENV_FILE"
 echo "2. Push to prod → CI/CD deploys automatically"
 echo "3. Or: cd $REPO_DIR && ./ci-cd/scripts/deploy-from-source.sh prod prod true true true"
