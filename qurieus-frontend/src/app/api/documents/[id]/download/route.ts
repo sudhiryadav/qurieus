@@ -9,6 +9,11 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const safeDownloadName = (name?: string | null): string => {
+    if (!name) return "document";
+    return name.replace(/[\r\n"]/g, "_").trim() || "document";
+  };
+
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
@@ -76,7 +81,7 @@ export async function GET(
 
     const headers = new Headers();
     headers.set("Content-Type", document.fileType || "application/octet-stream");
-    headers.set("Content-Disposition", `attachment; filename="${document.originalName}"`);
+    headers.set("Content-Disposition", `attachment; filename="${safeDownloadName(document.originalName)}"`);
     headers.set("Content-Length", fileBuffer.length.toString());
 
     const responseBody = new Uint8Array(fileBuffer);
@@ -89,12 +94,15 @@ export async function GET(
     });
 
     const isNotFound =
-      error.message?.includes("not found") ||
-      error.message?.includes("does not exist") ||
-      error.name === "NoSuchKey";
+      error?.message?.includes("not found") ||
+      error?.message?.includes("does not exist") ||
+      error?.name === "NoSuchKey";
     const status = isNotFound ? 404 : 500;
+    const clientMessage = isNotFound
+      ? "Document not found"
+      : "Internal server error";
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: clientMessage },
       { status }
     );
   }

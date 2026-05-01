@@ -5,6 +5,7 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
+const { getToken } = require('next-auth/jwt');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -38,15 +39,52 @@ app.prepare().then(() => {
   // Socket.IO event handlers
   const userSockets = new Map();
 
+  // Require an authenticated NextAuth session for all socket connections.
+  io.use(async (socket, next) => {
+    try {
+      const cookie = socket.handshake.headers.cookie;
+      if (!cookie) {
+        return next(new Error('Unauthorized'));
+      }
+
+      const token = await getToken({
+        req: { headers: { cookie } },
+        secret: process.env.NEXTAUTH_SECRET,
+        secureCookie: process.env.NODE_ENV === 'production',
+      });
+
+      if (!token?.id) {
+        return next(new Error('Unauthorized'));
+      }
+
+      socket.data.user = {
+        id: token.id,
+        role: token.role,
+      };
+      return next();
+    } catch (error) {
+      return next(new Error('Unauthorized'));
+    }
+  });
+
   io.on('connection', (socket) => {
 
     // Join chat room
     socket.on('join', ({ chatId, userId, agentId, role }) => {
-      if (chatId) {
-        socket.join(chatId);
+      const authUserId = socket.data?.user?.id;
+      if (!authUserId || !chatId) {
+        socket.emit('socket_error', { error: 'Unauthorized or invalid room' });
+        return;
       }
-      if (userId) userSockets.set(userId, socket.id);
-      if (agentId) userSockets.set(agentId, socket.id);
+
+      // Prevent client-side identity spoofing by enforcing authenticated identity.
+      if ((userId && userId !== authUserId) || (agentId && agentId !== authUserId)) {
+        socket.emit('socket_error', { error: 'Identity mismatch' });
+        return;
+      }
+
+      socket.join(chatId);
+      userSockets.set(authUserId, socket.id);
     });
 
     // Handle chat message event

@@ -10,7 +10,7 @@ load_dotenv()
 class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
+    DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
 
     # API Settings
     API_V1_STR: str = "/api/v1"

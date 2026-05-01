@@ -5,12 +5,41 @@ import { prisma } from "@/utils/prismaDB";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
+const sanitizeProfileField = (
+  value: unknown,
+  maxLength: number
+): string | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed) return null;
+  return trimmed.slice(0, maxLength);
+};
+
 export const PUT = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN])(async (req: NextRequest) => {
     const session = await getServerSession(authOptions);
   const user = session!.user!;
     
     // Parse the request body
     const { name, company, jobTitle, bio } = await req.json();
+
+    const sanitizedName = sanitizeProfileField(name, 120);
+    const sanitizedCompany = sanitizeProfileField(company, 120);
+    const sanitizedJobTitle = sanitizeProfileField(jobTitle, 120);
+    const sanitizedBio = sanitizeProfileField(bio, 1000);
+
+    if (name !== undefined && typeof name !== "string") {
+      return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+    }
+    if (company !== undefined && typeof company !== "string") {
+      return NextResponse.json({ error: "Invalid company" }, { status: 400 });
+    }
+    if (jobTitle !== undefined && typeof jobTitle !== "string") {
+      return NextResponse.json({ error: "Invalid job title" }, { status: 400 });
+    }
+    if (bio !== undefined && typeof bio !== "string") {
+      return NextResponse.json({ error: "Invalid bio" }, { status: 400 });
+    }
     
     // Update user profile in the database
     const updatedUser = await prisma.user.update({
@@ -18,10 +47,10 @@ export const PUT = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_A
       id: user.id,
       },
       data: {
-        name,
-        company,
-        jobTitle,
-        bio,
+        name: sanitizedName,
+        company: sanitizedCompany,
+        jobTitle: sanitizedJobTitle,
+        bio: sanitizedBio,
       },
     });
     

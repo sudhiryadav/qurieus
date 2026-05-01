@@ -9,6 +9,11 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const safeDownloadName = (name?: string | null): string => {
+    if (!name) return "document";
+    return name.replace(/[\r\n"]/g, "_").trim() || "document";
+  };
+
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
@@ -20,8 +25,8 @@ export async function GET(
       );
     }
 
-    // Check if user is admin
-    if (session.user.role !== 'ADMIN') {
+    // Check if user is admin or super admin
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
       logger.warn("Admin Document Download API: User is not admin", {
         userId: session.user.id,
         userRole: session.user.role
@@ -94,7 +99,7 @@ export async function GET(
       // Set appropriate headers for file download
       const headers = new Headers();
       headers.set('Content-Type', document.fileType || 'application/octet-stream');
-      headers.set('Content-Disposition', `attachment; filename="${document.originalName}"`);
+      headers.set('Content-Disposition', `attachment; filename="${safeDownloadName(document.originalName)}"`);
       headers.set('Content-Length', fileBuffer.length.toString());
 
       // Return the file data

@@ -71,6 +71,19 @@ export async function PUT(
 
     const body = await req.json();
     const { productId, priceId, trialDays, billingCycle } = body;
+    const normalizedProductId = typeof productId === "string" ? productId.trim() : "";
+    const normalizedPriceId = typeof priceId === "string" ? priceId.trim() : "";
+    const normalizedTrialDays =
+      typeof trialDays === "number" && Number.isInteger(trialDays) ? trialDays : 0;
+    const normalizedBillingCycle =
+      billingCycle === "monthly" || billingCycle === "yearly" ? billingCycle : "monthly";
+
+    if (!normalizedProductId || !normalizedPriceId) {
+      return NextResponse.json({ error: "Invalid Paddle product/price IDs" }, { status: 400 });
+    }
+    if (normalizedTrialDays < 0 || normalizedTrialDays > 365) {
+      return NextResponse.json({ error: "Invalid trial days value" }, { status: 400 });
+    }
 
     const plan = await prisma.subscriptionPlan.findUnique({
       where: { id: id },
@@ -89,16 +102,16 @@ export async function PUT(
       },
       create: {
         subscriptionPlanId: id,
-        productId,
-        priceId,
-        trialDays,
-        billingCycle,
+        productId: normalizedProductId,
+        priceId: normalizedPriceId,
+        trialDays: normalizedTrialDays,
+        billingCycle: normalizedBillingCycle,
       },
       update: {
-        productId,
-        priceId,
-        trialDays,
-        billingCycle,
+        productId: normalizedProductId,
+        priceId: normalizedPriceId,
+        trialDays: normalizedTrialDays,
+        billingCycle: normalizedBillingCycle,
       },
     });
 

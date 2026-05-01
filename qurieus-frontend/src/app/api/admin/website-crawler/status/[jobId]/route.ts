@@ -10,16 +10,6 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   req: NextRequest,
   context: { params: Promise<{ jobId: string }> }
 ) => {
-  
-  // Add a simple test response to verify this is the frontend API
-  if (req.url.includes('test')) {
-    return NextResponse.json({ 
-      message: "Frontend API route is working",
-      url: req.url,
-      timestamp: new Date().toISOString()
-    });
-  }
-  
   try {
     // Add validation for context.params
     if (!context || !context.params) {
@@ -42,14 +32,10 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
 
     const { jobId } = params;
 
-    // Debug: List all jobs before lookup
-    await crawlJobManager.debugJobs();
-
     // Get job from storage
     const job = await crawlJobManager.getJob(jobId);
     
     if (!job) {
-      await crawlJobManager.debugJobs();
       return NextResponse.json(
         { error: "Job not found" },
         { status: 404 }

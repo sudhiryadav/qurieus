@@ -8,6 +8,17 @@ import { checkRateLimit, getClientIp } from '@/utils/rateLimit';
 // Handle OPTIONS request for CORS preflight
 export const OPTIONS = createOptionsHandler();
 
+const maskApiKey = (value?: string | null) => {
+  if (!value) return "";
+  if (value.length <= 8) return "***";
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+};
+
+const normalizeText = (value: unknown, maxLength: number): string => {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/\s+/g, " ").slice(0, maxLength);
+};
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const ip = getClientIp(request);
@@ -34,7 +45,13 @@ export async function POST(request: NextRequest) {
       return corsErrorResponse("Invalid API key", 401);
     }
 
-    const { visitorId, name, email, phone, company, source = 'chat_widget' } = await request.json();
+    const payload = await request.json();
+    const visitorId = normalizeText(payload?.visitorId, 200);
+    const name = normalizeText(payload?.name, 120);
+    const email = normalizeText(payload?.email, 254);
+    const phone = normalizeText(payload?.phone, 40) || null;
+    const company = normalizeText(payload?.company, 120) || null;
+    const source = normalizeText(payload?.source, 50) || "chat_widget";
     
     logger.info("Visitor Info API: Saving visitor information", { 
       visitorId, 
@@ -43,7 +60,7 @@ export async function POST(request: NextRequest) {
       hasPhone: !!phone,
       hasCompany: !!company,
       source,
-      apiKey
+      apiKey: maskApiKey(apiKey)
     });
 
     if (!visitorId) {
@@ -155,19 +172,45 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const visitorId = searchParams.get('visitorId');
+    const apiKey = request.headers.get('x-api-key');
     
     if (!visitorId) {
       return corsErrorResponse("Visitor ID is required", 400);
+    }
+    if (!apiKey) {
+      return corsErrorResponse("API key is required", 401);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: apiKey },
+      select: { id: true },
+    });
+    if (!user) {
+      return corsErrorResponse("Invalid API key", 401);
+    }
+
+    // Enforce tenant ownership before returning visitor data.
+    const hasConversationAccess = await prisma.chatConversation.findFirst({
+      where: {
+        visitorId,
+        userId: apiKey,
+      },
+      select: { id: true },
+    });
+    if (!hasConversationAccess) {
+      return corsErrorResponse("Visitor not found", 404);
     }
 
     const visitorInfo = await prisma.visitorInfo.findUnique({
       where: { visitorId },
       include: {
         conversations: {
+          where: { userId: apiKey },
           orderBy: { lastSeen: 'desc' },
           take: 5
         },
         analytics: {
+          where: { userId: apiKey },
           orderBy: { createdAt: 'desc' },
           take: 10
         }

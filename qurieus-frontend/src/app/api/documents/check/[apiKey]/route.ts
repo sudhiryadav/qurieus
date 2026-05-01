@@ -3,6 +3,13 @@ import { prisma } from "@/utils/prismaDB";
 import { sendConfigurationNotificationEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import { requireUser } from "@/utils/roleGuards";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/utils/auth";
+
+const maskApiKey = (value: string) => {
+  if (value.length <= 8) return "***";
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+};
 
 export async function GET(
   request: Request,
@@ -13,6 +20,14 @@ export async function GET(
   
   try {
     const { apiKey } = await params;
+    const session = await getServerSession(authOptions);
+    const requesterId = session?.user?.id;
+    const requesterRole = session?.user?.role;
+
+    const isPrivileged = requesterRole === "ADMIN" || requesterRole === "SUPER_ADMIN";
+    if (!requesterId || (!isPrivileged && requesterId !== apiKey)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
 
     // Check if user exists
@@ -36,7 +51,7 @@ export async function GET(
     const hasDocuments = documentCount > 0;
 
     logger.info("Documents Check API: Document check completed", { 
-      apiKey, 
+      apiKey: maskApiKey(apiKey), 
       hasDocuments, 
       documentCount 
     });
@@ -46,7 +61,7 @@ export async function GET(
       try {
         if (userRecord.email) {
           logger.info("Documents Check API: Sending configuration notification email", { 
-            apiKey, 
+            apiKey: maskApiKey(apiKey), 
             userEmail: userRecord.email 
           });
           
@@ -60,7 +75,7 @@ export async function GET(
         }
       } catch (error) {
         logger.error("Documents Check API: Error sending configuration notification", { 
-          apiKey, 
+          apiKey: maskApiKey(apiKey), 
           error: error instanceof Error ? error.message : String(error) 
         });
       }
@@ -68,7 +83,7 @@ export async function GET(
 
     const responseTime = Date.now() - startTime;
     logger.info("Documents Check API: Request completed successfully", { 
-      apiKey, 
+      apiKey: maskApiKey(apiKey), 
       hasDocuments, 
       responseTime 
     });

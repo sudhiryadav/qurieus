@@ -17,6 +17,12 @@ const RATE_LIMIT = parseInt(process.env.QUERY_RATE_LIMIT || "100", 10);
 const RATE_WINDOW = parseInt(process.env.QUERY_RATE_WINDOW || "60", 10); // seconds
 const rateLimitStore: Record<string, { count: number; reset: number }> = {};
 
+const maskApiKey = (value?: string) => {
+  if (!value) return "";
+  if (value.length <= 8) return "***";
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+};
+
 function checkAllowed(list: string[] | undefined, value: string) {
   if (!list || list.length === 0) return true;
   return list.some((item) => value.startsWith(item));
@@ -140,6 +146,7 @@ async function queryWithModal(message: string, userId: string, history: any[], c
 export async function POST(request: Request) {
   const startTime = Date.now();
   let userId: string | undefined;
+  let responseCorsOrigin = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || "https://qurieus.com";
   
   try {
     // Extract headers for restriction checks
@@ -155,7 +162,7 @@ export async function POST(request: Request) {
     const { message, visitorId } = body;
     
     logger.info("Document Query API: Processing query request", { 
-      apiKey, 
+      apiKey: maskApiKey(apiKey), 
       visitorId, 
       messageLength: message?.length || 0,
       origin,
@@ -207,6 +214,9 @@ export async function POST(request: Request) {
       return corsErrorResponse({ error: "Referrer not allowed", errorCode: "REFERER_NOT_ALLOWED" }, 403);
     if (!checkAllowed(userWithSubscription.allowedIPs, ip))
       return corsErrorResponse({ error: "IP not allowed", errorCode: "IP_NOT_ALLOWED" }, 403);
+    if (origin) {
+      responseCorsOrigin = origin;
+    }
 
     const isAdmin = userWithSubscription.role === 'ADMIN' || userWithSubscription.role === 'SUPER_ADMIN';
 
@@ -312,10 +322,11 @@ export async function POST(request: Request) {
         "Content-Type": "text/plain",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": responseCorsOrigin,
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, x-api-key, Authorization",
         "Access-Control-Max-Age": "86400",
+        "Vary": "Origin",
       },
     });
     return finalResponse;

@@ -188,7 +188,9 @@ export async function POST(request: Request) {
     let event: any;
     
     // Check if webhook verification is bypassed for testing
-    if (process.env.BYPASS_WEBHOOK_VERIFICATION === 'true') {
+    const isBypassEnabled = process.env.BYPASS_WEBHOOK_VERIFICATION === 'true';
+    const isProduction = process.env.NODE_ENV === "production";
+    if (isBypassEnabled && !isProduction) {
       const bodyRaw = await request.text();
       event = JSON.parse(bodyRaw);
     } else {
@@ -232,11 +234,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: "Invalid request" }, { status: 400 });
       }
 
-      // const currentTime = Date.now();
-
-      // if (currentTime - timestampInt > 5000) {
-      //   return NextResponse.json({ message: "Event expired" }, { status: 408 });
-      // }
+      const currentTime = Date.now();
+      const webhookMaxAgeMs = 5 * 60 * 1000;
+      if (Math.abs(currentTime - timestampInt) > webhookMaxAgeMs) {
+        return NextResponse.json({ message: "Event expired" }, { status: 408 });
+      }
 
       // Build signed payload
       const bodyRaw = await request.text();
@@ -248,17 +250,9 @@ export async function POST(request: Request) {
         .digest("hex");
 
       // Compare signatures
-      if (!timingSafeEqual(Buffer.from(hashedPayload), Buffer.from(signature))) {
-        
-        const hmacBodyOnly = createHmac("sha256", secretKey)
-          .update(bodyRaw, "utf8")
-          .digest("hex");
-        
-        // Method 2: Try with different secret key format
-        const altSecretKey = secretKey.startsWith('pdl_') ? secretKey.substring(4) : `pdl_${secretKey}`;
-        const hmacAltKey = createHmac("sha256", altSecretKey)
-          .update(signedPayload, "utf8")
-          .digest("hex");
+      const localSig = Buffer.from(hashedPayload, "hex");
+      const remoteSig = Buffer.from(signature, "hex");
+      if (localSig.length !== remoteSig.length || !timingSafeEqual(localSig, remoteSig)) {
         
         // Try Paddle SDK unmarshal as final fallback
         try {
