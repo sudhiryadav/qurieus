@@ -7,7 +7,6 @@
 #   PROD_FRONTEND_ENV_FILE, PROD_BACKEND_ENV_FILE, PROD_BOT_ENV_FILE
 
 variables:
-  RUN_PIPELINE: "false"
   FORCE_FRONTEND: "false"
   FORCE_BACKEND: "false"
   FORCE_BOT: "false"
@@ -31,7 +30,7 @@ check_changes:
     reports:
       dotenv: changes.env
   rules:
-    - if: '$CI_COMMIT_BRANCH == "prod" || $RUN_PIPELINE == "true"'
+    - if: '$CI_COMMIT_BRANCH == "prod"'
 
 .deploy_base:
   image: alpine:latest
@@ -67,4 +66,4 @@ deploy_production:
       ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SERVER_IP} \
         "export REPO_DIR='${REPO_DIR}' SKIP_GIT_PULL=1 && cd \"\$REPO_DIR\" && bash ci-cd/scripts/deploy-from-source.sh prod prod $F $B $O"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "prod" || $RUN_PIPELINE == "true"'
+    - if: '$CI_COMMIT_BRANCH == "prod"'
