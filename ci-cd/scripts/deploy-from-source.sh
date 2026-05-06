@@ -67,16 +67,24 @@ version_matches_nvmrc() {
   normalized_active=$(normalize_node_version "$active")
 
   # Exact version pin (e.g. 24.15.0) must match fully.
-  if printf "%s" "$normalized_requested" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-    [ "$normalized_active" = "$normalized_requested" ]
-    return $?
-  fi
+  case "$normalized_requested" in
+    ''|*[!0-9.]*|*.*.*.*)
+      ;;
+    *.*.*)
+      [ "$normalized_active" = "$normalized_requested" ]
+      return $?
+      ;;
+  esac
 
   # Major pin (e.g. 24) accepts any v24.x.y currently active.
-  if printf "%s" "$normalized_requested" | grep -Eq '^[0-9]+$'; then
-    [ "${normalized_active%%.*}" = "$normalized_requested" ]
-    return $?
-  fi
+  case "$normalized_requested" in
+    ''|*[!0-9]*)
+      ;;
+    *)
+      [ "${normalized_active%%.*}" = "$normalized_requested" ]
+      return $?
+      ;;
+  esac
 
   # For aliases like lts/* we cannot reliably compare without nvm.
   return 1
@@ -129,8 +137,9 @@ use_node_version_from_nvmrc() {
 
   echo "🟢 Using Node $node_version from $(dirname "$nvmrc")/.nvmrc"
   # Binary-only install avoids expensive source builds in CI deploys.
+  # nvm uses "-b" for binary install (not "--binary" on many versions).
   # If binary is unavailable, fail fast with actionable guidance.
-  if ! nvm install --binary "$node_version"; then
+  if ! nvm install -b "$node_version"; then
     echo "❌ Binary Node install failed for $node_version (source build disabled to prevent deploy timeout)."
     echo "   Preinstall this Node version on the server (NodeSource or manual tarball), then redeploy."
     return 1
