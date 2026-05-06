@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const packageJson = require('./package.json');
 const nextConfig = {
+  // Keep webpack customization while explicitly enabling Turbopack config shape for Next 16 builds.
+  turbopack: {},
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
