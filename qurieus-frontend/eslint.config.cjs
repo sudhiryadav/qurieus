@@ -1,8 +1,9 @@
 const { defineConfig, globalIgnores } = require("eslint/config");
 const nextVitals = require("eslint-config-next/core-web-vitals");
+const nextVitalsConfig = Array.isArray(nextVitals) ? nextVitals : [nextVitals];
 
 module.exports = defineConfig([
-  ...nextVitals,
+  ...nextVitalsConfig,
   globalIgnores(["public/**", ".next/**", "node_modules/**", "scripts/**"]),
   {
     rules: {

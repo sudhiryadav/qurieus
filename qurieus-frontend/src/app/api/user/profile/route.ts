@@ -41,17 +41,31 @@ export const PUT = RequireRoles([UserRole.USER, UserRole.ADMIN, UserRole.SUPER_A
       return NextResponse.json({ error: "Invalid bio" }, { status: 400 });
     }
     
+    // Build update payload explicitly so required fields never receive null.
+    const updateData: {
+      name?: string;
+      company?: string | null;
+      jobTitle?: string | null;
+      bio?: string | null;
+    } = {};
+
+    if (name !== undefined) {
+      if (!sanitizedName) {
+        return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+      }
+      updateData.name = sanitizedName;
+    }
+
+    if (company !== undefined) updateData.company = sanitizedCompany;
+    if (jobTitle !== undefined) updateData.jobTitle = sanitizedJobTitle;
+    if (bio !== undefined) updateData.bio = sanitizedBio;
+
     // Update user profile in the database
     const updatedUser = await prisma.user.update({
       where: {
       id: user.id,
       },
-      data: {
-        name: sanitizedName,
-        company: sanitizedCompany,
-        jobTitle: sanitizedJobTitle,
-        bio: sanitizedBio,
-      },
+      data: updateData,
     });
     
     return NextResponse.json({
