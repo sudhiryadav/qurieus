@@ -25,30 +25,30 @@ export default function LegalNoticePage() {
             <p>
               Qurieus is operated by:
               <br />
-              Qurieus Inc.
+              Frontslash
               <br />
-              123 AI Street
+              Bagdola
               <br />
-              Tech City, TC 12345
+              Sector 8 Dwarka
               <br />
-              United States
+              New Delhi
             </p>
 
-            <h3>2. Contact Information</h3>
+            {/* <h3>2. Contact Information</h3>
             <p>
               For any legal inquiries, please contact:
               <br />
               Email: legal@qurieus.com
               <br />
               Phone: +1 (555) 123-4567
-            </p>
+            </p> */}
 
-            <h3>3. Registration</h3>
+            {/* <h3>3. Registration</h3>
             <p>
               Company Registration Number: 123456789
               <br />
               VAT Number: US123456789
-            </p>
+            </p> */}
 
             <h3>4. Regulatory Information</h3>
             <p>
