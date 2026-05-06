@@ -22,9 +22,9 @@ check_changes:
     - apk add --no-cache git
     - touch changes.env
     - |
-      echo "FRONTEND_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -Eq '^(qurieus-frontend/|ci-cd/scripts/)' && echo true || echo false)" >> changes.env
-      echo "BACKEND_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -q '^qurieus-backend/' && echo true || echo false)" >> changes.env
-      echo "BOT_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -q '^qurieus-bot-teams/' && echo true || echo false)" >> changes.env
+      echo "FRONTEND_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -Eq '^(qurieus-frontend/|ci-cd/scripts/|\\.gitlab-ci\\.yml$)' && echo true || echo false)" >> changes.env
+      echo "BACKEND_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -Eq '^(qurieus-backend/|\\.gitlab-ci\\.yml$)' && echo true || echo false)" >> changes.env
+      echo "BOT_CHANGED=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA} | grep -Eq '^(qurieus-bot-teams/|\\.gitlab-ci\\.yml$)' && echo true || echo false)" >> changes.env
     - cat changes.env
   artifacts:
     reports:
