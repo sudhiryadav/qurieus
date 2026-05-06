@@ -136,13 +136,40 @@ use_node_version_from_nvmrc() {
   }
 
   echo "🟢 Using Node $node_version from $(dirname "$nvmrc")/.nvmrc"
+  # If this version already exists in nvm, prefer using it directly.
+  if nvm use "$node_version" >/dev/null 2>&1; then
+    active_node=$(node -v 2>/dev/null || true)
+    if [ -n "$active_node" ] && version_matches_nvmrc "$node_version" "$active_node"; then
+      echo "✅ Active Node version: $active_node"
+      return 0
+    fi
+  fi
+
   # Binary-only install avoids expensive source builds in CI deploys.
   # nvm uses "-b" for binary install (not "--binary" on many versions).
   # If binary is unavailable, fail fast with actionable guidance.
   if ! nvm install -b "$node_version"; then
-    echo "❌ Binary Node install failed for $node_version (source build disabled to prevent deploy timeout)."
-    echo "   Preinstall this Node version on the server (NodeSource or manual tarball), then redeploy."
-    return 1
+    # Recover from partial/corrupt prior installs (common after interrupted installs).
+    local resolved_version stale_dir
+    resolved_version=$(nvm version "$node_version" 2>/dev/null || true)
+    if [ "$resolved_version" = "N/A" ] || [ -z "$resolved_version" ]; then
+      resolved_version="v$(normalize_node_version "$node_version")"
+    fi
+    stale_dir="${NVM_DIR}/versions/node/${resolved_version}"
+
+    if [ -d "$stale_dir" ]; then
+      echo "⚠️ Detected stale Node install at $stale_dir. Cleaning and retrying binary install once..."
+      rm -rf "$stale_dir"
+      if ! nvm install -b "$node_version"; then
+        echo "❌ Binary Node install failed for $node_version after cleanup (source build disabled to prevent deploy timeout)."
+        echo "   Preinstall this Node version on the server (NodeSource or manual tarball), then redeploy."
+        return 1
+      fi
+    else
+      echo "❌ Binary Node install failed for $node_version (source build disabled to prevent deploy timeout)."
+      echo "   Preinstall this Node version on the server (NodeSource or manual tarball), then redeploy."
+      return 1
+    fi
   fi
   nvm use "$node_version"
 
