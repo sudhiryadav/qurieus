@@ -94,11 +94,13 @@ export const POST = RequireRoles([UserRole.SUPER_ADMIN])(async (
       stack: error.stack,
     });
 
-    const status = error.message?.includes("exceeds") ||
+    const isClientError =
+      error.message?.includes("exceeds") ||
       error.message?.includes("not supported") ||
-      error.message?.includes("not found")
-      ? 400
-      : 500;
+      error.message?.includes("not found") ||
+      error.message?.includes("empty") ||
+      error.message?.includes("AI service error 4");
+    const status = isClientError ? 400 : 500;
 
     return NextResponse.json(
       {

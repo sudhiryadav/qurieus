@@ -107,6 +107,9 @@ export async function uploadDocument(params: UploadDocumentParams): Promise<Uplo
   const { file, userId, title, description, category } = params;
 
   const maxSize = DOCUMENT_UPLOAD.MAX_FILE_SIZE_MB * 1024 * 1024;
+  if (file.size === 0) {
+    throw new Error("File is empty");
+  }
   if (file.size > maxSize) {
     throw new Error(`File exceeds the ${DOCUMENT_UPLOAD.MAX_FILE_SIZE_MB}MB size limit`);
   }
@@ -162,7 +165,8 @@ export async function uploadDocument(params: UploadDocumentParams): Promise<Uplo
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`AI service error: ${response.status} - ${errorText}`);
+      // Preserve 4xx/5xx class in the message so API routes can map status codes.
+      throw new Error(`AI service error ${response.status}: ${errorText}`);
     }
 
     const result = (await response.json()) as {

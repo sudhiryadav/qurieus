@@ -73,7 +73,12 @@ export async function POST(request: NextRequest) {
       stack: error.stack,
     });
 
-    const status = error.message?.includes("exceeds") || error.message?.includes("not supported") ? 400 : 500;
+    const isClientError =
+      error.message?.includes("exceeds") ||
+      error.message?.includes("not supported") ||
+      error.message?.includes("empty") ||
+      error.message?.includes("AI service error 4");
+    const status = isClientError ? 400 : 500;
     return NextResponse.json(
       { error: error.message || "Failed to upload document" },
       { status }
