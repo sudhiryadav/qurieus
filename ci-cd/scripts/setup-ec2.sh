@@ -11,9 +11,9 @@ echo "🚀 Setting up EC2 for Qurieus (no Docker)..."
 
 sudo apt update && sudo apt install -y curl
 
-# Node.js 20
+# Node.js 24 (latest major used by this repo)
 if ! command -v node &>/dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
   sudo apt install -y nodejs
 fi
 

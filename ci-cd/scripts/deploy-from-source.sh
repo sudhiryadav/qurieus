@@ -54,6 +54,34 @@ ensure_nvm_loaded() {
   command -v nvm >/dev/null 2>&1
 }
 
+normalize_node_version() {
+  # Strips leading "v" and surrounding whitespace.
+  printf "%s" "$1" | tr -d '[:space:]' | sed 's/^v//'
+}
+
+version_matches_nvmrc() {
+  local requested normalized_requested active normalized_active
+  requested="$1"
+  active="$2"
+  normalized_requested=$(normalize_node_version "$requested")
+  normalized_active=$(normalize_node_version "$active")
+
+  # Exact version pin (e.g. 24.15.0) must match fully.
+  if printf "%s" "$normalized_requested" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+    [ "$normalized_active" = "$normalized_requested" ]
+    return $?
+  fi
+
+  # Major pin (e.g. 24) accepts any v24.x.y currently active.
+  if printf "%s" "$normalized_requested" | grep -Eq '^[0-9]+$'; then
+    [ "${normalized_active%%.*}" = "$normalized_requested" ]
+    return $?
+  fi
+
+  # For aliases like lts/* we cannot reliably compare without nvm.
+  return 1
+}
+
 install_nvm_if_missing() {
   if ensure_nvm_loaded; then
     return 0
@@ -86,16 +114,29 @@ use_node_version_from_nvmrc() {
     return 1
   fi
 
+  # Fast-path: if current node already satisfies .nvmrc, skip nvm install.
+  local active_node
+  active_node=$(node -v 2>/dev/null || true)
+  if [ -n "$active_node" ] && version_matches_nvmrc "$node_version" "$active_node"; then
+    echo "✅ Reusing existing Node version: $active_node (matches .nvmrc=$node_version)"
+    return 0
+  fi
+
   install_nvm_if_missing || {
     echo "❌ Unable to install/load nvm; cannot guarantee Node version."
     return 1
   }
 
   echo "🟢 Using Node $node_version from $(dirname "$nvmrc")/.nvmrc"
-  nvm install "$node_version"
+  # Binary-only install avoids expensive source builds in CI deploys.
+  # If binary is unavailable, fail fast with actionable guidance.
+  if ! nvm install --binary "$node_version"; then
+    echo "❌ Binary Node install failed for $node_version (source build disabled to prevent deploy timeout)."
+    echo "   Preinstall this Node version on the server (NodeSource or manual tarball), then redeploy."
+    return 1
+  fi
   nvm use "$node_version"
 
-  local active_node
   active_node=$(node -v 2>/dev/null || true)
   if [ -z "$active_node" ]; then
     echo "❌ Node is not available even after nvm use."
