@@ -4,6 +4,9 @@ import { useState } from "react";
 import { showToast } from "@/components/Common/Toast";
 import axiosInstance from "@/lib/axios";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Star } from "lucide-react";
 
 interface TestimonialFormProps {
@@ -45,37 +48,26 @@ export function TestimonialForm({ onSuccess, compact = false }: TestimonialFormP
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="content" className="block text-sm font-medium text-dark dark:text-white mb-1">
-          Your feedback <span className="text-red-500">*</span>
-        </label>
-        <textarea
+      <FormField label="Your feedback" htmlFor="content" required>
+        <Textarea
           id="content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Share your experience with us..."
           rows={compact ? 3 : 4}
           required
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white"
         />
-      </div>
-      <div>
-        <label htmlFor="designation" className="block text-sm font-medium text-dark dark:text-white mb-1">
-          Designation (optional)
-        </label>
-        <input
+      </FormField>
+      <FormField label="Designation (optional)" htmlFor="designation">
+        <Input
           id="designation"
           type="text"
           value={designation}
           onChange={(e) => setDesignation(e.target.value)}
           placeholder="e.g. Founder @ Company"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white"
         />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-dark dark:text-white mb-1">
-          Rating
-        </label>
+      </FormField>
+      <FormField label="Rating">
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map((n) => (
             <button
@@ -91,8 +83,8 @@ export function TestimonialForm({ onSuccess, compact = false }: TestimonialFormP
             </button>
           ))}
         </div>
-      </div>
-      <Button type="submit" disabled={loading}>
+      </FormField>
+      <Button type="submit" loading={loading}>
         {loading ? "Submitting..." : "Submit testimonial"}
       </Button>
     </form>

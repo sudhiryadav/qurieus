@@ -258,11 +258,11 @@ export default function DocumentsList({
   if (documents.length === 0) {
     return (
       <div className="text-center py-12">
-        <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-foreground mb-2">
+        <FileText className="mx-auto mb-4 h-12 w-12 text-gray-400 dark:text-gray-500" />
+        <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-white">
           No documents found
         </h3>
-        <p className="text-muted-foreground mb-6">
+        <p className="mb-6 text-gray-600 dark:text-gray-400">
           Get started by uploading your first document
         </p>
         {onUploadClick && (
@@ -296,26 +296,26 @@ export default function DocumentsList({
           
           <CardContent className="space-y-4">
             {/* File Size */}
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {formatFileSize(doc.fileSize)}
             </p>
 
             {/* Description */}
             {doc.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
                 {doc.description}
               </p>
             )}
 
             {/* Document Info */}
             <div className="space-y-2">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                 <Calendar className="w-4 h-4" />
                 <span>Uploaded {formatDate(doc.createdAt)}</span>
               </div>
 
               {doc.user && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                   <User className="w-4 h-4" />
                   <span>by {doc.user.name}</span>
                 </div>
@@ -336,7 +336,7 @@ export default function DocumentsList({
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div className="flex items-center justify-between border-t border-gray-200 pt-4 dark:border-dark-3">
               <div className="flex items-center space-x-2">
                 {onView && (
                   <Button
@@ -355,7 +355,7 @@ export default function DocumentsList({
                     variant="ghost"
                     size="sm"
                     onClick={() => onDownload(doc.id)}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                   >
                     <Download className="w-4 h-4" />
                   </Button>

@@ -17,7 +17,7 @@ export const userNav = [
   { name: "Embed Code", href: "/user/embed-code", icon: <Code className="h-5 w-5" />, hideForAgent: true },
 ];
 
-const adminNav = [
+export const adminNav = [
   { name: "Users", href: "/admin/users", icon: <User className="h-4 w-4 mr-2" /> },
   { name: "Subscriptions", href: "/admin/subscriptions", icon: <BarChart3 className="h-4 w-4 mr-2" /> },
   { name: "Trial Extensions", href: "/admin/trial-extensions", icon: <Clock className="h-4 w-4 mr-2" /> },
@@ -69,7 +69,7 @@ const Sidebar = () => {
           aria-expanded={sidebarOpen}
           className="block lg:hidden"
         >
-          <X className="h-6 w-6" />
+          <X className="h-6 w-6 text-gray-800 dark:text-gray-200" />
         </button>
       </div>
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
@@ -91,8 +91,11 @@ const Sidebar = () => {
                       key={item.href}
                       href={item.href}
                       onClick={() => updateSidebarOpen(false)}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
-                        ${isActive ? "bg-primary/10 text-primary" : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"}`}
+                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-blue-600/10 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                          : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                      }`}
                     >
                       {item.icon}
                       {item.name}
@@ -120,8 +123,11 @@ const Sidebar = () => {
                 key={item.href}
                 href={item.href}
                 onClick={() => updateSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
-                  ${isActive ? "bg-primary/10 text-primary" : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"}`}
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-blue-600/10 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                    : "text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-3"
+                }`}
               >
                 {item.icon}
                 {item.name}

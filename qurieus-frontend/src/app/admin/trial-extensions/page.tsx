@@ -5,6 +5,9 @@ import { showToast } from "@/components/Common/Toast";
 import axiosInstance from "@/lib/axios";
 import { format } from "date-fns";
 import { Clock, Check, X, UserPlus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
 
 interface TrialExtensionRequest {
   id: string;
@@ -131,13 +134,13 @@ export default function AdminTrialExtensionsPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3">
-        <Clock className="h-8 w-8 text-blue-600" />
-        <h1 className="text-2xl font-bold">Trial Extensions</h1>
+        <Clock className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Trial Extensions</h1>
       </div>
 
       {/* Direct extend section */}
-      <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
           <UserPlus className="h-5 w-5" />
           Extend trial directly (unlimited)
         </h2>
@@ -145,27 +148,22 @@ export default function AdminTrialExtensionsPage() {
           For special requests, extend any user&apos;s Free Trial. You can do this as many times as needed.
         </p>
         <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <label className="mb-1 block text-sm font-medium">User</label>
+          <FormField label="User" className="min-w-[200px] flex-1">
             <div className="flex gap-2">
-              <input
+              <Input
                 type="text"
                 placeholder="Search by name or email..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 onBlur={() => setTimeout(searchUsers, 200)}
-                className="flex-1 rounded-md border px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                className="flex-1"
               />
-              <button
-                type="button"
-                onClick={searchUsers}
-                className="rounded-md bg-gray-200 px-3 py-2 dark:bg-gray-600"
-              >
+              <Button type="button" variant="secondary" size="icon" onClick={searchUsers} aria-label="Search users">
                 <Search className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
             {searchResults.length > 0 && (
-              <div className="mt-1 max-h-40 overflow-y-auto rounded border bg-white dark:bg-gray-800">
+              <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-gray-200 bg-white dark:border-dark-3 dark:bg-dark-3">
                 {searchResults.map((u) => (
                   <button
                     key={u.id}
@@ -175,111 +173,111 @@ export default function AdminTrialExtensionsPage() {
                       setSearchResults([]);
                       setUserSearch(u.email);
                     }}
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="block w-full px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-dark-4"
                   >
                     {u.name} ({u.email})
                   </button>
                 ))}
               </div>
             )}
-          </div>
-          <div className="w-32">
-            <label className="mb-1 block text-sm font-medium">Extension days</label>
-            <input
+          </FormField>
+          <FormField label="Extension days" className="w-32">
+            <Input
               type="number"
               min={1}
               value={directExtendDays}
               onChange={(e) => setDirectExtendDays(Number(e.target.value) || 7)}
               disabled={!!directEndDate}
-              className="w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
             />
-          </div>
-          <div className="w-40">
-            <label className="mb-1 block text-sm font-medium">Or set end date</label>
-            <input
+          </FormField>
+          <FormField label="Or set end date" className="w-40">
+            <Input
               type="date"
               value={directEndDate}
               onChange={(e) => setDirectEndDate(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
             />
-          </div>
+          </FormField>
           <div className="flex items-end">
-            <button
+            <Button
               onClick={handleDirectExtend}
-              disabled={directExtending || !directUserId}
-              className="rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90 disabled:opacity-50"
+              loading={directExtending}
+              disabled={!directUserId}
             >
               {directExtending ? "Extending..." : "Extend trial"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Pending requests */}
-      <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="mb-4 text-lg font-semibold">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
           Pending requests ({pendingRequests.length})
         </h2>
         {loading ? (
-          <p className="text-gray-500">Loading...</p>
+          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
         ) : pendingRequests.length === 0 ? (
-          <p className="text-gray-500">No pending requests</p>
+          <p className="text-gray-500 dark:text-gray-400">No pending requests</p>
         ) : (
           <div className="space-y-4">
             {pendingRequests.map((req) => (
               <div
                 key={req.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4 dark:border-gray-600"
+                className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 p-4 dark:border-dark-3"
               >
                 <div>
-                  <p className="font-medium">{req.user.name}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{req.user.name}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{req.user.email}</p>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Requested {format(new Date(req.requestedAt), "PPp")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm">Days:</label>
-                    <input
-                      type="number"
-                      min={1}
-                      className="w-16 rounded border px-2 py-1 dark:bg-gray-700"
-                      value={approveDays[req.id] ?? 7}
-                      onChange={(e) =>
-                        setApproveDays((prev) => ({
-                          ...prev,
-                          [req.id]: Number(e.target.value) || 7,
-                        }))
-                      }
-                    />
+                    <FormField label="Days" className="w-20">
+                      <Input
+                        type="number"
+                        min={1}
+                        className="w-16"
+                        value={approveDays[req.id] ?? 7}
+                        onChange={(e) =>
+                          setApproveDays((prev) => ({
+                            ...prev,
+                            [req.id]: Number(e.target.value) || 7,
+                          }))
+                        }
+                      />
+                    </FormField>
                   </div>
-                  <button
+                  <Button
+                    variant="success"
+                    size="sm"
                     onClick={() => handleApprove(req.id)}
-                    disabled={actioning === req.id}
-                    className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-700 disabled:opacity-50"
+                    loading={actioning === req.id}
                   >
                     <Check className="h-4 w-4" />
                     {actioning === req.id ? "Approving..." : "Approve"}
-                  </button>
+                  </Button>
                   <div className="flex items-center gap-2">
-                    <input
+                    <Input
                       type="text"
+                      size="sm"
                       placeholder="Rejection reason (optional)"
-                      className="w-40 rounded border px-2 py-1 text-sm dark:bg-gray-700"
+                      className="w-40"
                       value={rejectReason[req.id] ?? ""}
                       onChange={(e) =>
                         setRejectReason((prev) => ({ ...prev, [req.id]: e.target.value }))
                       }
                     />
-                    <button
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleReject(req.id)}
-                      disabled={actioning === req.id}
-                      className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-white hover:bg-red-700 disabled:opacity-50"
+                      loading={actioning === req.id}
                     >
                       <X className="h-4 w-4" />
                       Reject
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -290,16 +288,16 @@ export default function AdminTrialExtensionsPage() {
 
       {/* Recent (non-pending) requests */}
       {otherRequests.length > 0 && (
-        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="mb-4 text-lg font-semibold">Recent requests</h2>
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Recent requests</h2>
           <div className="space-y-2">
             {otherRequests.slice(0, 20).map((req) => (
               <div
                 key={req.id}
-                className="flex items-center justify-between rounded border p-3 dark:border-gray-600"
+                className="flex items-center justify-between rounded border border-gray-200 p-3 dark:border-dark-3"
               >
                 <div>
-                  <p className="font-medium">{req.user.name}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{req.user.name}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{req.user.email}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -312,7 +310,7 @@ export default function AdminTrialExtensionsPage() {
                   >
                     {req.status}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     {format(new Date(req.requestedAt), "PP")}
                   </span>
                 </div>

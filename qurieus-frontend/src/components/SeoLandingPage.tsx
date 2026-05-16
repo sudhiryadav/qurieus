@@ -1,9 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import Script from "next/script";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import TryForFreeButton from "@/components/Common/TryForFreeButton";
 import type { SeoPageConfig } from "@/lib/seoPages";
@@ -16,53 +15,89 @@ export default function SeoLandingPage({ config }: SeoLandingPageProps) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://qurieus.com";
   const pageUrl = `${baseUrl}/${config.slug}`;
 
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: config.metaTitle,
-    description: config.metaDescription,
-    url: pageUrl,
-    breadcrumb: {
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
-        { "@type": "ListItem", position: 2, name: config.title, item: pageUrl },
-      ],
-    },
-  };
-
-  const faqStructuredData =
-    config.faqs && config.faqs.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: config.faqs.map((faq) => ({
-            "@type": "Question",
-            name: faq.question,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: faq.answer,
+  const webpageJson = useMemo(
+    () =>
+      JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: config.metaTitle,
+        description: config.metaDescription,
+        url: pageUrl,
+        breadcrumb: {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: config.title,
+              item: pageUrl,
             },
-          })),
-        }
-      : null;
+          ],
+        },
+      }),
+    [
+      baseUrl,
+      pageUrl,
+      config.metaTitle,
+      config.metaDescription,
+      config.title,
+    ]
+  );
+
+  const faqJson = useMemo(() => {
+    if (!config.faqs || config.faqs.length === 0) {
+      return null;
+    }
+    return JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: config.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    });
+  }, [config.faqs]);
+
+  useEffect(() => {
+    const id = `ld-webpage-${config.slug}`;
+    if (typeof document === "undefined" || document.getElementById(id)) {
+      return;
+    }
+    const s = document.createElement("script");
+    s.id = id;
+    s.type = "application/ld+json";
+    s.textContent = webpageJson;
+    document.head.appendChild(s);
+    return () => {
+      document.getElementById(id)?.remove();
+    };
+  }, [config.slug, webpageJson]);
+
+  useEffect(() => {
+    if (!faqJson) {
+      return;
+    }
+    const id = `ld-faq-${config.slug}`;
+    if (typeof document === "undefined" || document.getElementById(id)) {
+      return;
+    }
+    const s = document.createElement("script");
+    s.id = id;
+    s.type = "application/ld+json";
+    s.textContent = faqJson;
+    document.head.appendChild(s);
+    return () => {
+      document.getElementById(id)?.remove();
+    };
+  }, [config.slug, faqJson]);
 
   return (
     <main>
-      <Script
-        id={`structured-data-${config.slug}`}
-        type="application/ld+json"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
-      {faqStructuredData && (
-        <Script
-          id={`faq-structured-data-${config.slug}`}
-          type="application/ld+json"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
-        />
-      )}
       <Breadcrumb
         pageName={config.title}
         pageDescription={config.heroDescription.slice(0, 80) + "..."}

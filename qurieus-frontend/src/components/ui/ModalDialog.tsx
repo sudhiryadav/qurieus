@@ -39,7 +39,7 @@ export default function ModalDialog({
           </div>
           <button
             onClick={onClose}
-            className="ml-4 text-gray-400 hover:text-gray-700 dark:hover:text-white focus:outline-none"
+            className="ml-4 text-gray-500 hover:text-gray-800 focus:outline-none dark:text-gray-400 dark:hover:text-white"
             aria-label="Close dialog"
           >
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24">

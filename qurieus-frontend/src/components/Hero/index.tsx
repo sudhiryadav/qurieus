@@ -1,9 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
-import { useTheme } from "next-themes";
+import HeroDashboardPreview from "@/components/Hero/HeroDashboardPreview";
+import { Button } from "@/components/ui/button";
 
 const Hero = () => {
-  // const { theme } = useTheme();
   return (
     <>
       <section
@@ -24,18 +23,17 @@ const Hero = () => {
                   Qurieus is the AI document platform with agentic capabilities: chat with PDFs, ask questions about your documents, and embed an AI chatbot on your website. Escalate to human agents when needed. Upload documents, train the AI, and get instant answers—or hand off to your support team. Perfect for lawyers, HR, SaaS, and startups.
                 </p>
                 <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-                  <Link
-                    href="/signup"
-                    className="hover:shadow-signUp rounded-md bg-primary px-8 py-4 text-base font-semibold text-white duration-300 ease-in-out hover:bg-primary/80"
+                  <Button asChild size="xl" className="hover:shadow-signUp font-semibold">
+                    <Link href="/signup">Get Started Free</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="xl"
+                    variant="secondary"
+                    className="hover:shadow-signUp bg-dark font-semibold text-white hover:bg-dark/80 dark:bg-white dark:text-dark dark:hover:bg-white/80"
                   >
-                    Get Started Free
-                  </Link>
-                  <Link
-                    href="/about"
-                    className="hover:shadow-signUp inline-block rounded-md bg-dark px-8 py-4 text-base font-semibold text-white duration-300 ease-in-out hover:bg-dark/80 dark:bg-white dark:text-dark dark:hover:bg-white/80"
-                  >
-                    Learn More
-                  </Link>
+                    <Link href="/about">Learn More</Link>
+                  </Button>
                 </div>
                 <p className="mt-6 text-sm text-white/90">
                   Need live chat for your website?{" "}
@@ -62,15 +60,7 @@ const Hero = () => {
                 data-wow-delay=".25s"
               >
                 <div className="mt-16">
-                  {/* Add the overlay such that if the tem */}
-                  <div className="absolute inset-0 rounded-t-xl rounded-tr-xl bg-black opacity-0 dark:opacity-20"></div>
-                  <Image
-                    src="/images/hero/hero-image.jpg"
-                    alt="Qurieus AI document Q&A platform - chat with PDFs and documents"
-                    className="mx-auto max-w-full rounded-t-xl rounded-tr-xl"
-                    width={845}
-                    height={316}
-                  />
+                  <HeroDashboardPreview />
                 </div>
                 <div className="absolute -left-9 bottom-0 z-[-1]">
                   <svg

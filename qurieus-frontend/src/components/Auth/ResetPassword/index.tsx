@@ -1,5 +1,6 @@
 "use client";
-import Loader from "@/components/Common/Loader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Logo from "@/components/Common/Logo";
 import axios from "@/lib/axios";
 import { useRouter } from "next/navigation";
@@ -92,35 +93,32 @@ const ResetPassword = ({ token }: { token: string }) => {
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-[22px]">
-                  <input
+                  <Input
                     type="password"
                     placeholder="New password"
                     name="newPassword"
                     value={data?.newPassword}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+                    size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
                   />
                 </div>
 
                 <div className="mb-[22px]">
-                  <input
+                  <Input
                     type="password"
                     placeholder="Confirm new password"
                     name="ReNewPassword"
                     value={data?.ReNewPassword}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+                    size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
                   />
                 </div>
                 <div className="">
-                  <button
-                    type="submit"
-                    className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark"
-                  >
-                    Save Password {loader && <Loader />}
-                  </button>
+                  <Button type="submit" className="w-full" size="lg" loading={loader}>
+                    Save Password
+                  </Button>
                 </div>
               </form>
 

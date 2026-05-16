@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -238,8 +239,8 @@ export default function WebsiteCrawlerPage() {
     <div>
       <div className="flex items-center gap-3 mb-6 justify-between">
         <div className="flex items-center gap-3">
-          <Globe className="h-8 w-8 text-blue-600" />
-          <h1 className="text-2xl font-bold">Website Crawler</h1>
+          <Globe className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Website Crawler</h1>
         </div>
         <div className="flex gap-2">
           {isCrawling ? (
@@ -358,17 +359,17 @@ export default function WebsiteCrawlerPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm text-gray-700 dark:text-gray-200">
                   <span>Pages Crawled: {progress.current}</span>
                   <span>Total: {progress.total}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-dark-3">
                   <div 
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${progress.percentage}%` }}
                   ></div>
                 </div>
-                <div className="text-center text-sm text-muted-foreground">
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
                   {progress.percentage}% Complete
                 </div>
               </div>
@@ -381,24 +382,27 @@ export default function WebsiteCrawlerPage() {
               <CardTitle>Real-time Logs</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 overflow-y-auto bg-muted p-4 rounded-md font-mono text-sm">
+              <div className="h-64 overflow-y-auto bg-gray-100 p-4 rounded-md font-mono text-sm text-gray-900 dark:bg-dark-3 dark:text-gray-200">
                 {logs.length === 0 ? (
-                  <div className="text-muted-foreground">No logs yet...</div>
+                  <div className="text-gray-500 dark:text-gray-400">No logs yet...</div>
                 ) : (
                   logs.map((log, index) => (
                     <div key={index} className="mb-2">
-                      <span className="text-muted-foreground">[{log.timestamp || 'Unknown'}]</span>
+                      <span className="text-gray-500 dark:text-gray-400">[{log.timestamp || 'Unknown'}]</span>
                       <span className={`ml-2 ${
-                        (log.logType || 'info') === 'error' ? 'text-red-500' :
-                        (log.logType || 'info') === 'success' ? 'text-green-500' :
-                        (log.logType || 'info') === 'warning' ? 'text-yellow-500' :
-                        'text-blue-500'
+                        (log.logType || 'info') === 'error'
+                          ? 'text-red-500 dark:text-red-400'
+                          : (log.logType || 'info') === 'success'
+                            ? 'text-green-600 dark:text-green-400'
+                            : (log.logType || 'info') === 'warning'
+                              ? 'text-yellow-600 dark:text-yellow-400'
+                              : 'text-blue-600 dark:text-blue-400'
                       }`}>
                         [{(log.logType || 'info').toUpperCase()}]
                       </span>
-                      <span className="ml-2">{log.message || 'No message'}</span>
+                      <span className="ml-2 text-gray-800 dark:text-gray-100">{log.message || 'No message'}</span>
                       {log.url && (
-                        <span className="ml-2 text-muted-foreground">({log.url})</span>
+                        <span className="ml-2 text-gray-500 dark:text-gray-400">({log.url})</span>
                       )}
                     </div>
                   ))
@@ -421,10 +425,10 @@ export default function WebsiteCrawlerPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <textarea
+                <Textarea
                   value={extractedContent}
                   readOnly
-                  className="h-64 font-mono text-sm w-full p-3 border rounded-md bg-gray-50 dark:bg-gray-800"
+                  className="h-64 font-mono text-sm"
                   placeholder="Extracted content will appear here..."
                 />
               </CardContent>

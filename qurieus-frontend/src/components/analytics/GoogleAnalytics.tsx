@@ -9,7 +9,6 @@ import {
 } from "@/lib/gtag";
 import { useSession } from "next-auth/react";
 import { usePathname, useSearchParams } from "next/navigation";
-import Script from "next/script";
 import { useEffect, useRef } from "react";
 
 const sendUserEmail =
@@ -37,14 +36,41 @@ function flushPendingOAuthEvent() {
 }
 
 /**
+ * Loads GA4 without `<Script>` components so React 19 client trees do not warn
+ * ("Encountered a script tag while rendering...").
+ */
+function useGaLoader() {
+  useEffect(() => {
+    if (!isGaEnabled() || typeof window === "undefined") {
+      return;
+    }
+
+    const initId = "ga4-inline-init";
+    if (!document.getElementById(initId)) {
+      const inline = document.createElement("script");
+      inline.id = initId;
+      inline.textContent = `
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
+`;
+      document.head.appendChild(inline);
+
+      const ext = document.createElement("script");
+      ext.async = true;
+      ext.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+      document.head.appendChild(ext);
+    }
+  }, []);
+}
+
+/**
  * Loads GA4 and ties hits to the signed-in user.
- * - page_view: path, full URL, title (SPA navigations).
- * - user_id: internal DB id (recommended by Google; not PII).
- * - login / sign_up: credentials + Google OAuth (recommended events).
- * - ai_conversation: fire from agent console / embed (mark as key event in GA4).
- * - Optional user_email user property when NEXT_PUBLIC_GA_SEND_USER_EMAIL=true.
  */
 export function GoogleAnalytics() {
+  useGaLoader();
+
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -112,22 +138,5 @@ export function GoogleAnalytics() {
     return null;
   }
 
-  return (
-    <>
-      <Script id="ga4-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', {
-            send_page_view: false
-          });
-        `}
-      </Script>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-      />
-    </>
-  );
+  return null;
 }

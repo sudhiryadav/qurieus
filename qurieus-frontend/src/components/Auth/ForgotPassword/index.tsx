@@ -3,7 +3,8 @@ import React from "react";
 import { useState } from "react";
 import { showToast } from "@/components/Common/Toast";
 import axios from '@/lib/axios';
-import Loader from "@/components/Common/Loader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import Image from "next/image";
 import AuthDotsGrid from "@/components/Auth/AuthDotsGrid";
@@ -76,33 +77,27 @@ const ForgotPassword = () => {
                       Try again
                     </button>
                   </p>
-                  <Link
-                    href="/signin"
-                    className="inline-block w-full rounded-md border border-primary bg-primary px-5 py-3 text-center text-base font-medium text-white transition duration-300 ease-in-out hover:bg-primary/90"
-                  >
-                    Back to sign in
-                  </Link>
+                  <Button asChild className="w-full" size="lg">
+                    <Link href="/signin">Back to sign in</Link>
+                  </Button>
                 </div>
               ) : (
               <form onSubmit={handleSubmit}>
                 <div className="mb-[22px]">
-                  <input
+                  <Input
                     type="email"
                     placeholder="Email"
                     name="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+                    size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
                   />
                 </div>
                 <div className="mb-4">
-                  <button
-                    type="submit"
-                    className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark"
-                  >
-                    Send Email {loading && <Loader />}
-                  </button>
+                  <Button type="submit" className="w-full" size="lg" loading={loading}>
+                    Send Email
+                  </Button>
                 </div>
                 <p className="text-center text-sm text-body-color dark:text-dark-6">
                   Remember your password?{" "}

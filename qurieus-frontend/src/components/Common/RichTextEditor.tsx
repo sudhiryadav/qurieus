@@ -6,7 +6,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
-import { useTheme } from 'next-themes';
+import { useTheme } from "@/lib/app-theme";
 import { 
   Bold, 
   Italic, 

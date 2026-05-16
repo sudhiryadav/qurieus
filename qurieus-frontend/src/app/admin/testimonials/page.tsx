@@ -6,6 +6,8 @@ import axiosInstance from "@/lib/axios";
 import { format } from "date-fns";
 import { MessageSquare, Check, X, History, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Textarea } from "@/components/ui/textarea";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { UserAvatar } from "@/components/UserAvatar";
 import ModalDialog from "@/components/ui/ModalDialog";
@@ -153,11 +155,11 @@ export default function AdminTestimonialsPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <MessageSquare className="h-8 w-8 text-blue-600" />
+        <MessageSquare className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
         <h1 className="text-2xl font-bold text-dark dark:text-white">Testimonials</h1>
       </div>
 
-      <p className="mb-6 text-sm text-muted-foreground">
+      <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
         Review and approve user testimonials. Only approved testimonials appear on the public landing page. Rejected users receive an email with your feedback.
       </p>
 
@@ -195,7 +197,7 @@ export default function AdminTestimonialsPage() {
       <div className="space-y-4">
         <LoadingOverlay loading={loading} htmlText="Loading testimonials..." position="absolute" />
         {filtered.length === 0 ? (
-          <div className="rounded-lg border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-12 text-center text-muted-foreground">
+          <div className="rounded-lg border border-gray-200 dark:border-dark-3 bg-white dark:bg-dark-2 p-12 text-center text-gray-600 dark:text-gray-400">
             {loading ? null : filter === "pending"
               ? "No pending testimonials."
               : filter === "approved"
@@ -221,16 +223,16 @@ export default function AdminTestimonialsPage() {
                   />
                   <div>
                     <p className="font-medium text-dark dark:text-white">{t.user.name}</p>
-                    <p className="text-sm text-muted-foreground">{t.user.email}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t.user.email}</p>
                     {(t.designation || t.user.jobTitle || t.user.company) && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {t.designation || [t.user.jobTitle, t.user.company].filter(Boolean).join(" @ ")}
                       </p>
                     )}
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="mt-1 h-auto py-1 px-0 text-xs text-muted-foreground hover:text-primary"
+                      className="mt-1 h-auto py-1 px-0 text-xs text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
                       onClick={() => toggleUserHistory(t.user.id)}
                     >
                       <History className="h-3 w-3 mr-1 inline" />
@@ -246,7 +248,7 @@ export default function AdminTestimonialsPage() {
                     ))}
                   </div>
                   <p className="text-body-color dark:text-dark-6">&quot;{t.content}&quot;</p>
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     Submitted {format(new Date(t.createdAt), "MMM d, yyyy")}
                   </p>
                   {t.status === "REJECTED" && t.rejectionReason && (
@@ -335,7 +337,7 @@ export default function AdminTestimonialsPage() {
             <Button variant="outline" onClick={() => setApproveModal(null)}>
               Cancel
             </Button>
-            <Button onClick={handleApprove} disabled={!!actioning} className="bg-green-600 hover:bg-green-700">
+            <Button variant="success" onClick={handleApprove} loading={!!actioning}>
               <Check className="h-4 w-4 mr-1" />
               {actioning ? "Approving..." : "Approve"}
             </Button>
@@ -370,22 +372,18 @@ export default function AdminTestimonialsPage() {
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             The user will receive an email notification. Add a comment below to suggest changes so they can submit a revised testimonial.
           </p>
-          <div>
-            <label htmlFor="rejectionReason" className="block text-sm font-medium text-dark dark:text-white mb-1">
-              Feedback for user (optional)
-            </label>
-            <textarea
+          <FormField label="Feedback for user (optional)" htmlFor="rejectionReason">
+            <Textarea
               id="rejectionReason"
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="e.g. Please add more specific details about your experience, or fix the typo in..."
               rows={4}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-dark-3 dark:bg-dark-1 dark:text-white"
             />
-          </div>
+          </FormField>
         </div>
       </ModalDialog>
     </div>

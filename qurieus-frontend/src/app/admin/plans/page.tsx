@@ -8,8 +8,11 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
-import Loader from "@/components/Common/Loader";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Plan {
   id: string;
@@ -206,10 +209,6 @@ export default function AdminPlansPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <Code className="h-8 w-8 text-blue-600" />
-        <h1 className="text-2xl font-bold">Plans</h1>
-      </div>
       {/* Workflow Note */}
       <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
       <LoadingOverlay loading={loading} htmlText="Loading plans..." position="absolute" />
@@ -236,16 +235,21 @@ export default function AdminPlansPage() {
       </div>
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Plans</h1>
+        <div className="flex items-center gap-3">
+          <Code className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Plans
+          </h1>
+        </div>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="Search plans..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="pl-10"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -254,7 +258,7 @@ export default function AdminPlansPage() {
                 type="checkbox"
                 checked={showInactivePlans}
                 onChange={e => setShowInactivePlans(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-blue-500 dark:border-dark-3 dark:bg-dark-3"
               />
               <span className="text-gray-700 dark:text-gray-300">Show inactive plans</span>
             </label>
@@ -265,10 +269,10 @@ export default function AdminPlansPage() {
           </Button>
         </div>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm dark:border-dark-3 dark:bg-dark-2">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 dark:bg-gray-800 border-b dark:border-dark-3">
+            <tr className="border-b border-gray-200 bg-gray-50 dark:border-dark-3 dark:bg-dark-3/80">
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Name</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Description</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Price</th>
@@ -285,7 +289,7 @@ export default function AdminPlansPage() {
           </thead>
           <tbody>
             {filteredPlans.map(plan => (
-              <tr key={plan.id} className="border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <tr key={plan.id} className="border-b border-gray-100 bg-white hover:bg-gray-50 dark:border-dark-3 dark:bg-dark-2 dark:hover:bg-dark-3/60">
                 <td className="px-4 py-3 text-sm font-medium text-dark dark:text-white">{plan.name}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.description}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.price === 0 ? '-' : `${plan.currency} ${plan.price}`}</td>
@@ -304,10 +308,10 @@ export default function AdminPlansPage() {
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxStorageMB ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{plan.maxQueriesPerDay ?? 'Custom'}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{
-                  plan.name === "Free Trial" || plan.price === 0 ? '-' : (plan.paddleConfig?.productId || <span className="text-gray-500">Not synced</span>)
+                  plan.name === "Free Trial" || plan.price === 0 ? '-' : (plan.paddleConfig?.productId || <span className="text-gray-500 dark:text-gray-400">Not synced</span>)
                 }</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{
-                  plan.name === "Free Trial" || plan.price === 0 ? '-' : (plan.paddleConfig?.priceId || <span className="text-gray-500">Not synced</span>)
+                  plan.name === "Free Trial" || plan.price === 0 ? '-' : (plan.paddleConfig?.priceId || <span className="text-gray-500 dark:text-gray-400">Not synced</span>)
                 }</td>
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
@@ -368,50 +372,40 @@ export default function AdminPlansPage() {
         }
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
-            <input type="text" value={editForm.name} onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
-            <textarea value={editForm.description} onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Price</label>
-            <input type="number" value={editForm.price} onChange={e => setEditForm(prev => ({ ...prev, price: Number(e.target.value) }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Currency</label>
-            <input type="text" value={editForm.currency} onChange={e => setEditForm(prev => ({ ...prev, currency: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Features (comma separated)</label>
-            <input type="text" value={editForm.features} onChange={e => setEditForm(prev => ({ ...prev, features: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+          <FormField label="Name">
+            <Input type="text" value={editForm.name} onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}  />
+          </FormField>
+          <FormField label="Description">
+            <Textarea value={editForm.description} onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} rows={2}  />
+          </FormField>
+          <FormField label="Price">
+            <Input type="number" value={editForm.price} onChange={e => setEditForm(prev => ({ ...prev, price: Number(e.target.value) }))}  />
+          </FormField>
+          <FormField label="Currency">
+            <Input type="text" value={editForm.currency} onChange={e => setEditForm(prev => ({ ...prev, currency: e.target.value }))}  />
+          </FormField>
+          <FormField label="Features (comma separated)">
+            <Input type="text" value={editForm.features} onChange={e => setEditForm(prev => ({ ...prev, features: e.target.value }))}  />
+          </FormField>
           <div className="flex items-center">
-            <input type="checkbox" id="isActive" checked={editForm.isActive} onChange={e => setEditForm(prev => ({ ...prev, isActive: e.target.checked }))} className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500" />
-            <label htmlFor="isActive" className="ml-2 text-sm font-medium text-gray-300">Active</label>
+            <input type="checkbox" id="isActive" checked={editForm.isActive} onChange={e => setEditForm(prev => ({ ...prev, isActive: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-blue-500 dark:border-dark-3 dark:bg-dark-3" />
+            <Label htmlFor="isActive" className="ml-2 font-normal text-gray-700 dark:text-gray-200">Active</Label>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Ideal For</label>
-            <input type="text" value={editForm.idealFor} onChange={e => setEditForm(prev => ({ ...prev, idealFor: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Key Limits</label>
-            <input type="text" value={editForm.keyLimits} onChange={e => setEditForm(prev => ({ ...prev, keyLimits: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Max Docs</label>
-            <input type="number" value={editForm.maxDocs ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxDocs: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Max Storage (MB)</label>
-            <input type="number" value={editForm.maxStorageMB ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxStorageMB: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Max Queries/Day</label>
-            <input type="number" value={editForm.maxQueriesPerDay ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxQueriesPerDay: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+          <FormField label="Ideal For">
+            <Input type="text" value={editForm.idealFor} onChange={e => setEditForm(prev => ({ ...prev, idealFor: e.target.value }))}  />
+          </FormField>
+          <FormField label="Key Limits">
+            <Input type="text" value={editForm.keyLimits} onChange={e => setEditForm(prev => ({ ...prev, keyLimits: e.target.value }))}  />
+          </FormField>
+          <FormField label="Max Docs">
+            <Input type="number" value={editForm.maxDocs ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxDocs: e.target.value ? Number(e.target.value) : undefined }))}  />
+          </FormField>
+          <FormField label="Max Storage (MB)">
+            <Input type="number" value={editForm.maxStorageMB ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxStorageMB: e.target.value ? Number(e.target.value) : undefined }))}  />
+          </FormField>
+          <FormField label="Max Queries/Day">
+            <Input type="number" value={editForm.maxQueriesPerDay ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxQueriesPerDay: e.target.value ? Number(e.target.value) : undefined }))}  />
+          </FormField>
         </div>
       </ModalDialog>
       {/* Add Plan Modal */}
@@ -427,50 +421,40 @@ export default function AdminPlansPage() {
         }
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
-            <input type="text" value={editForm.name} onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
-            <textarea value={editForm.description} onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Price</label>
-            <input type="number" value={editForm.price} onChange={e => setEditForm(prev => ({ ...prev, price: Number(e.target.value) }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Currency</label>
-            <input type="text" value={editForm.currency} onChange={e => setEditForm(prev => ({ ...prev, currency: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Features (comma separated)</label>
-            <input type="text" value={editForm.features} onChange={e => setEditForm(prev => ({ ...prev, features: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+          <FormField label="Name">
+            <Input type="text" value={editForm.name} onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}  />
+          </FormField>
+          <FormField label="Description">
+            <Textarea value={editForm.description} onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} rows={2}  />
+          </FormField>
+          <FormField label="Price">
+            <Input type="number" value={editForm.price} onChange={e => setEditForm(prev => ({ ...prev, price: Number(e.target.value) }))}  />
+          </FormField>
+          <FormField label="Currency">
+            <Input type="text" value={editForm.currency} onChange={e => setEditForm(prev => ({ ...prev, currency: e.target.value }))}  />
+          </FormField>
+          <FormField label="Features (comma separated)">
+            <Input type="text" value={editForm.features} onChange={e => setEditForm(prev => ({ ...prev, features: e.target.value }))}  />
+          </FormField>
           <div className="flex items-center">
-            <input type="checkbox" id="isActive" checked={editForm.isActive} onChange={e => setEditForm(prev => ({ ...prev, isActive: e.target.checked }))} className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500" />
-            <label htmlFor="isActive" className="ml-2 text-sm font-medium text-gray-300">Active</label>
+            <input type="checkbox" id="isActive" checked={editForm.isActive} onChange={e => setEditForm(prev => ({ ...prev, isActive: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-blue-500 dark:border-dark-3 dark:bg-dark-3" />
+            <Label htmlFor="isActive" className="ml-2 font-normal text-gray-700 dark:text-gray-200">Active</Label>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Ideal For</label>
-            <input type="text" value={editForm.idealFor} onChange={e => setEditForm(prev => ({ ...prev, idealFor: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Key Limits</label>
-            <input type="text" value={editForm.keyLimits} onChange={e => setEditForm(prev => ({ ...prev, keyLimits: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Max Docs</label>
-            <input type="number" value={editForm.maxDocs ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxDocs: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Max Storage (MB)</label>
-            <input type="number" value={editForm.maxStorageMB ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxStorageMB: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Max Queries/Day</label>
-            <input type="number" value={editForm.maxQueriesPerDay ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxQueriesPerDay: e.target.value ? Number(e.target.value) : undefined }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+          <FormField label="Ideal For">
+            <Input type="text" value={editForm.idealFor} onChange={e => setEditForm(prev => ({ ...prev, idealFor: e.target.value }))}  />
+          </FormField>
+          <FormField label="Key Limits">
+            <Input type="text" value={editForm.keyLimits} onChange={e => setEditForm(prev => ({ ...prev, keyLimits: e.target.value }))}  />
+          </FormField>
+          <FormField label="Max Docs">
+            <Input type="number" value={editForm.maxDocs ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxDocs: e.target.value ? Number(e.target.value) : undefined }))}  />
+          </FormField>
+          <FormField label="Max Storage (MB)">
+            <Input type="number" value={editForm.maxStorageMB ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxStorageMB: e.target.value ? Number(e.target.value) : undefined }))}  />
+          </FormField>
+          <FormField label="Max Queries/Day">
+            <Input type="number" value={editForm.maxQueriesPerDay ?? ''} onChange={e => setEditForm(prev => ({ ...prev, maxQueriesPerDay: e.target.value ? Number(e.target.value) : undefined }))}  />
+          </FormField>
         </div>
       </ModalDialog>
       

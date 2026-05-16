@@ -1,4 +1,4 @@
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/app-theme";
 
 const ThemeToggler = () => {
   const { theme, setTheme } = useTheme();

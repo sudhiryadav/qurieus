@@ -3,6 +3,9 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -98,30 +101,23 @@ export default function AdminSettingsPage() {
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="w-full sm:max-w-xs">
-            <label
-              htmlFor="paid-renewal-days"
-              className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Days before renewal (1-30)
-            </label>
-            <input
+          <FormField
+            label="Days before renewal (1-30)"
+            htmlFor="paid-renewal-days"
+            className="w-full sm:max-w-xs"
+          >
+            <Input
               id="paid-renewal-days"
               type="number"
               min={1}
               max={30}
               value={daysBefore}
               onChange={(e) => setDaysBefore(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 dark:border-dark-3 dark:bg-dark-3"
             />
-          </div>
-          <button
-            onClick={saveSetting}
-            disabled={saveState === "saving"}
-            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60"
-          >
+          </FormField>
+          <Button onClick={saveSetting} loading={saveState === "saving"}>
             {saveState === "saving" ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </div>
 
         {saveState === "saved" && (

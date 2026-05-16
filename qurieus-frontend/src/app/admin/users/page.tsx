@@ -13,6 +13,11 @@ import UserKnowledgeBaseSection from "@/components/UserKnowledgeBaseSection";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import axiosInstance from "@/lib/axios";
 import { useSession } from "next-auth/react";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Document {
   id: string;
@@ -421,12 +426,12 @@ export default function AdminUsersPage() {
       <div className="flex flex-col gap-3 mb-6">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-3 shrink-0">
-            <UserIcon className="h-8 w-8 text-blue-600 shrink-0" />
-            <h1 className="text-2xl font-bold">Users</h1>
+            <UserIcon className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
           </div>
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            <input
+            <Input
               type="text"
               placeholder="Search users..."
               value={searchQuery}
@@ -437,7 +442,7 @@ export default function AdminUsersPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-            <select
+            <NativeSelect
               value={filters.role}
               onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[120px]"
@@ -446,9 +451,9 @@ export default function AdminUsersPage() {
               {Object.entries(ROLE_MAPPINGS).map(([role, display]) => (
                 <option key={role} value={role}>{display}</option>
               ))}
-            </select>
+            </NativeSelect>
 
-            <select
+            <NativeSelect
               value={filters.plan}
               onChange={(e) => setFilters(prev => ({ ...prev, plan: e.target.value }))}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[120px]"
@@ -459,9 +464,9 @@ export default function AdminUsersPage() {
               <option value="STANDARD">Standard</option>
               <option value="PRO">Pro</option>
               <option value="ENTERPRISE">Enterprise</option>
-            </select>
+            </NativeSelect>
 
-            <select
+            <NativeSelect
               value={filters.subscription_type}
               onChange={(e) => setFilters(prev => ({ ...prev, subscription_type: e.target.value }))}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[120px]"
@@ -470,9 +475,9 @@ export default function AdminUsersPage() {
               <option value="TRIAL">Trial</option>
               <option value="MONTHLY">Monthly</option>
               <option value="YEARLY">Yearly</option>
-            </select>
+            </NativeSelect>
 
-            <select
+            <NativeSelect
               value={filters.is_active}
               onChange={(e) => setFilters(prev => ({ ...prev, is_active: e.target.value }))}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[120px]"
@@ -480,9 +485,9 @@ export default function AdminUsersPage() {
               <option value="">All Status</option>
               <option value="true">Active</option>
               <option value="false">Inactive</option>
-            </select>
+            </NativeSelect>
 
-            <select
+            <NativeSelect
               value={filters.show_deleted}
               onChange={(e) => setFilters(prev => ({ ...prev, show_deleted: e.target.value }))}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-w-[140px]"
@@ -490,7 +495,7 @@ export default function AdminUsersPage() {
               <option value="">Active users only</option>
               <option value="true">Soft-deleted users only</option>
               <option value="all">All users</option>
-            </select>
+            </NativeSelect>
 
             {/* Add User Button */}
             <Button
@@ -504,11 +509,11 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Users Table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white dark:border-dark-3 dark:bg-dark-2 shadow-sm">
       <LoadingOverlay loading={loading} htmlText="Loading users..." position="absolute" />
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 dark:bg-gray-800 border-b dark:border-dark-3">
+            <tr className="border-b border-gray-200 bg-gray-50 dark:border-dark-3 dark:bg-dark-3/80">
               <th
                 className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
                 onClick={() => handleSort("name")}
@@ -548,7 +553,11 @@ export default function AdminUsersPage() {
             {sortedUsers.map((user) => (
               <tr
                 key={user.id}
-                className={`border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800 ${user.deleted_at ? "opacity-60 bg-gray-100 dark:bg-gray-800/50" : ""}`}
+                className={`border-b border-gray-100 dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-dark-3/60 ${
+                  user.deleted_at
+                    ? "opacity-70 bg-gray-100 dark:bg-gray-900/40"
+                    : "bg-white dark:bg-dark-2"
+                }`}
               >
                 <td className="px-4 py-3">
                   <span className="text-sm font-medium text-dark dark:text-white">{user.name}</span>
@@ -676,81 +685,61 @@ export default function AdminUsersPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField label="Name" required>
+              <Input
                 type="text"
                 value={editForm.name}
                 onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
+            </FormField>
+            <FormField label="Email" required>
+              <Input
                 type="email"
                 value={editForm.email}
                 onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Password
-              </label>
-              <input
+            </FormField>
+            <FormField label="Password" description="Leave blank to keep current password">
+              <Input
                 type="password"
                 value={editForm.password}
                 onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
                 placeholder="Leave blank to keep current password"
               />
-              <p className="mt-1 text-xs text-gray-400">
-                Leave blank to keep current password
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Role
-              </label>
-              <select
+            </FormField>
+            <FormField
+              label="Role"
+              description={
+                ROLE_DESCRIPTIONS[editForm.role as keyof typeof ROLE_DESCRIPTIONS]
+              }
+            >
+              <NativeSelect
                 value={editForm.role}
                 onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {Object.entries(ROLE_DESCRIPTIONS).map(([role, description]) => (
                   <option key={role} value={role} title={description}>
                     {ROLE_MAPPINGS[role as keyof typeof ROLE_MAPPINGS]} - {description}
                   </option>
                 ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-400">
-                {ROLE_DESCRIPTIONS[editForm.role as keyof typeof ROLE_DESCRIPTIONS]}
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Company
-              </label>
-              <input
+              </NativeSelect>
+            </FormField>
+            <FormField label="Company">
+              <Input
                 type="text"
                 value={editForm.company}
                 onChange={(e) => setEditForm(prev => ({ ...prev, company: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Plan
-              </label>
-              <select
+            </FormField>
+            <FormField label="Plan">
+              <NativeSelect
                 value={editForm.plan || ""}
                 onChange={(e) => setEditForm(prev => ({ ...prev, plan: e.target.value || null }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               >
                 <option value="">Select Plan</option>
                 <option value="FREE">Free</option>
@@ -758,68 +747,56 @@ export default function AdminUsersPage() {
                 <option value="STANDARD">Standard</option>
                 <option value="PRO">Pro</option>
                 <option value="ENTERPRISE">Enterprise</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Subscription Type
-              </label>
-              <select
+              </NativeSelect>
+            </FormField>
+            <FormField label="Subscription Type">
+              <NativeSelect
                 value={editForm.subscription_type || ""}
                 onChange={(e) => setEditForm(prev => ({ ...prev, subscription_type: e.target.value || null }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               >
                 <option value="">Select Subscription Type</option>
                 <option value="TRIAL">Trial</option>
                 <option value="MONTHLY">Monthly</option>
                 <option value="YEARLY">Yearly</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Job Title
-              </label>
-              <input
+              </NativeSelect>
+            </FormField>
+            <FormField label="Job Title">
+              <Input
                 type="text"
                 value={editForm.jobTitle}
                 onChange={(e) => setEditForm(prev => ({ ...prev, jobTitle: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Phone
-              </label>
-              <input
+            </FormField>
+            <FormField label="Phone">
+              <Input
                 type="tel"
                 value={editForm.phone}
                 onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
+            </FormField>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Bio
-            </label>
-            <textarea
+          <FormField label="Bio">
+              <Textarea
               value={editForm.bio}
               onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
               rows={3}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              
             />
-          </div>
+            </FormField>
           <div className="flex items-center">
-            <input
+            <Input
               type="checkbox"
               id="is_verified"
               checked={editForm.is_verified}
               onChange={(e) => setEditForm(prev => ({ ...prev, is_verified: e.target.checked }))}
-              className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-blue-500 dark:border-dark-3 dark:bg-dark-3"
             />
-            <label htmlFor="is_verified" className="ml-2 text-sm font-medium text-gray-300">
+            <Label htmlFor="is_verified" className="ml-2 font-normal text-gray-700 dark:text-gray-200">
               Email Verified
-            </label>
+            </Label>
           </div>
 
           {/* Inline Knowledge Base Section */}
@@ -889,17 +866,14 @@ export default function AdminUsersPage() {
             <span className="font-semibold text-gray-100">{userToHardDelete?.name}</span>.
             This code is valid for 10 minutes.
           </p>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Hard Delete Code <span className="text-red-500">*</span>
-            </label>
-            <input
+          <FormField label="Hard Delete Code" required>
+              <Input
               value={hardDeleteCode}
               onChange={(e) => setHardDeleteCode(e.target.value)}
               placeholder="Enter code"
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              
             />
-          </div>
+            </FormField>
         </div>
       </ModalDialog>
 
@@ -926,78 +900,57 @@ export default function AdminUsersPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
+            <FormField label="Name" required>
+              <Input
                 type="text"
                 value={editForm.name}
                 onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
+            </FormField>
+            <FormField label="Email" required>
+              <Input
                 type="email"
                 value={editForm.email}
                 onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <input
+            </FormField>
+            <FormField label="Password" required description="Password is required for new users">
+              <Input
                 type="password"
                 value={editForm.password}
                 onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
                 placeholder="Enter password"
               />
-              <p className="mt-1 text-xs text-gray-400">
-                Password is required for new users
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Role
-              </label>
-              <select
+            </FormField>
+            <FormField label="Role">
+              <NativeSelect
                 value={editForm.role}
                 onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               >
                 {Object.entries(ROLE_DESCRIPTIONS).map(([role, description]) => (
                   <option key={role} value={role} title={description}>
                     {ROLE_MAPPINGS[role as keyof typeof ROLE_MAPPINGS]} - {description}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Company
-              </label>
-              <input
+              </NativeSelect>
+            </FormField>
+            <FormField label="Company">
+              <Input
                 type="text"
                 value={editForm.company}
                 onChange={(e) => setEditForm(prev => ({ ...prev, company: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Plan
-              </label>
-              <select
+            </FormField>
+            <FormField label="Plan">
+              <NativeSelect
                 value={editForm.plan || ""}
                 onChange={(e) => setEditForm(prev => ({ ...prev, plan: e.target.value || null }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               >
                 <option value="">Select Plan</option>
                 <option value="FREE">Free</option>
@@ -1005,68 +958,56 @@ export default function AdminUsersPage() {
                 <option value="STANDARD">Standard</option>
                 <option value="PRO">Pro</option>
                 <option value="ENTERPRISE">Enterprise</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Subscription Type
-              </label>
-              <select
+              </NativeSelect>
+            </FormField>
+            <FormField label="Subscription Type">
+              <NativeSelect
                 value={editForm.subscription_type || ""}
                 onChange={(e) => setEditForm(prev => ({ ...prev, subscription_type: e.target.value || null }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               >
                 <option value="">Select Subscription Type</option>
                 <option value="TRIAL">Trial</option>
                 <option value="MONTHLY">Monthly</option>
                 <option value="YEARLY">Yearly</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Job Title
-              </label>
-              <input
+              </NativeSelect>
+            </FormField>
+            <FormField label="Job Title">
+              <Input
                 type="text"
                 value={editForm.jobTitle}
                 onChange={(e) => setEditForm(prev => ({ ...prev, jobTitle: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Phone
-              </label>
-              <input
+            </FormField>
+            <FormField label="Phone">
+              <Input
                 type="tel"
                 value={editForm.phone}
                 onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                
               />
-            </div>
+            </FormField>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Bio
-            </label>
-            <textarea
+          <FormField label="Bio">
+              <Textarea
               value={editForm.bio}
               onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
               rows={3}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              
             />
-          </div>
+            </FormField>
           <div className="flex items-center">
-            <input
+            <Input
               type="checkbox"
               id="is_verified"
               checked={editForm.is_verified}
               onChange={(e) => setEditForm(prev => ({ ...prev, is_verified: e.target.checked }))}
-              className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-blue-500 dark:border-dark-3 dark:bg-dark-3"
             />
-            <label htmlFor="is_verified" className="ml-2 text-sm font-medium text-gray-300">
+            <Label htmlFor="is_verified" className="ml-2 font-normal text-gray-700 dark:text-gray-200">
               Email Verified
-            </label>
+            </Label>
           </div>
           <div className="text-xs text-gray-400">
             <span className="text-red-500">*</span> Required fields
@@ -1144,15 +1085,15 @@ function UserDocumentsModal({ user, onClose }: { user: User; onClose: () => void
       <div className="text-sm text-gray-600 dark:text-gray-400">
         Showing {documents.length} document(s) for {user.name} ({user.email})
         {isViewingOwnDocuments && (
-          <span className="ml-2 text-blue-600">(Your documents)</span>
+          <span className="ml-2 text-blue-600 dark:text-blue-400">(Your documents)</span>
         )}
         {shouldUseAdminRoutes && (
-          <span className="ml-2 text-green-600">(Admin view)</span>
+          <span className="ml-2 text-green-600 dark:text-green-400">(Admin view)</span>
         )}
       </div>
       
       {documents.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           No documents found for this user.
         </div>
       ) : (

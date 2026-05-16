@@ -1,32 +1,31 @@
 import React from "react";
-import Loader from "./Loader";
+import { Button, type ButtonProps } from "@/components/ui/button";
 
-interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface LoadingButtonProps extends ButtonProps {
   loading?: boolean;
   loadingText?: string;
-  children: React.ReactNode;
 }
 
-const LoadingButton: React.FC<LoadingButtonProps> = ({
-  loading = false,
-  loadingText,
-  children,
-  disabled,
-  className = "",
-  ...props
-}) => {
-  return (
-    <button
-      disabled={disabled || loading}
-      className={`flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
-      {...props}
-    >
-      {loading && <Loader />}
-      <span>
+const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(
+  (
+    { loading = false, loadingText, children, disabled, variant, size, ...props },
+    ref
+  ) => {
+    return (
+      <Button
+        ref={ref}
+        variant={variant}
+        size={size}
+        loading={loading}
+        disabled={disabled}
+        {...props}
+      >
         {loading && loadingText ? loadingText : children}
-      </span>
-    </button>
-  );
-};
+      </Button>
+    );
+  }
+);
 
-export default LoadingButton; 
+LoadingButton.displayName = "LoadingButton";
+
+export default LoadingButton;

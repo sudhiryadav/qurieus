@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
   return (
@@ -63,12 +64,9 @@ const NotFound = () => {
                 Oops! The page you are looking for is not found. It might have
                 been moved or deleted. Please return to the Qurieus homepage.
               </p>
-              <Link
-                href="/"
-                className="dark:bg-bodydark1 mt-8 rounded-sm bg-primary px-9 py-4 text-base font-medium text-white shadow-submit duration-300 hover:bg-primary/90 dark:hover:bg-bodydark1/90"
-              >
-                Back to Home
-              </Link>
+              <Button asChild size="lg" className="mt-8 shadow-submit dark:bg-bodydark1 dark:hover:bg-bodydark1/90">
+                <Link href="/">Back to Home</Link>
+              </Button>
             </div>
           </div>
         </div>

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { showToast } from "@/components/Common/Toast";
 import axiosInstance from "@/lib/axios";
 import { Users as UsersIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
 
 interface Agent {
   id: string;
@@ -136,43 +139,38 @@ export default function AgentsPage() {
     <div className="mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <UsersIcon className="h-8 w-8 text-blue-600" />
-          <h1 className="text-2xl font-bold">Agents</h1>
+          <UsersIcon className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Agents</h1>
         </div>
-        <button
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-          onClick={() => setInviteModalOpen(true)}
-        >
-          Invite Agent
-        </button>
+        <Button onClick={() => setInviteModalOpen(true)}>Invite Agent</Button>
       </div>
       
-      <div className="bg-white dark:bg-dark-2 rounded shadow p-4">
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-dark-3 dark:bg-dark-2 p-4">
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading...</div>
         ) : agents.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No agents found.</div>
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">No agents found.</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b">
-                <th className="py-2 text-left">Name</th>
-                <th className="py-2 text-left">Email</th>
-                <th className="py-2 text-left">Status</th>
-                <th className="py-2 text-left">Created</th>
-                <th className="py-2 text-left">Actions</th>
+              <tr className="border-b border-gray-200 dark:border-dark-3">
+                <th className="py-2 text-left font-medium text-gray-700 dark:text-gray-200">Name</th>
+                <th className="py-2 text-left font-medium text-gray-700 dark:text-gray-200">Email</th>
+                <th className="py-2 text-left font-medium text-gray-700 dark:text-gray-200">Status</th>
+                <th className="py-2 text-left font-medium text-gray-700 dark:text-gray-200">Created</th>
+                <th className="py-2 text-left font-medium text-gray-700 dark:text-gray-200">Actions</th>
               </tr>
             </thead>
             <tbody>
               {agents.map((agent) => (
-                <tr key={agent.id} className="border-b last:border-0">
-                  <td className="py-2">{agent.name}</td>
-                  <td className="py-2">{agent.email}</td>
+                <tr key={agent.id} className="border-b border-gray-100 last:border-0 dark:border-dark-3">
+                  <td className="py-2 text-gray-900 dark:text-white">{agent.name}</td>
+                  <td className="py-2 text-gray-600 dark:text-gray-400">{agent.email}</td>
                   <td className="py-2">
                     <span className={`px-2 py-1 rounded text-xs ${
                       agent.is_active 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-gray-100 text-gray-800"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" 
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                     }`}>
                       {agent.is_active ? "Active" : "Inactive"}
                     </span>
@@ -202,12 +200,12 @@ export default function AgentsPage() {
                       </span>
                     )}
                   </td>
-                  <td className="py-2">{new Date(agent.created_at).toLocaleDateString()}</td>
+                  <td className="py-2 text-gray-600 dark:text-gray-400">{new Date(agent.created_at).toLocaleDateString()}</td>
                   <td className="py-2">
                     <div className="flex gap-2">
                       <button
                         onClick={() => openEditModal(agent)}
-                        className="text-blue-600 hover:text-blue-800 text-xs"
+                        className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         Edit
                       </button>
@@ -215,15 +213,15 @@ export default function AgentsPage() {
                         onClick={() => handleToggleStatus(agent)}
                         className={`text-xs ${
                           agent.is_active 
-                            ? "text-orange-600 hover:text-orange-800" 
-                            : "text-green-600 hover:text-green-800"
+                            ? "text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300" 
+                            : "text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
                         }`}
                       >
                         {agent.is_active ? "Deactivate" : "Activate"}
                       </button>
                       <button
                         onClick={() => openDeleteConfirm(agent)}
-                        className="text-red-600 hover:text-red-800 text-xs"
+                        className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                       >
                         Delete
                       </button>
@@ -241,54 +239,44 @@ export default function AgentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white dark:bg-dark-2 rounded-lg shadow-lg p-8 w-full max-w-md relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
               onClick={() => setInviteModalOpen(false)}
               aria-label="Close"
             >
               ×
             </button>
-            <h2 className="text-xl font-semibold mb-4">Invite Agent</h2>
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Invite Agent</h2>
             <form onSubmit={handleInviteSubmit} className="space-y-4">
-              <div>
-                <label className="block mb-1 font-medium">Name</label>
-                <input
+              <FormField label="Name">
+                <Input
                   type="text"
                   name="name"
                   value={inviteForm.name}
                   onChange={handleInviteChange}
                   required
-                  className="w-full border rounded px-3 py-2 bg-white dark:bg-dark-3 dark:text-white"
                 />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Email</label>
-                <input
+              </FormField>
+              <FormField label="Email">
+                <Input
                   type="email"
                   name="email"
                   value={inviteForm.email}
                   onChange={handleInviteChange}
                   required
-                  className="w-full border rounded px-3 py-2 bg-white dark:bg-dark-3 dark:text-white"
                 />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Password</label>
-                <input
+              </FormField>
+              <FormField label="Password">
+                <Input
                   type="password"
                   name="password"
                   value={inviteForm.password}
                   onChange={handleInviteChange}
                   required
-                  className="w-full border rounded px-3 py-2 bg-white dark:bg-dark-3 dark:text-white"
                 />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
-                disabled={submitting}
-              >
+              </FormField>
+              <Button type="submit" className="w-full" loading={submitting}>
                 {submitting ? "Inviting..." : "Invite Agent"}
-              </button>
+              </Button>
             </form>
           </div>
         </div>
@@ -299,43 +287,35 @@ export default function AgentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white dark:bg-dark-2 rounded-lg shadow-lg p-8 w-full max-w-md relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
               onClick={() => setEditModalOpen(false)}
               aria-label="Close"
             >
               ×
             </button>
-            <h2 className="text-xl font-semibold mb-4">Edit Agent</h2>
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Edit Agent</h2>
             <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block mb-1 font-medium">Name</label>
-                <input
+              <FormField label="Name">
+                <Input
                   type="text"
                   name="name"
                   value={editForm.name}
                   onChange={handleEditChange}
                   required
-                  className="w-full border rounded px-3 py-2 bg-white dark:bg-dark-3 dark:text-white"
                 />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Email</label>
-                <input
+              </FormField>
+              <FormField label="Email">
+                <Input
                   type="email"
                   name="email"
                   value={editForm.email}
                   onChange={handleEditChange}
                   required
-                  className="w-full border rounded px-3 py-2 bg-white dark:bg-dark-3 dark:text-white"
                 />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
-                disabled={submitting}
-              >
+              </FormField>
+              <Button type="submit" className="w-full" loading={submitting}>
                 {submitting ? "Updating..." : "Update Agent"}
-              </button>
+              </Button>
             </form>
           </div>
         </div>
@@ -350,19 +330,17 @@ export default function AgentsPage() {
               Are you sure you want to delete <strong>{selectedAgent.name}</strong>? This action cannot be undone.
             </p>
             <div className="flex gap-4">
-              <button
-                onClick={() => setDeleteConfirmOpen(false)}
-                className="flex-1 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmOpen(false)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
                 onClick={handleDelete}
-                disabled={submitting}
-                className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                loading={submitting}
               >
                 {submitting ? "Deleting..." : "Delete"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

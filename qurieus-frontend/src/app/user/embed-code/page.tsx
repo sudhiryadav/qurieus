@@ -5,6 +5,10 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axios";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export default function EmbedCode() {
   const { data: session, status } = useSession();
@@ -124,24 +128,21 @@ export default function EmbedCode() {
               <Code className="h-12 w-12 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex items-center gap-3 ml-4">
-              <Code className="h-8 w-8 text-blue-600" />
+              <Code className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
               <h1 className="text-2xl font-bold text-dark dark:text-white">Embed Code</h1>
             </div>
           </div>
           
-          <h1 className="mb-4 text-3xl font-bold">No Documents Found</h1>
+          <h1 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">No Documents Found</h1>
           <p className="mb-6 text-gray-600 dark:text-gray-300">
             You need to add documents to your knowledge base before you can embed the chat widget.
           </p>
           
           <div className="space-y-4">
-            <button
-              onClick={() => router.push('/user/knowledge-base')}
-              className="inline-flex items-center space-x-2 rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90"
-            >
+            <Button size="lg" onClick={() => router.push("/user/knowledge-base")}>
               <Upload className="h-5 w-5" />
-              <span>Upload Documents</span>
-            </button>
+              Upload Documents
+            </Button>
             
             <div className="text-sm text-gray-500 dark:text-gray-400">
               <p>Once you have documents in your knowledge base, you&apos;ll be able to:</p>
@@ -185,87 +186,77 @@ export default function EmbedCode() {
   return (
     <div className="mx-auto">
       <div className="mb-8">
-        <h1 className="mb-4 text-3xl font-bold">Embed Chat Widget</h1>
+        <h1 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">Embed Chat Widget</h1>
       </div>
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-4 text-xl font-semibold">Widget Configuration</h2>
+          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Widget Configuration</h2>
           
           <div className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium">Theme</label>
-              <select
+            <FormField label="Theme">
+              <NativeSelect
                 value={previewConfig.theme}
                 onChange={(e) => setPreviewConfig(prev => ({ ...prev, theme: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 dark:border-dark-3 dark:bg-dark-3"
               >
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
-              </select>
-            </div>
+              </NativeSelect>
+            </FormField>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium">Position</label>
-              <select
+            <FormField label="Position">
+              <NativeSelect
                 value={previewConfig.position}
                 onChange={(e) => setPreviewConfig(prev => ({ ...prev, position: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 dark:border-dark-3 dark:bg-dark-3"
               >
                 <option value="bottom-right">Bottom Right</option>
                 <option value="bottom-left">Bottom Left</option>
-              </select>
-            </div>
+              </NativeSelect>
+            </FormField>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium">Initial Message</label>
-              <input
+            <FormField label="Initial Message">
+              <Input
                 type="text"
                 value={previewConfig.initialMessage}
                 onChange={(e) => setPreviewConfig(prev => ({ ...prev, initialMessage: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 dark:border-dark-3 dark:bg-dark-3"
                 placeholder="Enter initial message"
               />
-            </div>
+            </FormField>
           </div>
         </div>
 
         <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Embed Code</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Embed Code</h2>
             <div className="flex items-center space-x-2">
-              <button
+              <Button
+                type="button"
+                variant={showPreview ? "default" : "outline"}
+                size="icon"
                 onClick={togglePreview}
-                className={`flex items-center justify-center rounded-lg border px-4 py-2 transition-colors ${
-                  showPreview 
-                    ? 'border-primary bg-primary text-white hover:bg-primary/90' 
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-dark-3 dark:bg-dark-3 dark:text-white dark:hover:bg-dark-4'
-                }`}
-                title={showPreview ? 'Hide Preview' : 'Show Preview'}
+                title={showPreview ? "Hide Preview" : "Show Preview"}
+                aria-label={showPreview ? "Hide Preview" : "Show Preview"}
               >
                 <Eye className="h-4 w-4" />
-              </button>
-              <button
-                onClick={copyToClipboard}
-                className="flex items-center space-x-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
-              >
+              </Button>
+              <Button type="button" onClick={copyToClipboard}>
                 {copied ? (
                   <>
                     <Check className="h-4 w-4" />
-                    <span>Copied!</span>
+                    Copied!
                   </>
                 ) : (
                   <>
                     <Copy className="h-4 w-4" />
-                    <span>Copy Code</span>
+                    Copy Code
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
           
           <div className="relative">
             <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 dark:bg-dark-3">
-              <code className="text-sm">{embedCode}</code>
+              <code className="text-sm text-gray-900 dark:text-gray-200">{embedCode}</code>
             </pre>
           </div>
           <div className="mt-4 rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
@@ -282,13 +273,17 @@ export default function EmbedCode() {
               <p className="mb-2 text-sm text-gray-600 dark:text-gray-400">
                 Use your account as the default embed for this website (Qurieus homepage). The widget on the main site will use your knowledge base.
               </p>
-              <button
+              <Button
                 onClick={setAsDefaultForWebsite}
-                disabled={settingDefault || isDefaultForSite === true}
-                className="rounded-lg bg-primary px-4 py-2 text-sm text-white hover:bg-primary/90 disabled:opacity-50"
+                loading={settingDefault}
+                disabled={isDefaultForSite === true}
               >
-                {settingDefault ? "Saving…" : isDefaultForSite ? "Already default" : "Set as default for this website"}
-              </button>
+                {settingDefault
+                  ? "Saving…"
+                  : isDefaultForSite
+                    ? "Already default"
+                    : "Set as default for this website"}
+              </Button>
             </div>
           )}
         </div>

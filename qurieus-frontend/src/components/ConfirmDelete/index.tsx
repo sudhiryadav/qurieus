@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '@/components/ui/button';
 
 interface ConfirmDeleteProps {
   isOpen: boolean;
@@ -31,20 +32,17 @@ const ConfirmDelete: React.FC<ConfirmDeleteProps> = ({
           {message}
         </p>
         <div className="flex gap-4">
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="flex-1 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white disabled:opacity-50"
-          >
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={isLoading}>
             {cancelText}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructive"
+            className="flex-1"
             onClick={onConfirm}
-            disabled={isLoading}
-            className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+            loading={isLoading}
           >
             {isLoading ? "Deleting..." : confirmText}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

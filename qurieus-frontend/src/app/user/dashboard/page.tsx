@@ -1,14 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import axiosInstance from "@/lib/axios";
-import { LayoutDashboard } from "lucide-react";
+import {
+  LayoutDashboard,
+  MessageSquare,
+  CheckCircle2,
+  Percent,
+  Clock,
+} from "lucide-react";
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/lib/app-theme";
 
 interface DashboardData {
   totalQueries: number;
@@ -36,6 +43,8 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const chartIsDark = resolvedTheme === "dark";
 
   // Redirect agents to agent dashboard
   useEffect(() => {
@@ -62,43 +71,49 @@ export default function Dashboard() {
 
   // Group and sum by day for weekly activity
   const weeklySums: Record<string, number> = {};
-  dashboardData?.weeklyActivity.forEach(({ date, count }) => {
+  dashboardData?.weeklyActivity?.forEach(({ date, count }) => {
     if (!weeklySums[date]) weeklySums[date] = 0;
     weeklySums[date] += count;
   });
   const weeklyCategories = Object.keys(weeklySums);
   const weeklyCounts = Object.values(weeklySums);
 
-  // Chart options
-  const chartOptions = {
-    chart: {
-      id: "basic-bar",
-      toolbar: {
-        show: false,
+  // Chart options — match light/dark card surfaces so labels and grids stay readable
+  const chartOptions = useMemo(
+    () => ({
+      chart: {
+        id: "basic-bar",
+        toolbar: {
+          show: false,
+        },
+        foreColor: chartIsDark ? "#94a3b8" : "#64748b",
       },
-      foreColor: "#64748b",
-    },
-    xaxis: {
-      categories: weeklyCategories,
-    },
-    colors: ["#3758F9"],
-    plotOptions: {
-      bar: {
-        borderRadius: 4,
-        columnWidth: "60%",
+      theme: {
+        mode: chartIsDark ? ("dark" as const) : ("light" as const),
       },
-    },
-    dataLabels: {
-      enabled: false,
-    },
-    grid: {
-      borderColor: "#f1f5f9",
-      strokeDashArray: 4,
-    },
-    tooltip: {
-      theme: "dark",
-    },
-  };
+      xaxis: {
+        categories: weeklyCategories,
+      },
+      colors: ["#3758F9"],
+      plotOptions: {
+        bar: {
+          borderRadius: 4,
+          columnWidth: "60%",
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      grid: {
+        borderColor: chartIsDark ? "#334155" : "#f1f5f9",
+        strokeDashArray: 4,
+      },
+      tooltip: {
+        theme: chartIsDark ? "dark" : "light",
+      },
+    }),
+    [chartIsDark, weeklyCategories]
+  );
 
   const chartSeries = [
     {
@@ -108,67 +123,105 @@ export default function Dashboard() {
   ];
 
   // Line chart options for trending queries
-  const lineChartOptions = {
-    chart: {
-      id: "trending-queries",
-      toolbar: {
-        show: false,
+  const lineChartOptions = useMemo(
+    () => ({
+      chart: {
+        id: "trending-queries",
+        toolbar: {
+          show: false,
+        },
+        foreColor: chartIsDark ? "#94a3b8" : "#64748b",
       },
-      foreColor: "#64748b",
-    },
-    stroke: {
-      curve: "smooth" as const,
-      width: 2,
-    },
-    xaxis: {
-      categories: dashboardData?.trendingQueries.map(q => q.name) || [],
-    },
-    colors: ["#10b981"],
-    markers: {
-      size: 4,
-    },
-    tooltip: {
-      theme: "dark",
-    },
-    grid: {
-      borderColor: "#f1f5f9",
-      strokeDashArray: 4,
-    },
-  };
+      theme: {
+        mode: chartIsDark ? ("dark" as const) : ("light" as const),
+      },
+      stroke: {
+        curve: "smooth" as const,
+        width: 2,
+      },
+      xaxis: {
+        categories: dashboardData?.trendingQueries?.map((q) => q.name) ?? [],
+      },
+      colors: ["#10b981"],
+      markers: {
+        size: 4,
+      },
+      tooltip: {
+        theme: chartIsDark ? "dark" : "light",
+      },
+      grid: {
+        borderColor: chartIsDark ? "#334155" : "#f1f5f9",
+        strokeDashArray: 4,
+      },
+    }),
+    [chartIsDark, dashboardData?.trendingQueries]
+  );
 
   const lineChartSeries = [
     {
       name: "Query Count",
-      data: dashboardData?.trendingQueries.map(q => q.count) || [],
+      data: dashboardData?.trendingQueries?.map((q) => q.count) ?? [],
     },
   ];
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <LayoutDashboard className="h-8 w-8 text-blue-600" />
+        <LayoutDashboard className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
         <h1 className="text-2xl font-bold text-dark dark:text-white">
           Welcome, {session?.user?.name}!
         </h1>
       </div>
 
       <div className="mb-8 grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Total Queries</h2>
-          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.totalQueries || 0}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Successful Queries</h2>
-          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.successfulQueries || 0}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Success Rate</h2>
-          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.successRate.toFixed(1)}%</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
-          <h2 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Avg Response Time</h2>
-          <p className="text-3xl font-bold text-dark dark:text-white">{dashboardData?.averageResponseTime.toFixed(0)}ms</p>
-        </div>
+        {(
+          [
+            {
+              label: "Total Queries",
+              value: String(dashboardData?.totalQueries ?? 0),
+              Icon: MessageSquare,
+              wrap: "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300",
+            },
+            {
+              label: "Successful Queries",
+              value: String(dashboardData?.successfulQueries ?? 0),
+              Icon: CheckCircle2,
+              wrap: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300",
+            },
+            {
+              label: "Success Rate",
+              value: `${(dashboardData?.successRate ?? 0).toFixed(1)}%`,
+              Icon: Percent,
+              wrap: "bg-violet-50 text-violet-600 dark:bg-violet-900/40 dark:text-violet-300",
+            },
+            {
+              label: "Avg Response Time",
+              value: `${(dashboardData?.averageResponseTime ?? 0).toFixed(0)}ms`,
+              Icon: Clock,
+              wrap: "bg-amber-50 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300",
+            },
+          ] as const
+        ).map(({ label, value, Icon, wrap }) => (
+          <div
+            key={label}
+            className="rounded-lg border bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                {label}
+              </h2>
+              <span
+                className={`flex shrink-0 rounded-lg p-2 ${wrap}`}
+                aria-hidden
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+            </div>
+            <p className="mt-3 text-3xl font-bold text-dark dark:text-white">
+              {value}
+            </p>
+          </div>
+        ))}
       </div>
 
       <div className="mb-8 grid gap-6 md:grid-cols-2">

@@ -1,7 +1,8 @@
 "use client";
 // MagicLink component hidden for now
 import SwitchOption from "@/components/Auth/SwitchOption";
-import Loader from "@/components/Common/Loader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Logo from "@/components/Common/Logo";
 import { showToast } from "@/components/Common/Toast";
 import { CountdownTimer } from "@/components/CountdownTimer";
@@ -161,13 +162,15 @@ export default function SignUp({
             }}
           />
           <div className="mb-9">
-            <button
+            <Button
               type="submit"
-              disabled={loading || verificationCode.length !== 4}
-              className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full"
+              size="lg"
+              loading={loading}
+              disabled={verificationCode.length !== 4}
             >
-              Verify Email {loading && <Loader />}
-            </button>
+              Verify Email
+            </Button>
           </div>
         </form>
         <div className="text-center">
@@ -266,46 +269,42 @@ export default function SignUp({
       {isPassword ? (
         <form onSubmit={handleSubmit}>
           <div className="mb-[22px]">
-            <input
+            <Input
               type="text"
               placeholder="Name"
               name="name"
               required
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
               value={user.name}
               onChange={(e) => setUser({ ...user, name: e.target.value })}
             />
           </div>
           <div className="mb-[22px]">
-            <input
+            <Input
               type="email"
               placeholder="Email"
               name="email"
               required
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
               value={user.email}
               onChange={(e) => setUser({ ...user, email: e.target.value })}
             />
           </div>
           <div className="mb-[22px]">
-            <input
+            <Input
               type="password"
               placeholder="Password"
               name="password"
               required
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
               onChange={(e) => setUser({ ...user, password: e.target.value })}
               value={user.password}
             />
           </div>
           <div className="mb-9">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Sign Up {loading && <Loader />}
-            </button>
+            <Button type="submit" className="w-full" size="lg" loading={loading}>
+              Sign Up
+            </Button>
           </div>
         </form>
       ) : (

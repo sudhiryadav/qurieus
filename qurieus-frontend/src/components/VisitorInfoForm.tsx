@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { getIdentityContext } from '@/utils/visitorId';
 import axiosInstance from '@/lib/axios';
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/ui/form-field';
+import { Input } from '@/components/ui/input';
 
 interface VisitorInfoFormProps {
   onSubmit: (visitorInfo: {
@@ -53,7 +56,6 @@ export function VisitorInfoForm({ onSubmit, onCancel }: VisitorInfoFormProps) {
     try {
       const identityContext = getIdentityContext();
       
-      // Save visitor information to backend
       await axiosInstance.post('/api/visitors/info', {
         visitorId: identityContext.visitorId,
         name: formData.name.trim(),
@@ -63,7 +65,6 @@ export function VisitorInfoForm({ onSubmit, onCancel }: VisitorInfoFormProps) {
         source: 'chat_widget'
       });
 
-      // Call the onSubmit callback with the form data
       onSubmit({
         name: formData.name.trim(),
         email: formData.email.trim(),
@@ -71,7 +72,7 @@ export function VisitorInfoForm({ onSubmit, onCancel }: VisitorInfoFormProps) {
         company: formData.company.trim() || undefined,
       });
 
-    } catch (error) {
+    } catch {
       setErrors({ submit: 'Failed to save information. Please try again.' });
     } finally {
       setIsSubmitting(false);
@@ -80,118 +81,90 @@ export function VisitorInfoForm({ onSubmit, onCancel }: VisitorInfoFormProps) {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
+    <div className="bg-white dark:bg-dark-2 rounded-lg shadow-lg p-6 max-w-md mx-auto">
       <div className="text-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           Welcome! Let&apos;s get started
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Please provide your information to begin chatting
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
+        <FormField label="Name" htmlFor="name" required error={errors.name}>
+          <Input
             type="text"
             id="name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.name ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={errors.name ? 'border-red-500' : undefined}
             placeholder="Enter your full name"
             disabled={isSubmitting}
           />
-          {errors.name && (
-            <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-          )}
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email <span className="text-red-500">*</span>
-          </label>
-          <input
+        <FormField label="Email" htmlFor="email" required error={errors.email}>
+          <Input
             type="email"
             id="email"
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.email ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={errors.email ? 'border-red-500' : undefined}
             placeholder="Enter your email address"
             disabled={isSubmitting}
           />
-          {errors.email && (
-            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-          )}
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-            Phone Number
-          </label>
-          <input
+        <FormField label="Phone Number" htmlFor="phone">
+          <Input
             type="tel"
             id="phone"
             value={formData.phone}
             onChange={(e) => handleInputChange('phone', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter your phone number (optional)"
             disabled={isSubmitting}
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
-            Company
-          </label>
-          <input
+        <FormField label="Company" htmlFor="company">
+          <Input
             type="text"
             id="company"
             value={formData.company}
             onChange={(e) => handleInputChange('company', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter your company name (optional)"
             disabled={isSubmitting}
           />
-        </div>
+        </FormField>
 
         {errors.submit && (
-          <div className="text-red-500 text-sm text-center">{errors.submit}</div>
+          <p className="text-red-500 text-sm text-center" role="alert">{errors.submit}</p>
         )}
 
         <div className="flex gap-3 pt-4">
           {onCancel && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              className="flex-1"
               onClick={onCancel}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
               disabled={isSubmitting}
             >
               Cancel
-            </button>
+            </Button>
           )}
-          <button
-            type="submit"
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" className="flex-1" loading={isSubmitting}>
             {isSubmitting ? 'Saving...' : 'Start Chat'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
   );
-} 
+}

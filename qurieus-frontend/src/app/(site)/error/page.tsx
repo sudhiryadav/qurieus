@@ -1,5 +1,6 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -33,12 +34,9 @@ const ErrorPage = () => {
                   Oops! The page you are looking for does not exist. It might have
                   been moved or deleted.
                 </p>
-                <Link
-                  href="/"
-                  className="rounded-md bg-dark px-7 py-3 text-base font-medium text-white transition hover:bg-primary dark:bg-primary dark:hover:bg-primary/80"
-                >
-                  Go To Home
-                </Link>
+                <Button asChild size="lg" className="bg-dark hover:bg-primary dark:bg-primary dark:hover:bg-primary/80">
+                  <Link href="/">Go To Home</Link>
+                </Button>
               </div>
             </div>
           </div>

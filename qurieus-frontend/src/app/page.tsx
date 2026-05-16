@@ -54,27 +54,8 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  const webPageSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "Qurieus AI - AI Document Conversations | Chat with PDFs & Documents",
-    "description": "Qurieus AI powers AI document conversations—chat with PDFs, ask questions about your documents, and embed an AI chatbot. Agentic platform with human escalation.",
-    "url": siteUrl,
-    "mainEntity": {
-      "@type": "SoftwareApplication",
-      "name": "Qurieus",
-      "alternateName": "Qurieus AI",
-      "applicationCategory": "BusinessApplication",
-      "description": "AI document conversations platform—chat with PDFs, escalate to human agents when needed"
-    }
-  };
-
   return (
     <main>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
-      />
       <ScrollUp />
       <Hero />
       <Features />

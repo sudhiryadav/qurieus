@@ -63,12 +63,12 @@ export default function FeedbackPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <Star className="h-8 w-8 text-blue-600" />
-        <h1 className="text-2xl font-bold text-dark dark:text-white">Share Feedback</h1>
+        <Star className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Share Feedback</h1>
       </div>
 
-      <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2 max-w-2xl">
-        <p className="text-muted-foreground mb-6">
+      <div className="max-w-2xl rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+        <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Your feedback helps us improve. Submit a testimonial and it will be reviewed by our team before appearing on the public testimonials section.
         </p>
 
@@ -84,7 +84,7 @@ export default function FeedbackPage() {
 
         {testimonials.length > 0 && (
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-dark-3">
-            <h2 className="text-sm font-medium text-dark dark:text-white mb-3">Your feedback history</h2>
+            <h2 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">Your feedback history</h2>
             <div className="space-y-3">
               {testimonials.map((t) => (
                 <div
@@ -99,8 +99,8 @@ export default function FeedbackPage() {
                     </div>
                     {getStatusBadge(t.status)}
                   </div>
-                  <p className="text-sm text-body-color dark:text-dark-6">&quot;{t.content}&quot;</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">&quot;{t.content}&quot;</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     {format(new Date(t.createdAt), "MMM d, yyyy")}
                   </p>
                   {t.status === "REJECTED" && t.rejectionReason && (
@@ -115,9 +115,9 @@ export default function FeedbackPage() {
           </div>
         )}
 
-        <p className="mt-6 text-sm text-muted-foreground">
+        <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">
           You can also{" "}
-          <Link href="/#testimonials" className="text-primary hover:underline">
+          <Link href="/#testimonials" className="text-blue-600 hover:underline dark:text-blue-400">
             share feedback from the testimonials section on our homepage
           </Link>
           .

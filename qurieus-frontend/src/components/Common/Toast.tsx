@@ -1,4 +1,4 @@
-import { useTheme } from 'next-themes';
+import { useTheme } from "@/lib/app-theme";
 import { ToastContainer, toast, ToastOptions } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useEffect, useState } from 'react';

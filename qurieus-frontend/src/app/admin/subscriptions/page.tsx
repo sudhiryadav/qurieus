@@ -10,6 +10,8 @@ import { UserSubscriptionWithUserAndPlan } from "@/types/subscription";
 import { Search, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import ConfirmDelete from '@/components/ConfirmDelete';
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
 
 type PaddleWebhookDebug = {
   sourceApp: string;
@@ -122,27 +124,29 @@ export default function AdminSubscriptionsPage() {
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <BarChart3 className="h-8 w-8 text-blue-600" />
-          <h1 className="text-2xl font-bold">Subscriptions</h1>
+          <BarChart3 className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Subscriptions
+          </h1>
         </div>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="Search subscriptions..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="pl-10"
             />
           </div>
         </div>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm dark:border-dark-3 dark:bg-dark-2">
       <LoadingOverlay loading={loading} htmlText="Loading subscriptions..." position="absolute" />
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 dark:bg-gray-800 border-b dark:border-dark-3">
+            <tr className="border-b border-gray-200 bg-gray-50 dark:border-dark-3 dark:bg-dark-3/80">
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">User</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Email</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Plan</th>
@@ -156,11 +160,19 @@ export default function AdminSubscriptionsPage() {
           <tbody>
             {filteredSubscriptions.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-6 text-gray-400">No subscriptions found</td>
+                <td
+                  colSpan={8}
+                  className="border-b border-gray-100 bg-white py-6 text-center text-gray-500 dark:border-dark-3 dark:bg-dark-2 dark:text-gray-400"
+                >
+                  No subscriptions found
+                </td>
               </tr>
             ) : (
               filteredSubscriptions.map(sub => (
-              <tr key={sub.id} className="border-b dark:border-dark-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <tr
+                key={sub.id}
+                className="border-b border-gray-100 bg-white hover:bg-gray-50 dark:border-dark-3 dark:bg-dark-2 dark:hover:bg-dark-3/60"
+              >
                 <td className="px-4 py-3 text-sm font-medium text-dark dark:text-white">{sub.user.name}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.user.email}</td>
                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{sub.plan.name}</td>
@@ -171,7 +183,9 @@ export default function AdminSubscriptionsPage() {
                 <td className="px-4 py-3">
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(sub)}>Edit</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteSubscription(sub.id)}>Archive</Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteSubscription(sub.id)}>
+                      Archive
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -180,20 +194,62 @@ export default function AdminSubscriptionsPage() {
           </tbody>
         </table>
       </div>
-      <div className="mt-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="mb-3 text-lg font-semibold">Paddle Webhook Debug</h2>
+      <div className="mt-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+        <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
+          Paddle Webhook Debug
+        </h2>
         {!webhookDebug ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">Debug data unavailable.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 dark:text-gray-300 md:grid-cols-2">
-            <div>Source App: <span className="font-medium">{webhookDebug.sourceApp}</span></div>
-            <div>Product Tag: <span className="font-medium">{webhookDebug.productTag}</span></div>
-            <div>Processed Count: <span className="font-medium">{webhookDebug.processedCount}</span></div>
-            <div>Ignored Count: <span className="font-medium">{webhookDebug.ignoredCount}</span></div>
-            <div>Last Event: <span className="font-medium">{webhookDebug.lastEvent || "-"}</span></div>
-            <div>Last Tag: <span className="font-medium">{webhookDebug.lastTag || "-"}</span></div>
-            <div>Last Reason: <span className="font-medium">{webhookDebug.lastIgnoredReason || "-"}</span></div>
-            <div>Updated At: <span className="font-medium">{new Date(webhookDebug.updatedAt).toLocaleString()}</span></div>
+          <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 dark:text-gray-200 md:grid-cols-2">
+            <div>
+              Source App:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {webhookDebug.sourceApp}
+              </span>
+            </div>
+            <div>
+              Product Tag:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {webhookDebug.productTag}
+              </span>
+            </div>
+            <div>
+              Processed Count:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {webhookDebug.processedCount}
+              </span>
+            </div>
+            <div>
+              Ignored Count:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {webhookDebug.ignoredCount}
+              </span>
+            </div>
+            <div>
+              Last Event:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {webhookDebug.lastEvent || "-"}
+              </span>
+            </div>
+            <div>
+              Last Tag:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {webhookDebug.lastTag || "-"}
+              </span>
+            </div>
+            <div>
+              Last Reason:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {webhookDebug.lastIgnoredReason || "-"}
+              </span>
+            </div>
+            <div>
+              Updated At:{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {new Date(webhookDebug.updatedAt).toLocaleString()}
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -210,18 +266,39 @@ export default function AdminSubscriptionsPage() {
         }
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
-            <input type="text" value={editForm.status} onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Period Start</label>
-            <input type="date" value={editForm.currentPeriodStart} onChange={e => setEditForm(prev => ({ ...prev, currentPeriodStart: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Period End</label>
-            <input type="date" value={editForm.currentPeriodEnd} onChange={e => setEditForm(prev => ({ ...prev, currentPeriodEnd: e.target.value }))} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+          <FormField label="Status">
+            <Input
+              type="text"
+              value={editForm.status}
+              onChange={(e) =>
+                setEditForm((prev) => ({ ...prev, status: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Period Start">
+            <Input
+              type="date"
+              value={editForm.currentPeriodStart}
+              onChange={(e) =>
+                setEditForm((prev) => ({
+                  ...prev,
+                  currentPeriodStart: e.target.value,
+                }))
+              }
+            />
+          </FormField>
+          <FormField label="Period End">
+            <Input
+              type="date"
+              value={editForm.currentPeriodEnd}
+              onChange={(e) =>
+                setEditForm((prev) => ({
+                  ...prev,
+                  currentPeriodEnd: e.target.value,
+                }))
+              }
+            />
+          </FormField>
         </div>
       </ModalDialog>
 

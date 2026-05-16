@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import AuthModal from '@/components/Auth/AuthModal';
+import { Button } from '@/components/ui/button';
 
 const TryForFreeButton = () => {
   const { data: session } = useSession();
@@ -18,20 +19,17 @@ const TryForFreeButton = () => {
 
   if (session) {
     return (
-      <Link href="/user/knowledge-base" className="inline-block bg-primary text-white px-6 py-3 rounded hover:bg-primary-dark transition">
-        Try Qurieus with Your Own Files
-      </Link>
+      <Button asChild size="lg">
+        <Link href="/user/knowledge-base">Try Qurieus with Your Own Files</Link>
+      </Button>
     );
   }
 
   return (
     <>
-      <button
-        onClick={handleOpenModal}
-        className="inline-block bg-primary text-white px-6 py-3 rounded hover:bg-primary-dark transition"
-      >
+      <Button size="lg" onClick={handleOpenModal}>
         Try Qurieus with Your Own Files
-      </button>
+      </Button>
       <AuthModal isOpen={isModalOpen} onClose={handleCloseModal} />
     </>
   );

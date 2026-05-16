@@ -270,7 +270,7 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-primary text-white">
                 {getVisitorInitials()}
               </AvatarFallback>
             </Avatar>
@@ -323,7 +323,7 @@ export default function AgentChatWindow({ chatId, agentId, chat, onStatusUpdate 
               <div
                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                   msg.role === 'agent'
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-primary text-white'
                     : msg.role === 'assistant'
                     ? 'bg-gray-100 text-gray-900'
                     : msg.role === 'system'

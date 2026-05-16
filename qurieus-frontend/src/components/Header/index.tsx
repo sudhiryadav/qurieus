@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { showToast } from "@/components/Common/Toast";
 import { Menu } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/app-theme";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -343,12 +343,9 @@ const Header: React.FC = () => {
                 >
                   Sign In
                 </Link>
-                <Link
-                  href="/signup"
-                  className="hidden rounded-lg bg-primary px-6 py-3 text-base font-medium text-white duration-300 ease-in-out hover:bg-primary/90 dark:bg-white/10 dark:hover:bg-white/20 sm:block"
-                >
-                  Sign Up
-                </Link>
+                <Button asChild size="lg" className="hidden sm:inline-flex dark:bg-white/10 dark:hover:bg-white/20">
+                  <Link href="/signup">Sign Up</Link>
+                </Button>
               </>
             )}
             

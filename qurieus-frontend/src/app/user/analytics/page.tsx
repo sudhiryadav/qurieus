@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ApexOptions } from "apexcharts";
 import axiosInstance from "@/lib/axios";
 import { BarChart3 } from "lucide-react";
+import { useTheme } from "@/lib/app-theme";
 
 // Import ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -30,6 +31,8 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { resolvedTheme } = useTheme();
+  const isChartDark = resolvedTheme === "dark";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,39 +51,48 @@ export default function AnalyticsPage() {
     fetchData();
   }, [timeRange]);
 
-  const chartOptions: ApexOptions = {
-    chart: {
-      type: 'line',
-      toolbar: { show: false },
-      zoom: { enabled: false }
-    },
-    stroke: { curve: 'smooth', width: 2 },
-    xaxis: {
-      categories: data?.queriesByDate.map(d => new Date(d.date).toLocaleDateString()) || [],
-      labels: { style: { colors: '#94a3b8' } }
-    },
-    yaxis: {
-      labels: { style: { colors: '#94a3b8' } }
-    },
-    grid: {
-      borderColor: '#1e293b',
-      strokeDashArray: 4
-    },
-    tooltip: {
-      theme: 'dark'
-    }
-  };
+  const chartOptions: ApexOptions = useMemo(
+    () => ({
+      chart: {
+        type: "line",
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        foreColor: isChartDark ? "#94a3b8" : "#64748b",
+      },
+      theme: { mode: isChartDark ? "dark" : "light" },
+      stroke: { curve: "smooth", width: 2 },
+      xaxis: {
+        categories:
+          data?.queriesByDate?.map((d) => new Date(d.date).toLocaleDateString()) ?? [],
+        labels: { style: { colors: isChartDark ? "#94a3b8" : "#64748b" } },
+      },
+      yaxis: {
+        labels: { style: { colors: isChartDark ? "#94a3b8" : "#64748b" } },
+      },
+      grid: {
+        borderColor: isChartDark ? "#334155" : "#e2e8f0",
+        strokeDashArray: 4,
+      },
+      tooltip: {
+        theme: isChartDark ? "dark" : "light",
+      },
+    }),
+    [data?.queriesByDate, isChartDark]
+  );
 
   const chartSeries = [{
     name: "Queries",
-    data: data?.queriesByDate.map(d => d.count) || []
+    data: data?.queriesByDate?.map(d => d.count) ?? [],
   }];
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Analytics</h1>
+        <div className="flex justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <BarChart3 className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400 opacity-70" aria-hidden />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+          </div>
           <Skeleton className="h-10 w-[180px]" />
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -115,8 +127,8 @@ export default function AnalyticsPage() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-500 mb-2">Error</h2>
-          <p className="text-gray-400">{error}</p>
+          <h2 className="text-2xl font-bold text-red-500 dark:text-red-400 mb-2">Error</h2>
+          <p className="text-gray-600 dark:text-gray-400">{error}</p>
         </div>
       </div>
     );
@@ -126,8 +138,8 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <BarChart3 className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">Analytics</h1>
+          <BarChart3 className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px]">
@@ -147,7 +159,7 @@ export default function AnalyticsPage() {
             <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.totalQueries}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{data?.totalQueries}</div>
           </CardContent>
         </Card>
         <Card>
@@ -155,7 +167,7 @@ export default function AnalyticsPage() {
             <CardTitle className="text-sm font-medium">Successful Queries</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.successfulQueries}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{data?.successfulQueries}</div>
           </CardContent>
         </Card>
         <Card>
@@ -163,7 +175,7 @@ export default function AnalyticsPage() {
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.successRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{data?.successRate.toFixed(1)}%</div>
           </CardContent>
         </Card>
         <Card>
@@ -171,7 +183,7 @@ export default function AnalyticsPage() {
             <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.averageResponseTime.toFixed(2)}ms</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{data?.averageResponseTime.toFixed(2)}ms</div>
           </CardContent>
         </Card>
       </div>
@@ -198,10 +210,14 @@ export default function AnalyticsPage() {
             <div className="space-y-4">
               {data?.topVisitors.map((visitor, index) => (
                 <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Visitor {visitor.visitorId.slice(0, 8)}</span>
-                  <div className="text-sm">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Visitor {visitor.visitorId.slice(0, 8)}
+                  </span>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
                     <span className="font-medium">{visitor.queryCount} queries</span>
-                    <span className="text-gray-400 ml-2">({(visitor.averageDuration / 60).toFixed(1)} min avg)</span>
+                    <span className="text-gray-500 dark:text-gray-400 ml-2">
+                      ({(visitor.averageDuration / 60).toFixed(1)} min avg)
+                    </span>
                   </div>
                 </div>
               ))}

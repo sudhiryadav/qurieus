@@ -32,7 +32,7 @@ export default function AuthWrapper({ children, isAdmin }: AuthWrapperProps) {
   return (
     <div className="relative flex h-screen overflow-hidden">
       <Sidebar/>
-      <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-dark">
         <main className="flex-1 p-4 md:p-6 2xl:p-10">
           {children}
         </main>

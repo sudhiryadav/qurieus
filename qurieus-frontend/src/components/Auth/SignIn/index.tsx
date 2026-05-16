@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Common/Logo";
 import SwitchOption from "@/components/Auth/SwitchOption";
-import Loader from "@/components/Common/Loader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 // MagicLink component hidden for now
 import axios from "@/lib/axios";
 import { showToast } from "@/components/Common/Toast";
@@ -192,7 +193,7 @@ export default function SignIn({
             </div>
           )}
           <div className="mb-[22px]">
-            <input
+            <Input
               type="email"
               placeholder="Email"
               required
@@ -200,11 +201,12 @@ export default function SignIn({
               onChange={(e) =>
                 setLoginData({ ...loginData, email: e.target.value })
               }
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              size="lg"
+              className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
             />
           </div>
           <div className="mb-[22px]">
-            <input
+            <Input
               type="password"
               placeholder="Password"
               required
@@ -212,7 +214,8 @@ export default function SignIn({
               onChange={(e) =>
                 setLoginData({ ...loginData, password: e.target.value })
               }
-              className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
+              size="lg"
+              className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
             />
             <div className="mt-2 text-right">
               <Link
@@ -224,13 +227,9 @@ export default function SignIn({
             </div>
           </div>
           <div className="mb-9">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              Sign In {loading && <Loader />}
-            </button>
+            <Button type="submit" className="w-full" size="lg" loading={loading}>
+              Sign In
+            </Button>
           </div>
         </form>
       ) : (

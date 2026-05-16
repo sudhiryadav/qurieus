@@ -8,9 +8,13 @@ import ModalDialog from "../ui/ModalDialog";
 import { showToast } from "@/components/Common/Toast";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { logger } from "@/lib/logger";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/app-theme";
 import ProgressToast from "@/components/ProgressToast";
 import { toast } from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -230,30 +234,26 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
   // Footer buttons
   const footer = (
     <>
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={onClose}
-        className="rounded-md border border-gray-300 dark:border-gray-500 px-4 py-2 text-sm font-medium text-gray-700 dark:text-white bg-gray-100 dark:bg-[#2d3543] hover:bg-gray-200 dark:hover:bg-[#393f4a]"
         disabled={loading || processingDocuments.length > 0}
       >
-        {processingDocuments.length > 0 ? 'Close' : 'Cancel'}
-      </button>
+        {processingDocuments.length > 0 ? "Close" : "Cancel"}
+      </Button>
       {processingDocuments.length === 0 && (
-        <button
+        <Button
           type="submit"
           form="upload-form"
-          disabled={loading || selectedFiles.length === 0 || selectedFiles.some(f => f.error)}
-          className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 ml-3"
+          loading={loading}
+          disabled={selectedFiles.length === 0 || selectedFiles.some((f) => f.error)}
+          className="ml-3"
         >
-          {loading ? (
-            <>
-              <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-              Uploading...
-            </>
-          ) : (
-            `Upload ${selectedFiles.filter(f => !f.error).length} File${selectedFiles.filter(f => !f.error).length !== 1 ? 's' : ''}`
-          )}
-        </button>
+          {loading
+            ? "Uploading..."
+            : `Upload ${selectedFiles.filter((f) => !f.error).length} File${selectedFiles.filter((f) => !f.error).length !== 1 ? "s" : ""}`}
+        </Button>
       )}
     </>
   );
@@ -382,7 +382,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
         </div>
         {/* Upload Files */}
         <div>
-          <label className="mb-2 block text-base font-semibold text-gray-900 dark:text-white">Upload Files</label>
+          <Label className="mb-2 block text-base font-semibold">Upload Files</Label>
           <div
             className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-500 bg-gray-50 dark:bg-[#2d3543] py-8 transition hover:border-primary ${
               !isSuperAdmin && selectedFiles.length >= MAX_FILES_PER_UPLOAD ? "cursor-not-allowed opacity-60" : "cursor-pointer"
@@ -412,7 +412,7 @@ export default function UploadDialog({ isOpen, onClose, onUploadSuccess, customU
         {/* Selected Files */}
         {selectedFiles.length > 0 && (
           <div className="space-y-2">
-            <label className="block text-base font-semibold text-gray-900 dark:text-white">Selected Files</label>
+            <Label className="block text-base font-semibold">Selected Files</Label>
             <div className="max-h-48 overflow-y-auto space-y-2">
               {selectedFiles.map((sf) => (
                 <div

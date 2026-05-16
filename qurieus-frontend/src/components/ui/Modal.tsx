@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ModalProps {
   isOpen: boolean;
@@ -51,18 +52,12 @@ export function Modal({
 
         {/* Footer */}
         <div className="flex justify-end space-x-3">
-          <button
-            onClick={onClose}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-dark-3 dark:text-gray-300 dark:hover:bg-dark-3"
-          >
+          <Button variant="outline" onClick={onClose}>
             {cancelText}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
-          >
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
             {confirmText}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

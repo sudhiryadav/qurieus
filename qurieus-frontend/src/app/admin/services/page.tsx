@@ -83,7 +83,7 @@ export default function AdminServicesPage() {
 
   const StatusIcon = ({ s }: { s: ServiceCheck }) => {
     if (s.status === "loading")
-      return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+      return <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />;
     if (s.status === "ok")
       return <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />;
     if (s.status === "error")
@@ -171,7 +171,7 @@ export default function AdminServicesPage() {
                         : s.status === "error"
                         ? "text-red-600 dark:text-red-400"
                         : s.status === "loading"
-                        ? "text-primary"
+                        ? "text-blue-600 dark:text-blue-400"
                         : "text-gray-500 dark:text-gray-400"
                     }`}
                   >

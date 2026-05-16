@@ -9,9 +9,10 @@ import UploadDialog from '@/components/UploadDialog';
 import ConfirmDelete from '@/components/ConfirmDelete';
 import { format } from "date-fns";
 import AsyncSelect from "react-select/async";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/app-theme";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 
 interface User {
   id: string;
@@ -269,7 +270,7 @@ export default function AdminKnowledgeBasePage() {
     <div className="mx-auto">
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <FileText className="h-8 w-8 text-blue-600" />
+          <FileText className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
           <h1 className="text-2xl font-bold text-dark dark:text-white">
             Knowledge Base Management
           </h1>
@@ -282,10 +283,7 @@ export default function AdminKnowledgeBasePage() {
         </p>
 
         {/* User Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Select User
-          </label>
+        <FormField label="Select User" className="mb-6">
           <AsyncSelect
             value={selectedUser}
             onChange={handleUserChange}
@@ -297,7 +295,7 @@ export default function AdminKnowledgeBasePage() {
             classNamePrefix="react-select"
             styles={selectStyles}
           />
-        </div>
+        </FormField>
 
         {/* Upload Button */}
         {selectedUser && (
@@ -315,7 +313,7 @@ export default function AdminKnowledgeBasePage() {
 
       {/* Documents Table */}
       {selectedUser && (
-        <div className="bg-white dark:bg-dark-2 rounded shadow p-4">
+        <div className="bg-white dark:bg-dark-2 rounded-lg shadow-sm border border-gray-200 dark:border-dark-3 p-4">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-dark dark:text-white">
               Documents for {selectedUser.user.name}
@@ -328,30 +326,30 @@ export default function AdminKnowledgeBasePage() {
           <LoadingOverlay loading={loading} htmlText="Loading documents..." position="absolute" />
           
           {!loading && documents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               No documents found for this user.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-2 font-medium">Document Name</th>
-                    <th className="text-left py-2 font-medium">Type</th>
-                    <th className="text-left py-2 font-medium">Size</th>
-                    <th className="text-left py-2 font-medium">Uploaded</th>
-                    <th className="text-left py-2 font-medium">Status</th>
-                    <th className="text-left py-2 font-medium">Chunks</th>
-                    <th className="text-left py-2 font-medium">Actions</th>
+                  <tr className="border-b border-gray-200 dark:border-dark-3">
+                    <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-200">Document Name</th>
+                    <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-200">Type</th>
+                    <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-200">Size</th>
+                    <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-200">Uploaded</th>
+                    <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-200">Status</th>
+                    <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-200">Chunks</th>
+                    <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-200">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {documents.map((doc) => (
-                    <tr key={doc.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <tr key={doc.id} className="border-b border-gray-100 dark:border-dark-3">
                       <td className="py-2">
-                        <div className="font-medium">{doc.originalName}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{doc.originalName}</div>
                         {doc.description && (
-                          <div className="text-xs text-gray-500 truncate max-w-xs">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">
                             {doc.description}
                           </div>
                         )}
@@ -379,20 +377,23 @@ export default function AdminKnowledgeBasePage() {
                       </td>
                       <td className="py-2">
                         <div className="flex space-x-2">
-                          <button
+                          <Button
+                            size="sm"
                             onClick={() => handleDownload(doc.id, doc.originalName)}
-                            className="rounded-md bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600 transition-colors"
                             title="Download document"
+                            aria-label="Download document"
                           >
                             <Download className="h-4 w-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
                             onClick={() => handleDelete(doc.id)}
-                            className="rounded-md bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600 transition-colors"
                             title="Delete document"
+                            aria-label="Delete document"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>

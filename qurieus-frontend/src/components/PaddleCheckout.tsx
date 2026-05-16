@@ -9,7 +9,7 @@ import {
 } from "@paddle/paddle-js";
 import axios from "axios"; // Import axios for backend calls
 import { useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/app-theme";
 import {
   forwardRef,
   useEffect,

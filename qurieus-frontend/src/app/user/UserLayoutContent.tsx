@@ -110,8 +110,12 @@ export default function UserLayoutContent({
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
-          <p className="text-gray-600">Please sign in to access this page.</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Authentication Required
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Please sign in to access this page.
+          </p>
         </div>
       </div>
     );

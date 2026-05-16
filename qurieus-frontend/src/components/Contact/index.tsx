@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { showToast } from "@/components/Common/Toast";
 import axios from "@/lib/axios";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+const contactFieldClass =
+  "rounded-none border-0 border-b border-[#f1f1f1] bg-transparent px-0 shadow-none focus-visible:ring-0 dark:border-dark-3";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -115,82 +122,58 @@ const Contact = () => {
                 Send us a Message
               </h3>
               <form onSubmit={handleSubmit}>
-                <div className="mb-[22px]">
-                  <label
-                    htmlFor="fullName"
-                    className="mb-4 block text-sm text-body-color dark:text-dark-6"
-                  >
-                    Full Name*
-                  </label>
-                  <input
+                <FormField label="Full Name" htmlFor="fullName" required className="mb-[22px]">
+                  <Input
                     type="text"
+                    id="fullName"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
                     placeholder="Adam Gelius"
                     required
-                    className="w-full border-0 border-b border-[#f1f1f1] bg-transparent pb-3 text-dark placeholder:text-body-color/60 focus:border-primary focus:outline-none dark:border-dark-3 dark:text-white"
+                    className={contactFieldClass}
                   />
-                </div>
-                <div className="mb-[22px]">
-                  <label
-                    htmlFor="email"
-                    className="mb-4 block text-sm text-body-color dark:text-dark-6"
-                  >
-                    Email*
-                  </label>
-                  <input
+                </FormField>
+                <FormField label="Email" htmlFor="email" required className="mb-[22px]">
+                  <Input
                     type="email"
+                    id="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="example@yourmail.com"
                     required
-                    className="w-full border-0 border-b border-[#f1f1f1] bg-transparent pb-3 text-dark placeholder:text-body-color/60 focus:border-primary focus:outline-none dark:border-dark-3 dark:text-white"
+                    className={contactFieldClass}
                   />
-                </div>
-                <div className="mb-[22px]">
-                  <label
-                    htmlFor="phone"
-                    className="mb-4 block text-sm text-body-color dark:text-dark-6"
-                  >
-                    Phone*
-                  </label>
-                  <input
+                </FormField>
+                <FormField label="Phone" htmlFor="phone" required className="mb-[22px]">
+                  <Input
                     type="tel"
+                    id="phone"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="+885 1254 5211 552"
                     required
-                    className="w-full border-0 border-b border-[#f1f1f1] bg-transparent pb-3 text-dark placeholder:text-body-color/60 focus:border-primary focus:outline-none dark:border-dark-3 dark:text-white"
+                    className={contactFieldClass}
                   />
-                </div>
-                <div className="mb-[30px]">
-                  <label
-                    htmlFor="message"
-                    className="mb-4 block text-sm text-body-color dark:text-dark-6"
-                  >
-                    Message*
-                  </label>
-                  <textarea
+                </FormField>
+                <FormField label="Message" htmlFor="message" required className="mb-[30px]">
+                  <Textarea
+                    id="message"
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
                     rows={1}
                     placeholder="type your message here"
                     required
-                    className="w-full resize-none border-0 border-b border-[#f1f1f1] bg-transparent pb-3 text-dark placeholder:text-body-color/60 focus:border-primary focus:outline-none dark:border-dark-3 dark:text-white"
-                  ></textarea>
-                </div>
+                    className={`${contactFieldClass} min-h-0 resize-none py-0 pb-3`}
+                  />
+                </FormField>
                 <div className="mb-0">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="inline-flex items-center justify-center rounded-md bg-primary px-10 py-3 text-base font-medium text-white transition duration-300 ease-in-out hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
+                  <Button type="submit" size="lg" loading={isLoading}>
                     {isLoading ? "Sending..." : "Send"}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

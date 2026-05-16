@@ -34,6 +34,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Upload } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import LoadingOverlay from "@/components/Common/LoadingOverlay";
+import { Button } from "@/components/ui/button";
 
 export default function KnowledgeBase() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -93,18 +94,13 @@ export default function KnowledgeBase() {
     <div className="mx-auto">
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Upload className="h-8 w-8 text-blue-600" />
+          <Upload className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
           <h1 className="text-2xl font-bold text-dark dark:text-white">
             Knowledge Base
           </h1>
         </div>
         {documents.length > 0 && (
-          <button
-            onClick={() => setIsUploadDialogOpen(true)}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-          >
-            Upload Documents
-          </button>
+          <Button onClick={() => setIsUploadDialogOpen(true)}>Upload Documents</Button>
         )}
       </div>
       <p className="mb-6 text-gray-600 dark:text-gray-300">

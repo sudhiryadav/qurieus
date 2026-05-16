@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Select from 'react-select';
-import { useTheme } from 'next-themes';
+import { useTheme } from "@/lib/app-theme";
 
 interface UserOption {
   id: string;

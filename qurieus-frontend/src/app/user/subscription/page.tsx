@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 import { logger } from "@/lib/logger";
 import { CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const FullScreenPricing = ({
   showPricingModal,
@@ -28,14 +29,11 @@ const FullScreenPricing = ({
     <FullScreenDialog
       isOpen={showPricingModal}
       onClose={() => setShowPricingModal(false)}
-      header={<h2 className="text-2xl font-bold">Change Plan</h2>}
+      header={<h2 className="text-2xl font-bold text-gray-900 dark:text-white">Change Plan</h2>}
       footer={
-        <button
-          onClick={() => setShowPricingModal(false)}
-          className="rounded-lg border border-primary bg-white px-6 py-3 text-primary hover:bg-primary hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-        >
+        <Button size="lg" variant="outline" onClick={() => setShowPricingModal(false)}>
           Cancel
-        </button>
+        </Button>
       }
     >
       <Pricing onUpdatePlan={onUpdatePlan} hideFreeTrialWhenExpired={hideFreeTrialWhenExpired} />
@@ -107,7 +105,7 @@ export default function SubscriptionPage() {
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent dark:border-blue-400"></div>
       </div>
     );
   }
@@ -116,25 +114,22 @@ export default function SubscriptionPage() {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
-          <h2 className="mb-4 text-2xl font-bold">No Active Subscription</h2>
+          <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">No Active Subscription</h2>
           <p className="mb-6 text-gray-600 dark:text-gray-400">
             You don&apos;t have an active subscription. Please subscribe to a
             plan to access our services.
           </p>
-          <button
-            className="inline-block rounded-lg bg-primary px-6 py-3 text-white hover:bg-primary/90"
-            onClick={() => {
-              setShowPricingModal(true);
-            }}
-          >
+          <Button size="lg" onClick={() => setShowPricingModal(true)}>
             View Plans
-          </button>
-          <button
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
             onClick={() => fetchSubscription(true)}
-            className="ml-2 inline-block rounded-lg px-6 py-3 text-white hover:bg-secondary/90 outline"
+            className="ml-2"
           >
             Reload
-          </button>
+          </Button>
         </div>
         <FullScreenPricing
           showPricingModal={showPricingModal}
@@ -158,14 +153,15 @@ export default function SubscriptionPage() {
             You can still view your documents and dashboard, but chat and new queries are disabled. Upgrade to a paid plan to restore full access and continue using Qurieus.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setShowPricingModal(true)}
-              className="rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
-            >
+            <Button variant="warning" size="lg" onClick={() => setShowPricingModal(true)}>
               Upgrade to a paid plan
-            </button>
+            </Button>
             {extensionStatus?.canRequestExtension && (
-              <button
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-2 border-amber-600 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500 dark:text-amber-200 dark:hover:bg-amber-900/50"
+                loading={requestingExtension}
                 onClick={async () => {
                   setRequestingExtension(true);
                   try {
@@ -179,11 +175,9 @@ export default function SubscriptionPage() {
                     setRequestingExtension(false);
                   }
                 }}
-                disabled={requestingExtension}
-                className="rounded-lg border-2 border-amber-600 bg-white px-6 py-3 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/50"
               >
                 {requestingExtension ? "Submitting..." : "Request 7-day extension (one-time)"}
-              </button>
+              </Button>
             )}
             {extensionStatus?.latestRequest?.status === "PENDING" && (
               <span className="flex items-center rounded-lg border border-amber-600 px-4 py-3 text-amber-700 dark:text-amber-200">
@@ -205,40 +199,42 @@ export default function SubscriptionPage() {
       )}
       <div className="mb-8 flex items-center justify-between">
       <div className="flex items-center gap-3">
-      <CreditCard className="h-8 w-8 text-blue-600" />
-      <h1 className="text-3xl font-bold">Subscription Details</h1>
+      <CreditCard className="h-8 w-8 shrink-0 text-blue-600 dark:text-blue-400" />
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Subscription Details</h1>
       </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="lg"
+            variant="outline"
             onClick={() => setShowPricingModal(true)}
-            className="rounded-lg border border-primary bg-white px-6 py-3 text-primary hover:bg-primary hover:text-white dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
           >
             {isExpiredTrial ? "Upgrade Plan" : "Change Plan"}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
             onClick={() => fetchSubscription(true)}
-            className="inline-flex items-center rounded-lg px-6 py-3 text-white hover:bg-secondary/90"
-            disabled={refreshing}
+            loading={refreshing}
           >
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
       <LoadingOverlay loading={loading} htmlText="Loading subscription details..." position="absolute" />
-        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="mb-4 text-xl font-semibold">Current Plan</h2>
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Current Plan</h2>
           <div className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Plan</p>
-              <p className="text-lg font-medium">{subscription.plan.name}</p>
+              <p className="text-lg font-medium text-gray-900 dark:text-white">{subscription.plan.name}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
               {/* set color green if active, red if expired/inactive */}
               <p
-                className={`text-lg font-medium capitalize ${subscription.status === "active" ? "rounded-md bg-green-500/10 p-2 text-green-500" : "rounded-md bg-red-500/10 p-2 text-red-500"}`}
+                className={`text-lg font-medium capitalize ${subscription.status === "active" ? "rounded-md bg-green-500/10 p-2 text-green-700 dark:text-green-400" : "rounded-md bg-red-500/10 p-2 text-red-700 dark:text-red-400"}`}
               >
                 {subscription.status === "active"
                   ? "Active"
@@ -251,13 +247,13 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Billing Cycle
               </p>
-              <p className="text-lg font-medium capitalize">
+              <p className="text-lg font-medium capitalize text-gray-900 dark:text-white">
                 {subscription.billingCycle}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
                 {subscription.plan.name === "Free Trial"
                   ? "Free"
                   : subscription.paddlePaymentCurrency +
@@ -270,14 +266,14 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="mb-4 text-xl font-semibold">Billing Information</h2>
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Billing Information</h2>
           <div className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Start Date
               </p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
                 {format(new Date(subscription.startDate), "PPP")}
               </p>
             </div>
@@ -285,7 +281,7 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Next Billing Date
               </p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
                 {format(new Date(subscription.nextBillingDate), "PPP")}
               </p>
             </div>
@@ -293,7 +289,7 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Current Period
               </p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
                 {format(new Date(subscription.currentPeriodStart), "PPP")} -{" "}
                 {format(new Date(subscription.currentPeriodEnd), "PPP")}
               </p>
@@ -302,7 +298,7 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Remaining Days
               </p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
               {(() => {
                   const daysLeft = differenceInDays(new Date(subscription.nextBillingDate), new Date());
                   if (daysLeft >= 0) {
@@ -319,14 +315,14 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="mb-4 text-xl font-semibold">Features</h2>
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-dark-3 dark:bg-dark-2">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Features</h2>
           <div className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Ideal For
               </p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
                 {subscription.plan.idealFor}
               </p>
             </div>
@@ -334,13 +330,13 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 No of Documents
               </p>
-              <p className="text-lg font-medium">{subscription.plan.maxDocs}</p>
+              <p className="text-lg font-medium text-gray-900 dark:text-white">{subscription.plan.maxDocs}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Storage
               </p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
                 {subscription.plan.maxStorageMB} MB
               </p>
             </div>
@@ -348,7 +344,7 @@ export default function SubscriptionPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Queries Per Day
               </p>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-white">
                 {subscription.plan.maxQueriesPerDay}
               </p>
             </div>
