@@ -201,7 +201,7 @@ export default function SignIn({
               onChange={(e) =>
                 setLoginData({ ...loginData, email: e.target.value })
               }
-              size="lg"
+              fieldSize="lg"
               className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
             />
           </div>
@@ -214,7 +214,7 @@ export default function SignIn({
               onChange={(e) =>
                 setLoginData({ ...loginData, password: e.target.value })
               }
-              size="lg"
+              fieldSize="lg"
               className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
             />
             <div className="mt-2 text-right">

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import Faq from "@/components/Faq";
 import Pricing from "@/components/Pricing";
@@ -13,7 +14,9 @@ export default async function PricingPage() {
   return (
     <>
       <Breadcrumb pageName="Pricing" />
-      <Pricing />
+      <Suspense fallback={null}>
+        <Pricing />
+      </Suspense>
       <Faq />
     </>
   );

@@ -1,11 +1,12 @@
 "use client";
+
 import { showToast } from "@/components/Common/Toast";
 import axios from "@/lib/axios";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -24,7 +25,7 @@ export default function VerifyEmailPage() {
           signIn("credentials", {
             redirect: false,
             email: data.email,
-            password: "temp_password_for_verification"
+            password: "temp_password_for_verification",
           }).then((res) => {
             if (res?.ok) {
               router.push("/user/knowledge-base");
@@ -58,4 +59,18 @@ export default function VerifyEmailPage() {
       </div>
     </div>
   );
-} 
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <p className="text-base text-body-color dark:text-dark-6">Verifying...</p>
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}

@@ -127,7 +127,7 @@ export default function AdminEmailBroadcastPage() {
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Enter email subject..."
-            size="lg"
+            fieldSize="lg"
           />
         </div>
 

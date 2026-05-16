@@ -20,7 +20,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      formControlVariants({ size: "lg" }),
+      formControlVariants({ fieldSize: "lg" }),
       "items-center justify-between focus:ring-offset-2 dark:focus:ring-offset-dark-2",
       className
     )}

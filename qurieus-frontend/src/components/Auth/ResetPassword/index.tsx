@@ -100,7 +100,7 @@ const ResetPassword = ({ token }: { token: string }) => {
                     value={data?.newPassword}
                     onChange={handleChange}
                     required
-                    size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
+                    fieldSize="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
                   />
                 </div>
 
@@ -112,7 +112,7 @@ const ResetPassword = ({ token }: { token: string }) => {
                     value={data?.ReNewPassword}
                     onChange={handleChange}
                     required
-                    size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
+                    fieldSize="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
                   />
                 </div>
                 <div className="">

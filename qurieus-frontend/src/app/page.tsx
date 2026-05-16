@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import About from "@/components/About";
 import CallToAction from "@/components/CallToAction";
 import ScrollUp from "@/components/Common/ScrollUp";
@@ -61,7 +62,9 @@ export default function Home() {
       <Features />
       <About />
       <CallToAction />
-      <Pricing />
+      <Suspense fallback={null}>
+        <Pricing />
+      </Suspense>
       <Testimonials />
       <Faq />
       {/* <Team /> */}

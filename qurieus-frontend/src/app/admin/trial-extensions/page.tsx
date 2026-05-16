@@ -261,7 +261,7 @@ export default function AdminTrialExtensionsPage() {
                   <div className="flex items-center gap-2">
                     <Input
                       type="text"
-                      size="sm"
+                      fieldSize="sm"
                       placeholder="Rejection reason (optional)"
                       className="w-40"
                       value={rejectReason[req.id] ?? ""}

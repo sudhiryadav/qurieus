@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import SignIn from "@/components/Auth/SignIn/index";
 import AuthDotsGrid from "@/components/Auth/AuthDotsGrid";
 
@@ -11,7 +12,9 @@ export default function SignInPage() {
               className="relative mx-auto max-w-[525px] overflow-hidden rounded-lg bg-white px-8 py-14 dark:bg-dark-2 sm:px-12 md:px-[60px]"
             >
               <AuthDotsGrid />
-              <SignIn />
+              <Suspense fallback={<div className="min-h-[320px]" aria-hidden />}>
+                <SignIn />
+              </Suspense>
             </div>
           </div>
         </div>

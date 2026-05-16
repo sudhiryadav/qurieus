@@ -274,7 +274,7 @@ export default function SignUp({
               placeholder="Name"
               name="name"
               required
-              size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
+              fieldSize="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
               value={user.name}
               onChange={(e) => setUser({ ...user, name: e.target.value })}
             />
@@ -285,7 +285,7 @@ export default function SignUp({
               placeholder="Email"
               name="email"
               required
-              size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
+              fieldSize="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
               value={user.email}
               onChange={(e) => setUser({ ...user, email: e.target.value })}
             />
@@ -296,7 +296,7 @@ export default function SignUp({
               placeholder="Password"
               name="password"
               required
-              size="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
+              fieldSize="lg" className="border-stroke bg-transparent text-dark placeholder:text-dark-6 dark:border-dark-3 dark:bg-transparent dark:text-white"
               onChange={(e) => setUser({ ...user, password: e.target.value })}
               value={user.password}
             />

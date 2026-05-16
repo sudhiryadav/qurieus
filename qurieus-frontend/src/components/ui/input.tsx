@@ -13,14 +13,14 @@ export interface InputProps
     VariantProps<typeof formControlVariants> {}
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, size, ...props }, ref) => {
+  ({ className, type, fieldSize, ...props }, ref) => {
     const picker = isNativePickerType(type)
 
     return (
       <input
         type={type}
         className={cn(
-          formControlVariants({ size }),
+          formControlVariants({ fieldSize }),
           picker && nativePickerVariants(),
           "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-gray-900 dark:file:text-gray-100",
           className

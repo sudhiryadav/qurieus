@@ -14,14 +14,14 @@ export const formControlVariants = cva(
   ["flex", ...formControlBase],
   {
     variants: {
-      size: {
+      fieldSize: {
         default: "h-9 px-3 py-1 text-base md:text-sm",
         sm: "h-8 px-2.5 text-sm",
         lg: "h-10 px-3 py-2 text-base",
       },
     },
     defaultVariants: {
-      size: "default",
+      fieldSize: "default",
     },
   }
 )
