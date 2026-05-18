@@ -41,7 +41,7 @@ const Testimonials = () => {
 
         <div className="mt-[60px] flex flex-wrap lg:mt-20 gap-y-8">
           {loading ? (
-            <div className="w-full text-center py-12 text-gray-600 dark:text-gray-300">
+            <div className="w-full text-center py-12 text-muted-foreground">
               Loading testimonials...
             </div>
           ) : testimonials.length > 0 ? (
@@ -49,7 +49,7 @@ const Testimonials = () => {
               <SingleTestimonial key={t.id} testimonial={t} />
             ))
           ) : (
-            <div className="w-full text-center py-12 text-gray-600 dark:text-gray-300">
+            <div className="w-full text-center py-12 text-muted-foreground">
               No testimonials yet. Be the first to share your experience!
             </div>
           )}
@@ -61,7 +61,7 @@ const Testimonials = () => {
               <h3 className="text-lg font-semibold text-dark dark:text-white mb-2">
                 Share your experience
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Your feedback helps us improve. Submit a testimonial and it will be reviewed by our team before appearing on this page.
               </p>
               <TestimonialForm onSuccess={fetchTestimonials} compact />
@@ -71,7 +71,7 @@ const Testimonials = () => {
 
         {!isLoggedIn && status !== "loading" && (
           <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-sm text-muted-foreground">
               <Link href="/signin" className="text-primary hover:underline">
                 Sign in
               </Link>
