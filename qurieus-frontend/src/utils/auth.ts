@@ -167,17 +167,24 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider === "email" && user?.email) {
-        await prisma.user.update({
-          where: { email: user.email },
-          data: { is_verified: true },
-        });
-      }
-      if (account?.provider === "google" && user?.email) {
-        await prisma.user.update({
-          where: { email: user.email },
-          data: { is_verified: true },
-        });
+      const oauthProvider =
+        account?.provider === "email" || account?.provider === "google";
+      if (oauthProvider && (user?.id || user?.email)) {
+        // Use updateMany + user.id so a missing/stale email match does not throw
+        // P2025 and block OAuth (Google sign-in was failing on production).
+        if (user.id) {
+          await prisma.user.updateMany({
+            where: { id: user.id },
+            data: { is_verified: true },
+          });
+        } else if (user.email) {
+          await prisma.user.updateMany({
+            where: {
+              email: { equals: user.email, mode: "insensitive" },
+            },
+            data: { is_verified: true },
+          });
+        }
       }
       return true;
     },
