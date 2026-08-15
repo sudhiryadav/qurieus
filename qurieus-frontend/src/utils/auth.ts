@@ -19,6 +19,7 @@ declare module "next-auth" {
       accessToken?: string;
       role: string;
       hasPassword: boolean;
+      hasOAuthAccount: boolean;
     };
   }
 
@@ -210,6 +211,9 @@ export const authOptions: NextAuthOptions = {
         if (!dbUser?.is_active) {
           throw new Error("Account deactivated");
         }
+        if (dbUser?.role) {
+          token.role = dbUser.role;
+        }
       }
       
       return token;
@@ -219,9 +223,22 @@ export const authOptions: NextAuthOptions = {
       if (session?.user) {
         session.user.id = token.id;
         session.user.role = token.role;
-        const dbUser = await prisma.user.findUnique({ where: { id: token.id } });
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: {
+            name: true,
+            image: true,
+            password: true,
+            role: true,
+            accounts: { select: { provider: true } },
+          },
+        });
         session.user.hasPassword = !!dbUser?.password;
+        // Google (and other social) users authenticate without a local password
+        session.user.hasOAuthAccount =
+          dbUser?.accounts?.some((account) => account.provider === "google") ?? false;
         if (dbUser) {
+          session.user.role = dbUser.role;
           session.user.name = dbUser.name;
           session.user.image = dbUser.image ?? undefined;
         }

@@ -1,14 +1,23 @@
 "use client";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import PasswordForm from "@/components/Auth/PasswordForm";
 import axios from "@/lib/axios";
-import { showToast } from "@/components/Common/Toast";
+
+function getPostAuthPath(role?: string, wasFirstPassword?: boolean) {
+  if (role === "AGENT") return "/agent/dashboard";
+  if (role === "ADMIN" || role === "SUPER_ADMIN") return "/admin/users";
+  if (wasFirstPassword) return "/user/knowledge-base";
+  return "/user/dashboard";
+}
 
 export default function SetPasswordPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
+
+  const canSkipPasswordSetup =
+    Boolean(session?.user?.hasPassword) || Boolean(session?.user?.hasOAuthAccount);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -16,42 +25,22 @@ export default function SetPasswordPage() {
       router.replace("/signin");
       return;
     }
-    // If user already has a password, redirect to dashboard
-    if ((session.user as any)?.hasPassword) {
-      if(session?.user?.role === "AGENT") {
-        router.replace("/agent/dashboard");
-      }
-      else{
-        router.replace("/user/dashboard");
-      }
+    if (canSkipPasswordSetup) {
+      router.replace(getPostAuthPath(session.user.role));
     }
-  }, [session, status, router]);
+  }, [session, status, router, canSkipPasswordSetup]);
 
   const handleSetPassword = async (password: string) => {
-    try {
-      const { data } = await axios.post("/api/user/set-password", { password });
-      showToast.success("Password set successfully");
-      // Refresh session by signing in with new credentials
-      await signIn("credentials", {
-        redirect: false,
-        email: session?.user?.email,
-        password,
-      });
-      setTimeout(() => {
-        if(session?.user?.role === "AGENT") {
-          router.replace("/agent/dashboard");
-        }
-        else{
-          if (data.wasFirstPassword) {
-          router.replace("/user/knowledge-base");
-        } else {
-          router.replace("/user/dashboard");
-        }}
-      }, 1000);
-    } catch (error: any) {
-      showToast.error(error.response?.data?.error || "Failed to set password");
-    }
+    const { data } = await axios.post("/api/user/set-password", { password });
+    // Re-fetch session so hasPassword is true before navigating away
+    await update();
+    router.refresh();
+    router.replace(getPostAuthPath(session?.user?.role, data.wasFirstPassword));
   };
+
+  if (status === "loading" || !session || canSkipPasswordSetup) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -69,4 +58,4 @@ export default function SetPasswordPage() {
       </div>
     </div>
   );
-} 
+}

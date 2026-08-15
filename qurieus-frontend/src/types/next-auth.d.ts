@@ -9,6 +9,8 @@ declare module "next-auth" {
       image?: string | null;
       accessToken?: string;
       role: string;
+      hasPassword: boolean;
+      hasOAuthAccount: boolean;
     };
   }
 } 

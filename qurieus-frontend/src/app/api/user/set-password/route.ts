@@ -6,7 +6,12 @@ import bcrypt from "bcrypt";
 import { RequireRoles } from '@/utils/roleGuardsDecorator';
 import { UserRole } from '@prisma/client';
 
-export const POST = RequireRoles([UserRole.USER])(async (request: Request) => {
+export const POST = RequireRoles([
+  UserRole.USER,
+  UserRole.ADMIN,
+  UserRole.SUPER_ADMIN,
+  UserRole.AGENT,
+])(async (request: Request) => {
   const session = await getServerSession(authOptions);
   const { password } = await request.json();
   if (!password) {
