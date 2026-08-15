@@ -1,6 +1,11 @@
-# Deploy is handled by Google Cloud Build on GitHub `prod`
-# (same pattern as myflatmate). This file exists so GitLab does not run
-# the old EC2/SSH pipeline.
+# Deploy is Google Cloud Build on GitHub `prod`.
+# GitLab still requires at least one visible job or it creates a *failed*
+# pipeline ("jobs config should contain at least one visible job") and emails.
+# workflow:never means that job is never scheduled.
 workflow:
   rules:
     - when: never
+
+disabled:
+  script:
+    - echo "GitLab CI is disabled; deploy is Cloud Build on GitHub."
