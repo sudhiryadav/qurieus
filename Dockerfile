@@ -33,6 +33,9 @@ COPY qurieus-frontend/ ./
 # Dummy URL so `prisma generate` can run without Cloud Run secrets.
 ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/qurieus?schema=public"
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV YARN_IGNORE_ENGINES=1
+
+RUN yarn config set ignore-engines true
 
 ARG NEXT_PUBLIC_APP_URL=https://qurieus.com
 ARG NEXT_PUBLIC_SITE_URL=https://qurieus.com
