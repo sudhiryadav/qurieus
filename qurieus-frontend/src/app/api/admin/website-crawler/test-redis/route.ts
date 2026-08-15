@@ -6,7 +6,14 @@ import { UserRole } from '@prisma/client';
 export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (request: NextRequest) => {
   try {
     const redis = getRedis();
-    
+    if (!redis) {
+      return NextResponse.json({
+        success: false,
+        skipped: true,
+        message: 'REDIS_URL is not set (optional on Cloud Run)',
+      });
+    }
+
     // Test basic Redis operations
     const testKey = 'test:crawl:connection';
     const testValue = { timestamp: new Date().toISOString(), test: true };

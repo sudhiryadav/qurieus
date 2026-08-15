@@ -8,8 +8,8 @@ const { Server } = require('socket.io');
 const { getToken } = require('next-auth/jwt');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = process.env.PORT || 8000;
+const hostname = process.env.HOSTNAME || '0.0.0.0';
+const port = Number(process.env.PORT || 8000);
 
 // Prepare the Next.js app
 const app = next({ dev, hostname, port });
@@ -119,6 +119,7 @@ app.prepare().then(() => {
   // Make io available globally for API routes
   global.io = io;
 
-  server.listen(port, () => {
+  server.listen(port, hostname, () => {
+    console.log(`Frontend listening on ${hostname}:${port}`);
   });
 }); 

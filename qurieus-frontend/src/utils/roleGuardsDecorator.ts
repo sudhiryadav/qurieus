@@ -313,10 +313,12 @@ export async function getCurrentUserWithAgent() {
 // Helper function to invalidate user cache (useful for admin operations)
 export async function invalidateUserCache(userId: string) {
   try {
-    const cacheKey = generateUserCacheKey(userId);
     const redis = getRedis();
+    if (!redis) return;
+    const cacheKey = generateUserCacheKey(userId);
     await redis.del(cacheKey);
-  } catch (error) {
+  } catch {
+    // Cache is optional on Cloud Run.
   }
 }
 
@@ -324,10 +326,12 @@ export async function invalidateUserCache(userId: string) {
 export async function invalidateAllUserCaches() {
   try {
     const redis = getRedis();
+    if (!redis) return;
     const keys = await redis.keys(`${USER_CACHE_PREFIX}*`);
     if (keys.length > 0) {
       await redis.del(...keys);
     }
-  } catch (error) {
+  } catch {
+    // Cache is optional on Cloud Run.
   }
 } 

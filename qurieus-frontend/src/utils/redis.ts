@@ -1,53 +1,43 @@
 import { Redis } from 'ioredis';
 
-// Create Redis client with environment-specific configuration
+const redisUrl = process.env.REDIS_URL?.trim();
+const redisEnabled = Boolean(redisUrl);
+
+let redisClient: Redis | null = null;
+
 const getRedisClient = () => {
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-  return new Redis(redisUrl, {
+  return new Redis(redisUrl as string, {
     maxRetriesPerRequest: 3,
     retryStrategy: (times) => {
-      const delay = Math.min(times * 50, 2000);
-      return delay;
+      if (times > 3) return null;
+      return Math.min(times * 50, 2000);
     },
-    connectTimeout: 10000,
+    connectTimeout: 5000,
     enableReadyCheck: true,
+    lazyConnect: true,
   });
 };
 
-// Initialize Redis client
-let redisClient: Redis | null = null;
-let instanceId = 0;
-
-// Get Redis client instance (singleton pattern)
-export const getRedis = () => {
+export const getRedis = (): Redis | null => {
+  if (!redisEnabled) {
+    return null;
+  }
   if (!redisClient) {
-    instanceId++;
     redisClient = getRedisClient();
-    
-    // Add event listeners for debugging
-    redisClient.on('connect', () => {
-    });
-    
-    redisClient.on('error', (error) => {
-    });
-    
-    redisClient.on('ready', () => {
-    });
-  } else {
+    redisClient.on('error', () => {});
   }
   return redisClient;
 };
 
-// Cache helper functions
 export const cacheGet = async (key: string): Promise<string | null> => {
   try {
     const redis = getRedis();
-    const value = await redis.get(key);
-    if (value) {
-    } else {
+    if (!redis) return null;
+    if (redis.status === 'wait') {
+      await redis.connect();
     }
-    return value;
-  } catch (error) {
+    return await redis.get(key);
+  } catch {
     return null;
   }
 };
@@ -55,14 +45,17 @@ export const cacheGet = async (key: string): Promise<string | null> => {
 export const cacheSet = async (key: string, value: string, expirySeconds: number = 3600): Promise<void> => {
   try {
     const redis = getRedis();
+    if (!redis) return;
+    if (redis.status === 'wait') {
+      await redis.connect();
+    }
     await redis.setex(key, expirySeconds, value);
-  } catch (error) {
+  } catch {
+    // Cache is optional on Cloud Run (no Memorystore on free tier).
   }
 };
 
-// Generate cache key for queries
 export const generateQueryCacheKey = (query: string, documentOwnerId: string): string => {
-  // Normalize the query by trimming and converting to lowercase
   const normalizedQuery = query.trim().toLowerCase();
   return `query:${documentOwnerId}:${normalizedQuery}`;
-}; 
+};

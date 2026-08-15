@@ -1,80 +1,50 @@
-# Qurieus CI/CD – No Docker
+# Qurieus CI/CD – Google Cloud Run
 
-Push to `prod` or `dev` → GitLab CI SSHs to server → git pull, yarn/pip install (if deps changed), build, PM2 restart.
+Push to `prod` on GitHub (`sudhiryadav/qurieus`) → Cloud Build builds the root `Dockerfile` → deploys Cloud Run service `qurieus` in `us-central1`.
 
-## Server layout
-
-- `/home/ubuntu/qurieus` – Git repo (source)
-
-## One-time setup
+GitLab (`origin`) is no longer used for deploy. Push `prod` to GitHub so the trigger runs:
 
 ```bash
-# SSH to server, then:
-curl -fsSL https://gitlab.com/frontslash/apps/qurieus/-/raw/prod/ci-cd/scripts/setup-ec2.sh | bash -s https://gitlab.com/frontslash/apps/qurieus.git
+git push github prod
 ```
 
-Or: `./ci-cd/scripts/setup-ec2.sh https://gitlab.com/frontslash/apps/qurieus.git`
+## Layout
 
-## Env files (GitLab File variables)
+One Cloud Run container (free-tier friendly):
 
-Store each app env as a **GitLab CI/CD File variable**. During deploy, CI uploads each file directly to:
+- nginx on `$PORT` (8080)
+- Next.js on `127.0.0.1:8000`
+- FastAPI on `127.0.0.1:8001`
+- `/api/v1/` → FastAPI, everything else (including `/api` and `/socket.io`) → Next.js
 
-- `qurieus-frontend/.env`
-- `qurieus-backend/.env`
-- `qurieus-bot-teams/.env`
+## One-time GCP setup
 
-Required File variables:
+Project: `roommate-matcher-473708` (same as myflatmate). Region: `us-central1`.
 
-- `STAGING_FRONTEND_ENV_FILE`
-- `STAGING_BACKEND_ENV_FILE`
-- `STAGING_BOT_ENV_FILE`
-- `PROD_FRONTEND_ENV_FILE`
-- `PROD_BACKEND_ENV_FILE`
-- `PROD_BOT_ENV_FILE`
-
-See `ci-cd/env.template` for variable shape (no secrets).
-
-## Deployment
-
-Deployment uses **GitLab CI**. Push to both remotes: `git push origin prod && git push github prod`. Secrets stay in GitLab CI/CD File variables and are uploaded only at deploy time.
-
-## GitLab CI/CD variables
-
-**Required (scalar/masked variables):**
-- `STAGING_SSH_PRIVATE_KEY`, `STAGING_SSH_USER`, `STAGING_SERVER_IP`
-- `PROD_SSH_PRIVATE_KEY`, `PROD_SSH_USER`, `PROD_SERVER_IP`
-
-Use these as normal CI/CD variables (masked/protected), **not** File variables.
-`*_SSH_PRIVATE_KEY` should be base64-encoded one-line private key content.
-
-**Paddle:** keep Paddle keys directly inside the frontend env File variable content (`*_FRONTEND_ENV_FILE`).
-
-**Optional (scalar/masked variables):**
-- `PROD_REPO_DIR`, `STAGING_REPO_DIR` – if repo is not at `/home/ubuntu/qurieus`
-
-The runner clones the repo with `CI_JOB_TOKEN` and rsyncs to the server – the server does not need GitLab access.
-
-**Important:** `PROD_SERVER_IP` must point to the server with `/home/ubuntu/qurieus`. If staging and prod share the same server, use the same IP for both.
-
-## Watchdog (auto-heal)
-
-Server setup/deploy also installs a systemd timer that runs every minute and auto-heals PM2 apps:
-
-- Script source: `ci-cd/scripts/qurieus-watchdog.sh`
-- Installed script: `/usr/local/bin/qurieus-watchdog.sh`
-- Service: `qurieus-watchdog.service`
-- Timer: `qurieus-watchdog.timer`
-
-What it checks:
-
-- PM2 processes exist for `qurieus-frontend`, `qurieus-backend`, and `qurieus-bot-teams`
-- Local health probes: `http://127.0.0.1:8000/` and `http://127.0.0.1:8001/`
-- Public health probe: `https://qurieus.com/`
-
-If a probe fails, it restarts the affected PM2 app and writes to syslog with tag `qurieus-watchdog`.
-
-## Remove Docker (after migration)
+1. Connect the GitHub repo `sudhiryadav/qurieus` to Cloud Build (same GitHub App as roommate-matcher).
+2. Create a trigger on branch `^prod$` using `cloudbuild.yaml`.
+3. Copy runtime secrets:
 
 ```bash
-./ci-cd/scripts/remove-docker.sh
+cp deploy/cloudrun/env.yaml.example deploy/cloudrun/env.yaml
+# fill DATABASE_URL and other secrets
+gcloud run services update qurieus --region=us-central1 --env-vars-file=deploy/cloudrun/env.yaml
 ```
+
+## Database (Neon)
+
+Production Postgres is Neon project `qurieus`, database `qurieus`. Prisma migrations run on container startup (`prisma migrate deploy`).
+
+## Env files
+
+- **Build-time (NEXT_PUBLIC_*)**: Cloud Build substitutions in `cloudbuild.yaml`
+- **Runtime secrets**: `deploy/cloudrun/env.yaml` (gitignored). See `env.yaml.example`.
+
+Do not set `PORT`. Cloud Run injects `8080`. Redis is optional (omit `REDIS_URL` on Cloud Run).
+
+## Custom domain
+
+Production URL is `https://qurieus.com`. Cloud Run maps `qurieus.com` and `www.qurieus.com`. Hostinger DNS for the apex uses Google Cloud Run A/AAAA records; `www` is a CNAME to `qurieus.com`. Mail (MX, SPF, DKIM, DMARC) is unchanged.
+
+OAuth callback is `https://qurieus.com/api/auth/callback/google` (not the `*.run.app` URL).
+

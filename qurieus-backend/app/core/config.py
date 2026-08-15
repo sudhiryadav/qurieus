@@ -16,14 +16,28 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Qurieus API"
     VERSION: str = "1.0.0"
-    FAST_API_HOST: str = os.getenv("FAST_API_HOST")
-    FAST_API_PORT: int = int(os.getenv("FAST_API_PORT"))
+    FAST_API_HOST: str = os.getenv("FAST_API_HOST", "0.0.0.0")
+    FAST_API_PORT: int = int(os.getenv("FAST_API_PORT", "8001"))
 
     # Frontend URL for CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
 
     # CORS settings
-    CORS_ORIGINS: List[str] = [os.getenv("FRONTEND_URL")]
+    CORS_ORIGINS: List[str] = list(
+        dict.fromkeys(
+            [
+                origin
+                for origin in [
+                    os.getenv("FRONTEND_URL"),
+                    os.getenv("NEXTAUTH_URL"),
+                    os.getenv("NEXT_PUBLIC_APP_URL"),
+                    "https://qurieus.com",
+                    "https://www.qurieus.com",
+                ]
+                if origin
+            ]
+        )
+    )
 
     # NextAuth Secret for token verification
     # IMPORTANT: This must match the NEXTAUTH_SECRET in the Next.js frontend
@@ -32,23 +46,23 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "uploaded_docs")
 
-    # Ollama settings
-    OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL").strip()  # Default to mistral:latest
+    # Ollama settings (optional; production uses Modal + Qdrant)
+    OLLAMA_API_URL: str = os.getenv("OLLAMA_API_URL", "")
+    OLLAMA_MODEL: str = (os.getenv("OLLAMA_MODEL") or "").strip()
 
     # Qdrant settings
-    QDRANT_URL: str = os.getenv("QDRANT_URL")
-    QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION")
+    QDRANT_URL: str = os.getenv("QDRANT_URL", "")
+    QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "qurieus")
     QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
 
     # AI Service API Key for internal service communication
-    AI_SERVICE_API_KEY: str = os.getenv("AI_SERVICE_API_KEY")
+    AI_SERVICE_API_KEY: str = os.getenv("AI_SERVICE_API_KEY", "")
 
     # OCR Settings
-    OCR_ENABLED: bool = os.getenv("OCR_ENABLED").lower() == "true"
-    OCR_LANGUAGE: str = os.getenv("OCR_LANGUAGE")
-    OCR_DPI: int = int(os.getenv("OCR_DPI"))
-    OCR_CONFIG: str = os.getenv("OCR_CONFIG")
+    OCR_ENABLED: bool = os.getenv("OCR_ENABLED", "true").lower() == "true"
+    OCR_LANGUAGE: str = os.getenv("OCR_LANGUAGE", "eng")
+    OCR_DPI: int = int(os.getenv("OCR_DPI", "300"))
+    OCR_CONFIG: str = os.getenv("OCR_CONFIG", "--oem 3 --psm 6")
 
     class Config:
         case_sensitive = True

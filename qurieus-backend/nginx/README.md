@@ -1,6 +1,6 @@
-# Nginx Configuration for AWS Server
+# Nginx Configuration (legacy EC2)
 
-This directory contains the Nginx configuration files for the Qurieus application running on AWS.
+Production traffic on Google Cloud Run uses `deploy/cloudrun/nginx.conf.template` instead of these files. Keep this directory only as a reference for local/EC2 nginx.
 
 ## Configuration Files
 

@@ -11,8 +11,16 @@ export const GET = RequireRoles([UserRole.SUPER_ADMIN])(async (
   try {
     const { jobId } = await params;
     const redis = getRedis();
-    
-    
+    if (!redis) {
+      const jobInManager = await crawlJobManager.getJob(jobId);
+      return NextResponse.json({
+        jobId,
+        skipped: true,
+        message: 'REDIS_URL is not set (optional on Cloud Run)',
+        manager: { jobData: jobInManager },
+      });
+    }
+
     // Test 1: Direct Redis read
     const crawlJobsData = await redis.get('crawlJobs');
     const allJobs = crawlJobsData ? JSON.parse(crawlJobsData) : {};

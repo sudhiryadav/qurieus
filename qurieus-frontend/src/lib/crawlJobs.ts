@@ -27,6 +27,7 @@ interface CrawlJob {
 class CrawlJobManager {
   private redisKey = 'crawlJobs';
   private redisInstance: any = null;
+  private memoryJobs = new Map<string, CrawlJob>();
 
   constructor() {
     this.initialize();
@@ -51,32 +52,30 @@ class CrawlJobManager {
     try {
       const redis = await this.getRedisInstance();
       if (!redis) {
-        return new Map();
+        return this.memoryJobs;
       }
       
       const stored = await redis.get(this.redisKey);
       if (stored) {
         const jobs = JSON.parse(stored);
-        const jobsMap = new Map(Object.entries(jobs)) as Map<string, CrawlJob>;
-        return jobsMap;
-      } else {
-        return new Map();
+        return new Map(Object.entries(jobs)) as Map<string, CrawlJob>;
       }
-    } catch (error) {
       return new Map();
+    } catch {
+      return this.memoryJobs;
     }
   }
 
   private async saveJobsToRedis(jobs: Map<string, CrawlJob>): Promise<void> {
+    this.memoryJobs = jobs;
     try {
       const redis = await this.getRedisInstance();
       if (!redis) {
         return;
       }
-      const jobsObject = Object.fromEntries(jobs);
-      const jobsJson = JSON.stringify(jobsObject);
-      await redis.set(this.redisKey, jobsJson);
-    } catch (error) {
+      await redis.set(this.redisKey, JSON.stringify(Object.fromEntries(jobs)));
+    } catch {
+      // Redis is optional on Cloud Run; in-memory map still holds jobs.
     }
   }
 

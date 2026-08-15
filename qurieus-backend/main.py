@@ -66,6 +66,12 @@ async def root():
     return {"status": "healthy", "version": settings.VERSION}
 
 
+@app.get("/api/v1/health")
+async def health():
+    """Public health check for Cloud Run / nginx."""
+    return {"status": "healthy", "version": settings.VERSION}
+
+
 if __name__ == "__main__":
     import uvicorn
 
