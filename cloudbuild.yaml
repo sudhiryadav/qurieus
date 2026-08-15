@@ -1,0 +1,115 @@
+# Cloud Build for Cloud Run.
+# Used when the GitHub trigger is set to this file (prod branch).
+#
+# Substitutions (set on the trigger or Cloud Run build settings):
+#   _REGION, _SERVICE, _AR_REPO
+#   _NEXT_PUBLIC_*  (baked into the Next.js client bundle)
+#
+# Runtime secrets (Cloud Run → Variables & Secrets, or --env-vars-file):
+#   DATABASE_URL, NEXTAUTH_SECRET, GOOGLE_*, SMTP_*, PADDLE_*, QDRANT_*, AWS_*, MODAL_*
+# Service: qurieus in us-central1 (Cloud Run free-tier region)
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE: qurieus
+  _AR_REPO: cloud-run-source-deploy
+  _NEXT_PUBLIC_APP_URL: https://qurieus.com
+  _NEXT_PUBLIC_SITE_URL: https://qurieus.com
+  _NEXT_PUBLIC_CONTACT_EMAIL: contact@qurieus.com
+  _NEXT_PUBLIC_SUPPORT_EMAIL: support@qurieus.com
+  _NEXT_PUBLIC_SALES_EMAIL: sales@qurieus.com
+  _NEXT_PUBLIC_SUPPORT_ADDRESS: Frontslash, New Delhi
+  _NEXT_PUBLIC_SUPPORT_PHONE: "+919953633888"
+  _NEXT_PUBLIC_SENTRY_DSN: https://6b3774d8984a23cb21a00917e343237b@o4509654881075200.ingest.de.sentry.io/4509654882517072
+  _NEXT_PUBLIC_GA_MEASUREMENT_ID: G-SYGMQN1JQY
+  _NEXT_PUBLIC_LOGROCKET_APP_ID: wdxmnh/qurieus
+  _NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: live_6893c776e89bf3eaa14c495fc0d
+  _NEXT_PUBLIC_MAX_FILE_SIZE: "10"
+  _NEXT_PUBLIC_MAX_FILE_SIZE_MB: "10"
+  _NEXT_PUBLIC_MAX_FILES: "5"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+  diskSizeGb: "100"
+  substitutionOption: ALLOW_LOOSE
+
+timeout: 3600s
+
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: ensure-artifact-registry
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud artifacts repositories describe ${_AR_REPO} --location=${_REGION} >/dev/null 2>&1 \
+          || gcloud artifacts repositories create ${_AR_REPO} \
+               --repository-format=docker \
+               --location=${_REGION} \
+               --description="Cloud Run images"
+
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_APP_URL=${_NEXT_PUBLIC_APP_URL}
+      - --build-arg
+      - NEXT_PUBLIC_SITE_URL=${_NEXT_PUBLIC_SITE_URL}
+      - --build-arg
+      - NEXT_PUBLIC_CONTACT_EMAIL=${_NEXT_PUBLIC_CONTACT_EMAIL}
+      - --build-arg
+      - NEXT_PUBLIC_SUPPORT_EMAIL=${_NEXT_PUBLIC_SUPPORT_EMAIL}
+      - --build-arg
+      - NEXT_PUBLIC_SALES_EMAIL=${_NEXT_PUBLIC_SALES_EMAIL}
+      - --build-arg
+      - NEXT_PUBLIC_SUPPORT_ADDRESS=${_NEXT_PUBLIC_SUPPORT_ADDRESS}
+      - --build-arg
+      - NEXT_PUBLIC_SUPPORT_PHONE=${_NEXT_PUBLIC_SUPPORT_PHONE}
+      - --build-arg
+      - NEXT_PUBLIC_SENTRY_DSN=${_NEXT_PUBLIC_SENTRY_DSN}
+      - --build-arg
+      - NEXT_PUBLIC_GA_MEASUREMENT_ID=${_NEXT_PUBLIC_GA_MEASUREMENT_ID}
+      - --build-arg
+      - NEXT_PUBLIC_LOGROCKET_APP_ID=${_NEXT_PUBLIC_LOGROCKET_APP_ID}
+      - --build-arg
+      - NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=${_NEXT_PUBLIC_PADDLE_CLIENT_TOKEN}
+      - --build-arg
+      - NEXT_PUBLIC_MAX_FILE_SIZE=${_NEXT_PUBLIC_MAX_FILE_SIZE}
+      - --build-arg
+      - NEXT_PUBLIC_MAX_FILE_SIZE_MB=${_NEXT_PUBLIC_MAX_FILE_SIZE_MB}
+      - --build-arg
+      - NEXT_PUBLIC_MAX_FILES=${_NEXT_PUBLIC_MAX_FILES}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:${BUILD_ID}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:${BUILD_ID}
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-latest
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:latest
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:${BUILD_ID}
+      - --region=${_REGION}
+      - --quiet
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}

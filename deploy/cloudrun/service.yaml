@@ -1,0 +1,45 @@
+# Cloud Run service for qurieus (free-tier region us-central1).
+# Do not commit real secrets here. Apply runtime env from env.yaml instead:
+#   cp deploy/cloudrun/env.yaml.example deploy/cloudrun/env.yaml
+#   gcloud run services update qurieus --region=us-central1 --env-vars-file=deploy/cloudrun/env.yaml
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: qurieus
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/invoker-iam-disabled: "true"
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/startup-cpu-boost: "true"
+        run.googleapis.com/sessionAffinity: "true"
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "2"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 3600
+      containers:
+        - name: qurieus
+          image: us-central1-docker.pkg.dev/roommate-matcher-473708/cloud-run-source-deploy/qurieus:latest
+          ports:
+            - name: http1
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          env:
+            - name: NODE_ENV
+              value: production
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 36
+  traffic:
+    - percent: 100
+      latestRevision: true

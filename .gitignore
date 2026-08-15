@@ -89,3 +89,7 @@ next-env.d.ts
 **/.env.prod
 **/.env.stage
 **/.env.state
+
+# Cloud Run secrets — never commit
+deploy/cloudrun/env.yaml
+.neon
